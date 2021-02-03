@@ -19,7 +19,6 @@
     "edge-deploy",
     "edge-publish"
   ],
-  "type": "module",
   "author": {
     "name": "avi12",
     "email": "avi6106@gmail.com",
