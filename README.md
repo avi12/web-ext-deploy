@@ -1,0 +1,104 @@
+# WebExt Deploy
+
+The ultimate automation tool for deploying to multiple extension stores simultaneously!
+
+Supported stores:
+
+- [Chrome Web Store](https://chrome.google.com/webstore/category/extensions)
+- [Firefox Addons](https://addons.mozilla.org/en-US/firefox/extensions)
+- [Edge Add-ons](https://microsoftedge.microsoft.com/addons)
+- [Opera Addons](https://addons.opera.com/en/extensions)
+
+## Core packages used
+
+- [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Addons / Edge Add-ons / Opera
+  Addons.
+- [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
+
+## Installing
+
+```powershell
+pnpm i -D web-ext-deploy
+```
+
+## Usage
+
+### If using `.env`
+
+Rename `.env.sample` to `STORE.env`, e.g. `firefox.env`, and fill in the details.
+
+### if using CLI
+
+```powershell
+web-ext-deploy --ext-name=EXT_NAME --chrome=CWS_DETAIS --firefox=FIREFOX_DETAILS --edge=EDGE_DETAILS --opera=OPERA_DETAILS
+```
+
+### CLI API
+
+- `chrome` object  
+  Example: `--chrome={refreshToken: "refreshToken", clientId: "client ID", clientSecret: "clientSecret", filename: "filename-v{version}.zip"}`
+
+
+- `firefox` object  
+  Example: `--firefox={email: "some@email.com", password: "password", twoFactor: 123456, filename: "filename-v{version}.zip", changes: "Changes\nWith new lines"}`
+
+
+- `edge` object  
+  Example: `--edge={email: "some@email.com", password: "password", filename: "filename-v{version}.zip"}`
+
+
+- `opera` object  
+  Example: `--opera={email: "some@email.com", password: "password", twoFactor: 123456, filename: "filename-v{version}.zip"}`
+
+### If using Node.js
+
+```js
+import { deployChrome, deployFirefox, deployOpera, deployEdge } from "web-ext-deploy";
+// or
+const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ext-deploy");
+```
+
+### API
+
+- `deployChrome` object  
+  Options:
+
+  - `refreshToken` string
+  - `clientId` string
+  - `clientSecret` string
+  - `filename` string
+
+  returns `Promise<boolean>`
+
+
+- `deployFirefox` object  
+  Options:
+
+  - `email` string
+  - `password` string
+  - `twoFactor?` string
+  - `filename` string
+  - `changes?` string
+
+  returns `Promise<boolean>`
+
+
+- `deployEdge` object  
+  Options:
+
+  - `email` string
+  - `password` string
+  - `filename` string
+  - `changes` string
+
+  returns `Promise<boolean>`
+
+
+- `deployOpera` object  
+  Options:
+
+  - `email` string
+  - `password` string
+  - `filename` string
+
+  returns `Promise<boolean>`
