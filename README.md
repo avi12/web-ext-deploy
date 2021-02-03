@@ -21,6 +21,8 @@ Supported stores:
 pnpm i -D web-ext-deploy
 ```
 
+Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).
+
 ## Usage
 
 ### If using `.env`
@@ -58,7 +60,7 @@ import { deployChrome, deployFirefox, deployOpera, deployEdge } from "web-ext-de
 const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ext-deploy");
 ```
 
-### API
+### Node.js API
 
 - `deployChrome` object  
   Options:
