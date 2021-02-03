@@ -36,7 +36,7 @@ Rename `.env.sample` to `STORE.env`, e.g. `firefox.env`, and fill in the details
 ### if using CLI
 
 ```powershell
-web-ext-deploy --ext-name=EXT_NAME --filename=some-filename-v{version}.zip --filename-source=some-filename-source-v{version}.zip --chrome=CWS_DETAIS --firefox=FIREFOX_DETAILS --edge=EDGE_DETAILS --opera=OPERA_DETAILS
+web-ext-deploy --ext-name=EXT_NAME --zip=some-zip-v{version}.zip --zip-source=some-zip-source-v{version}.zip --chrome=CWS_DETAIS --firefox=FIREFOX_DETAILS --edge=EDGE_DETAILS --opera=OPERA_DETAILS
 ```
 
 ### CLI API
@@ -46,38 +46,43 @@ web-ext-deploy --ext-name=EXT_NAME --filename=some-filename-v{version}.zip --fil
   It must be identical to the one listed on the stores.
 
 
-- `filename` string  
+- `zip` string  
   The ZIP to be uploaded.  
   `{version}` can be used to pull the version of the extension's manifest.
 
 
-- `filename-source` string  
+- `zip-source` string  
   The extension source. It wil be used for the Firefox Addons store.  
   `{version}` can be used to pull the version of the extension's manifest.
 
 
 - `chrome` object  
-  Example: `--chrome={refreshToken: "refreshToken", clientId: "client ID", clientSecret: "clientSecret", filename: "filename-v{version}.zip"}`
+  Example: `--chrome={refreshToken: "refreshToken", clientId: "client ID", clientSecret: "clientSecret", zip: "zip-v{version}.zip"}`
 
 
 - `firefox` object  
-  Example: `--firefox={email: "some@email.com", password: "password", twoFactor: 123456, filename: "filename-v{version}.zip", changes: "Changes\nWith new lines"}`
+  Example: `--firefox={email: "some@email.com", password: "password", twoFactor: 123456, zip: "zip-v{version}.zip", changes: "Changes\nWith new lines"}`
 
 
 - `edge` object  
-  Example: `--edge={email: "some@email.com", password: "password", filename: "filename-v{version}.zip"}`
+  Example: `--edge={email: "some@email.com", password: "password", zip: "zip-v{version}.zip"}`
 
 
 - `opera` object  
-  Example: `--opera={email: "some@email.com", password: "password", twoFactor: 123456, filename: "filename-v{version}.zip"}`
+  Example: `--opera={email: "some@email.com", password: "password", twoFactor: 123456, zip: "zip-v{version}.zip"}`
 
 ### If using Node.js
 
+#### ESM
 ```js
 import { deployChrome, deployFirefox, deployOpera, deployEdge } from "web-ext-deploy";
-// or
+```
+
+#### CommonJS
+```js
 const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ext-deploy");
 ```
+
 
 ### Node.js API
 
@@ -87,7 +92,7 @@ const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ex
   - `refreshToken` string
   - `clientId` string
   - `clientSecret` string
-  - `filename` string
+  - `zip` string
 
   returns `Promise<boolean>`
 
@@ -98,8 +103,8 @@ const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ex
   - `email` string
   - `password` string
   - `twoFactor?` string
-  - `filename` string
-  - `filenameSource?` string
+  - `zip` string
+  - `zipSource?` string
   - `changes?` string
 
   returns `Promise<boolean>`
@@ -110,7 +115,7 @@ const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ex
 
   - `email` string
   - `password` string
-  - `filename` string
+  - `zip` string
   - `changes` string
 
   returns `Promise<boolean>`
@@ -121,6 +126,6 @@ const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ex
 
   - `email` string
   - `password` string
-  - `filename` string
+  - `zip` string
 
   returns `Promise<boolean>`
