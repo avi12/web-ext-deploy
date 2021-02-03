@@ -18,6 +18,10 @@ Supported stores:
 ## Installing
 
 ```powershell
+npm i -D web-ext-deploy
+# or
+yarn add -D web-ext-deploy
+# or
 pnpm i -D web-ext-deploy
 ```
 
@@ -32,10 +36,25 @@ Rename `.env.sample` to `STORE.env`, e.g. `firefox.env`, and fill in the details
 ### if using CLI
 
 ```powershell
-web-ext-deploy --ext-name=EXT_NAME --chrome=CWS_DETAIS --firefox=FIREFOX_DETAILS --edge=EDGE_DETAILS --opera=OPERA_DETAILS
+web-ext-deploy --ext-name=EXT_NAME --filename=some-filename-v{version}.zip --filename-source=some-filename-source-v{version}.zip --chrome=CWS_DETAIS --firefox=FIREFOX_DETAILS --edge=EDGE_DETAILS --opera=OPERA_DETAILS
 ```
 
 ### CLI API
+
+- `ext-name` string  
+  The name of the extension. This module will use the `name.toLowerCase()`.  
+  It must be identical to the one listed on the stores.
+
+
+- `filename` string  
+  The ZIP to be uploaded.  
+  `{version}` can be used to pull the version of the extension's manifest.
+
+
+- `filename-source` string  
+  The extension source. It wil be used for the Firefox Addons store.  
+  `{version}` can be used to pull the version of the extension's manifest.
+
 
 - `chrome` object  
   Example: `--chrome={refreshToken: "refreshToken", clientId: "client ID", clientSecret: "clientSecret", filename: "filename-v{version}.zip"}`
@@ -80,6 +99,7 @@ const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ex
   - `password` string
   - `twoFactor?` string
   - `filename` string
+  - `filenameSource?` string
   - `changes?` string
 
   returns `Promise<boolean>`
