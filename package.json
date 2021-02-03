@@ -1,0 +1,40 @@
+{
+  "name": "web-ext-deploy",
+  "version": "1.0.0",
+  "description": "A tool for deploying WebExtensions to multiple stores.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --experimental-json-modules ."
+  },
+  "keywords": [
+    "web-ext",
+    "web-ext-deploy",
+    "web-ext-publish",
+    "chrome-deploy",
+    "chrome-publish",
+    "firefox-deploy",
+    "firefox-publish",
+    "opera-deploy",
+    "opera-publish",
+    "edge-deploy",
+    "edge-publish"
+  ],
+  "type": "module",
+  "author": {
+    "name": "avi12",
+    "email": "avi6106@gmail.com",
+    "url": "https://avi12.com"
+  },
+  "prettier": {
+    "arrowParens": "avoid"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "puppeteer": "^6.0.0",
+    "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
+  }
+}
