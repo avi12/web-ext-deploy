@@ -109,7 +109,7 @@ async function deployExtension({
     twoFactor,
   });
 
-  await openRelevantExtensionPage(page, extName);
+  await openRelevantExtensionPage(page, extName.toLowerCase());
   await clickUploadNewVersion(page);
 }
 
