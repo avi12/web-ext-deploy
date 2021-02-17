@@ -1,8 +1,12 @@
 node_modules
-.env
+dist
+dist_packed
+
+*.env
+src/*.js
+src/*.d.ts
 
 # IntelliJ IDEA folder
-
 .idea
 
 # Sublime files

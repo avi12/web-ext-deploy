@@ -1,11 +1,16 @@
 {
   "name": "web-ext-deploy",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A tool for deploying WebExtensions to multiple stores.",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node --experimental-json-modules ."
+    "start": "nodemon --config nodemon.json ."
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/avi12/web-ext-deploy"
+  },
+  "bin": "src/index.js",
   "keywords": [
     "web-ext",
     "web-ext-deploy",
@@ -24,16 +29,51 @@
     "email": "avi6106@gmail.com",
     "url": "https://avi12.com"
   },
-  "prettier": {
-    "arrowParens": "avoid"
+  "bugs": {
+    "email": "avi6106@gmail.com",
+    "url": "https://github.com/avi12/web-ext-deploy/issues"
   },
-  "license": "ISC",
+  "homepage": "https://github.com/avi12/web-ext-deploy#readme",
+  "eslintConfig": {
+    "extends": [
+      "plugin:@typescript-eslint/recommended",
+      "prettier/@typescript-eslint",
+      "plugin:prettier/recommended"
+    ],
+    "rules": {
+      "semi": "warn",
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "prettier/prettier": "warn"
+    },
+    "parserOptions": {
+      "ecmaVersion": 2020,
+      "sourceType": "module"
+    }
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "trailingComma": "none"
+  },
+  "license": "GPL-3.0-or-later",
   "dependencies": {
+    "camel-case": "^4.1.2",
     "dotenv": "^8.2.0",
-    "puppeteer": "^6.0.0",
+    "prompt-promise": "^1.0.3",
+    "puppeteer": "^7.1.0",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.7"
+    "@types/puppeteer": "^5.4.3",
+    "@types/yargs": "^16.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.15.1",
+    "@typescript-eslint/parser": "^4.15.1",
+    "eslint": "^7.20.0",
+    "eslint-config-prettier": "^7.2.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "nodemon": "^2.0.7",
+    "prettier": "^2.2.1",
+    "ts-node": "^9.1.1",
+    "tslint": "^6.1.3",
+    "typescript": "^4.1.5"
   }
 }
