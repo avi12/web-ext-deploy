@@ -5,14 +5,14 @@ The ultimate automation tool for deploying to multiple extension stores simultan
 Supported stores:
 
 - [Chrome Web Store](https://chrome.google.com/webstore/category/extensions)
-- [Firefox Addons](https://addons.mozilla.org/en-US/firefox/extensions)
+- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/extensions)
 - [Edge Add-ons](https://microsoftedge.microsoft.com/addons)
-- [Opera Addons](https://addons.opera.com/en/extensions)
+- [Opera Add-ons](https://addons.opera.com/en/extensions)
 
 ## Core packages used
 
-- [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Addons / Edge Add-ons / Opera
-  Addons.
+- [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Add-ons / Edge Add-ons / Opera
+  Add-ons.
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 
 [comment]: <> (TODO: Add a disclaimer of not taking responsibility for stolen credentials)
@@ -60,7 +60,7 @@ web-ext-deploy --env
 
 <!-- prettier-ignore -->
 - `--firefox-dev-changelog` string?  
-  If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox Addons reviewers.  
+  If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox Add-ons reviewers.  
   New lines ("\n") are supported.
 
 <!-- prettier-ignore -->
@@ -70,7 +70,7 @@ web-ext-deploy --env
 
 #### Notes:
 <!-- prettier-ignore -->
-- Firefox Addons store: if your account has two-factor authentication enabled - if it relies on an authentication generator (e.g. Google Authenticator), you can specify the code with `--firefox-two-factor`  
+- Firefox Add-ons store: if your account has two-factor authentication enabled - if it relies on an authentication generator (e.g. Google Authenticator), you can specify the code with `--firefox-two-factor`  
   If you have email-based authentication, the module will prompt you to fill your OTP.  
   As for `EXT_ID`, you must provide the extension ID as seen in the store listing URL.
 
@@ -79,7 +79,7 @@ web-ext-deploy --env
   I.e. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
 
 
-- Opera Addons store: The same applies. To specify the current OTP, use `--opera-two-factor`  
+- Opera Add-ons store: The same applies. To specify the current OTP, use `--opera-two-factor`  
   As for `EXT_ID`, you must provide the extension ID as seen in the store listing URL.
 
 #### Possible `.env` files:
@@ -152,7 +152,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
   web-ext-deploy --chrome-ext-id="Extension ID" --chrome-refresh-token="RefreshToken" --chrome-client-id="ClientID" --chrome-client-secret="ClientSecret" --chrome-zip="zip-v{version}.zip"
   ```
 
-- Firefox Addons
+- Firefox Add-ons
 
   - `--firefox-ext-id` string  
     The extension ID. (From the store listing URL)
@@ -173,7 +173,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     The changes made in this version.  
     You can use "\n" for new lines.
   - `--firefox-dev-changelog` string?  
-    The technical changes made in this version, which will be seen by the Firefox Addons reviewers.  
+    The technical changes made in this version, which will be seen by the Firefox Add-ons reviewers.  
     You can use "\n" for new lines.
 
   Example:
@@ -182,7 +182,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
   web-ext-deploy --firefox-ext-id="Extension ID" --firefox-email="some@email.com" --firefox-password="pass" --firefox-two-factor=123456 --firefox-zip="dist/some-zip-v{version}.zip" --firefox-changelog="Changelog\nWith line breaks" --firefox-dev-changelog="Changelog for reviewers\nWith line breaks"
   ```
 
-- Edge Addons
+- Edge Add-ons
   - `--edge-ext-id` string  
     The extension ID from the Edge Add-ons Dashboard.  
     I.e. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
@@ -194,10 +194,10 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     The path to the ZIP from the root.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
   - `--edge-dev-changelog` string?  
-    The technical changes made in this version, which will be seen by the Edge Addons reviewers.  
+    The technical changes made in this version, which will be seen by the Edge Add-ons reviewers.  
     You can use "\n" for new lines.
 
-- Opera Addons
+- Opera Add-ons
   - `--opera-ext-id` string  
     The extension ID.
   - `--opera-email` string  
@@ -228,7 +228,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
   ```shell
   web-ext-deploy --zip="zip-v{version}.zip" --chrome-refresh-token="refreshToken" --firefox-email="some@email.com"
   ```
-  the `zip-v{version}.zip` will be used for the Chrome Web Store version _and_ the Firefox Addons version.
+  the `zip-v{version}.zip` will be used for the Chrome Web Store version _and_ the Firefox Add-ons version.
 
 ### If using Node.js
 
@@ -336,7 +336,7 @@ deployFirefox({
   devChanges: "Changes for reviewers",
   packageJson: "path/package.json"
 })
-  .then(() => console.log("Uploaded to Firefox Addons"))
+  .then(() => console.log("Uploaded to Firefox Add-ons"))
   .catch(console.error);
 
 deployEdge({
@@ -357,7 +357,7 @@ deployOpera({
   zip: "dist/some-zip-v{version}.zip",
   packageJson: "path/package.json"
 })
-  .then(() => console.log("Uploaded to Opera Addons"))
+  .then(() => console.log("Uploaded to Opera Add-ons"))
   .catch(console.error);
 ```
 
@@ -370,7 +370,7 @@ node deploy.js --firefox-two-factor=123456 --opera-two-factor=123456
 Of course, `--firefox-two-factor` and `--opera-two-factor` are optional.
 
 ## Notes
-- If you update your extension on Opera Addons, make sure to either have the source ZIP uploaded to a folder which is accessible to the Opera Addons reviewers (e.g. on a Google Drive account), OR make the extension open source and link to its repository.
+- If you update your extension on Opera Add-ons, make sure to either have the source ZIP uploaded to a folder which is accessible to the Opera Add-ons reviewers (e.g. on a Google Drive account), OR make the extension open source and link to its repository.
 
 <!-- prettier-ignore -->
 - If you have two-factor authentication enabled, but you don't provide the two-factor CLI argument _OR_ you provide an incorrect code, the module will prompt you.
