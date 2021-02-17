@@ -33,7 +33,7 @@ Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/ch
 
 ### If using `.env`
 
-Use the `.env` [snippet(s)](#Possible+env+files) relevant to your extension.  
+Use the `.env` [snippet(s)](#possible-env-files) relevant to your extension.  
 Make sure to have `*.env` in your `.gitignore`
 
 In the CLI:
