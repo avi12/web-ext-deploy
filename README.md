@@ -44,32 +44,40 @@ web-ext-deploy --env
 
 #### Additional arguments:
 
+<!-- prettier-ignore -->
 - `--package-json` string?  
   If specified, it will be used instead of the root `package.json`.  
   The `package.json` will be used for the `{version}` in the ZIP filename(s).
 
+<!-- prettier-ignore -->
 - `--zip` string?  
   If specified, it will be used for every `.env` that the `ZIP` is not specified.
 
+<!-- prettier-ignore -->
 - `--firefox-changelog` string?  
   If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox users.  
   New lines ("\n") are supported.
 
+<!-- prettier-ignore -->
 - `--firefox-dev-changelog` string?  
   If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox Addons reviewers.  
   New lines ("\n") are supported.
+
+<!-- prettier-ignore -->
 - `--edge-dev-changelog` string?  
   If specified and `edge.env` exists, it will be used to provide changelog for the Edge Add-ons reviewers.  
   New lines ("\n") are supported.
 
 #### Notes:
-
+<!-- prettier-ignore -->
 - Firefox Addons store: if your account has two-factor authentication enabled - if it relies on an authentication generator (e.g. Google Authenticator), you can specify the code with `--firefox-two-factor`  
   If you have email-based authentication, the module will prompt you to fill your OTP.  
   As for `EXT_ID`, you must provide the extension ID as seen in the store listing URL.
 
+<!-- prettier-ignore -->
 - Edge Add-ons store: The `EXT_ID` must be provided according to the dashboard URL.  
   I.e. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+
 
 - Opera Addons store: The same applies. To specify the current OTP, use `--opera-two-factor`  
   As for `EXT_ID`, you must provide the extension ID as seen in the store listing URL.
@@ -189,9 +197,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     The technical changes made in this version, which will be seen by the Edge Addons reviewers.  
     You can use "\n" for new lines.
 
-
 - Opera Addons
-
   - `--opera-ext-id` string  
     The extension ID.
   - `--opera-email` string  
@@ -204,7 +210,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
   - `--opera-zip` string  
     The path to the ZIP from the root.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
-    
+
   Example:
 
   ```shell
@@ -215,6 +221,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
   If specified, it will be used instead of the root `package.json`.  
   The `package.json` will be used for the `{version}` in the ZIP filename(s).
 
+<!-- prettier-ignore -->
 - `--zip` string?  
   If specified, it will be used for every store that the `zip` is not specified.  
   For example, in
@@ -260,7 +267,7 @@ const {
 
   returns `Promise<boolean>` or throws an exception.
 
-
+<!-- prettier-ignore -->
 - `deployFirefox` object  
   Options:
   - `extId` string
@@ -274,7 +281,7 @@ const {
 
   returns `Promise<boolean>` or throws an exception.
 
-
+<!-- prettier-ignore -->
 - `deployEdge` object  
   Options:
   - `email` string
@@ -285,7 +292,7 @@ const {
 
   returns `Promise<boolean>` or throws an exception.
 
-
+<!-- prettier-ignore -->
 - `deployOpera` object  
   Options:
   - `extId` string
@@ -363,8 +370,7 @@ node deploy.js --firefox-two-factor=123456 --opera-two-factor=123456
 Of course, `--firefox-two-factor` and `--opera-two-factor` are optional.
 
 ## Notes
-
 - If you update your extension on Opera Addons, make sure to either have the source ZIP uploaded to a folder which is accessible to the Opera Addons reviewers (e.g. on a Google Drive account), OR make the extension open source and link to its repository.
 
-
+<!-- prettier-ignore -->
 - If you have two-factor authentication enabled, but you don't provide the two-factor CLI argument _OR_ you provide an incorrect code, the module will prompt you.
