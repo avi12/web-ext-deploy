@@ -1,8 +1,0 @@
-{
-  "rules": {
-    "indent": {
-      "options": ["spaces", 2],
-      "severity": "warn"
-    }
-  }
-}
