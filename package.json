@@ -47,6 +47,9 @@
       "@typescript-eslint/explicit-module-boundary-types": "off",
       "prettier/prettier": "warn"
     },
+    "env": {
+      "node": true
+    },
     "parserOptions": {
       "ecmaVersion": 2020,
       "sourceType": "module"
