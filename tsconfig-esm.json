@@ -3,11 +3,11 @@
     "target": "ES2015",
     "module": "ESNext",
     "sourceMap": true,
-    "declarationMap": true,
     "declaration": true,
-    "resolveJsonModule": true,
-    "outDir": "dist/esm"
+    "moduleResolution": "Node",
+    "outDir": "dist/esm",
+    "rootDir": "src"
   },
   "exclude": ["node_modules"],
-  "include": ["src"]
+  "include": ["src/**/*"]
 }

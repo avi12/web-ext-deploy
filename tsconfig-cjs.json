@@ -2,6 +2,8 @@
   "extends": "./tsconfig-esm.json",
   "compilerOptions": {
     "module": "CommonJS",
+    "target": "ESNext",
+    "resolveJsonModule": false,
     "outDir": "dist/cjs"
   }
 }
