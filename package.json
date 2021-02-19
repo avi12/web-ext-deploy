@@ -2,15 +2,19 @@
   "name": "web-ext-deploy",
   "version": "0.1.0",
   "description": "A tool for deploying WebExtensions to multiple stores.",
-  "main": "dist/index.js",
+  "main": "dist/esm/index.js",
+  "module": "dist/cjs/index.js",
+  "bin": "src/index.js",
+  "types": "dist",
   "scripts": {
-    "start": "nodemon --config nodemon.json ."
+    "start": "nodemon --config nodemon.json .",
+    "tsc": "typescript -p tsconfig-esm.json && typescript -p tsconfig-cjs.json",
+    "prepublish": "pnpm tsc"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/avi12/web-ext-deploy"
   },
-  "bin": "src/index.js",
   "keywords": [
     "web-ext",
     "web-ext-deploy",
@@ -23,6 +27,9 @@
     "opera-publish",
     "edge-deploy",
     "edge-publish"
+  ],
+  "files": [
+    "dist"
   ],
   "author": {
     "name": "avi12",
@@ -41,7 +48,9 @@
       "plugin:prettier/recommended",
       "eslint:recommended"
     ],
-    "plugins": ["@typescript-eslint"],
+    "plugins": [
+      "@typescript-eslint"
+    ],
     "rules": {
       "semi": "warn",
       "@typescript-eslint/explicit-module-boundary-types": "off",

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "ESNext",
+    "sourceMap": true,
+    "declarationMap": true,
+    "declaration": true,
+    "resolveJsonModule": true,
+    "outDir": "dist/esm"
+  },
+  "exclude": ["node_modules"],
+  "include": ["src"]
+}

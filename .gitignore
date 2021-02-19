@@ -4,6 +4,7 @@ dist_packed
 
 *.env
 src/*.js
+src/*.map
 src/*.d.ts
 
 # IntelliJ IDEA folder
