@@ -237,14 +237,14 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
 
 <!-- prettier-ignore -->
 ```js
-import { deployChrome, deployFirefox, deployOpera, deployEdge } from "web-ext-deploy";
+import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
 ```
 
 #### CommonJS
 
 <!-- prettier-ignore -->
 ```js
-const { deployChrome, deployFirefox, deployOpera, deployEdge } = require("web-ext-deploy");
+const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ext-deploy");
 ```
 
 ### Node.js API
