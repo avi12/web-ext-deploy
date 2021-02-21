@@ -184,10 +184,10 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     You can use `{version}` in the ZIP filename, which will be replaced by the version in `package.json`
   - `--firefox-changelog` string?  
     The changes made in this version.  
-    You can use "\n" for new lines.
+    You can use `\n` for new lines.
   - `--firefox-dev-changelog` string?  
     The technical changes made in this version, which will be seen by the Firefox Add-ons reviewers.  
-    You can use "\n" for new lines.
+    You can use `\n` for new lines.
 
   Example:
 
@@ -208,7 +208,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
   - `--edge-dev-changelog` string?  
     The technical changes made in this version, which will be seen by the Edge Add-ons reviewers.  
-    You can use "\n" for new lines.
+    You can use `\n` for new lines.
 
 
 - Opera Add-ons
