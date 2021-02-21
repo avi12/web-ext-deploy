@@ -149,7 +149,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
 
 - Chrome Web Store
   - `--chrome-ext-id` string  
-    The extension ID.
+    The extension ID from the store URL, e.g. `https://chrome.google.com/webstore/detail/EXT_ID`
   - `--chrome-refresh-token` string  
     The refreshToken you have registered.
   - `--chrome-client-id` string  
@@ -168,7 +168,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
 
 - Firefox Add-ons
   - `--firefox-ext-id` string  
-    The extension ID. (From the store listing URL)
+    The extension ID from the store URL, e.g. `https://addons.mozilla.org/en-US/developers/EXT_ID`
   - `--firefox-email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
   - `--firefox-password` string  
@@ -197,8 +197,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
 
 - Edge Add-ons
   - `--edge-ext-id` string  
-    The extension ID from the Edge Add-ons Dashboard.  
-    I.e. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+    The extension ID from the Edge Add-ons Dashboard, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
   - `--edge-email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
   - `--edge-password` string  
@@ -213,7 +212,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
 
 - Opera Add-ons
   - `--opera-ext-id` string  
-    The extension ID.
+    The extension ID, e.g. `https://addons.opera.com/en/extensions/details/EXT_ID`
   - `--opera-email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
   - `--opera-password` string  
@@ -296,7 +295,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   Options:
 
   - `extId` string  
-    The extension ID from the dashboard URL, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+    The extension ID from the Edge Extensions Dashboard URL, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
   - `email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
   - `password` string  
