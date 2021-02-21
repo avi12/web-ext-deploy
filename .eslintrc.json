@@ -1,0 +1,30 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2015,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "impliedStrict": true,
+      "experimentalObjectRestSpread": true
+    },
+    "allowImportExportEverywhere": true
+  },
+  "plugins": ["@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "prettier"
+  ],
+  "env": {
+    "node": true
+  },
+  "rules": {
+    "prefer-const": "warn",
+    "@typescript-eslint/camelcase": 0,
+    "quotes": ["warn", "double"],
+    "no-unused-vars": "warn",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/interface-name-prefix": "off",
+    "no-async-promise-executor": "off"
+  }
+}

@@ -1,19 +1,9 @@
 node_modules
 dist
-dist_packed
-
-*.env
-src/*.js
-src/*.map
-src/*.d.ts
-
-# IntelliJ IDEA folder
-.idea
-
-# Sublime files
-*.sublime-workspace
-*.sublime-project
-
-# Mac and windows files
+esm
+*.log
+*.tgz
+.env
 .DS_Store
-.tmp
+.idea
+examples/**/package-json.lock

@@ -1,18 +1,11 @@
 {
   "name": "web-ext-deploy",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "A tool for deploying WebExtensions to multiple stores.",
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "bin": "dist/cjs/index.js",
-  "types": "dist",
-  "scripts": {
-    "start": "nodemon --config nodemon.json .",
-    "tsc": "pnpm tsc-cjs && pnpm tsc-esm",
-    "tsc-cjs": "tsc -p tsconfig-cjs.json",
-    "tsc-esm": "tsc -p tsconfig-esm.json",
-    "prepublish": "pnpm tsc"
-  },
+  "main": "./dist/index.js",
+  "module": "./esm/index.js",
+  "bin": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/avi12/web-ext-deploy"
@@ -42,54 +35,54 @@
     "email": "avi6106@gmail.com",
     "url": "https://github.com/avi12/web-ext-deploy/issues"
   },
+  "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/avi12/web-ext-deploy#readme",
-  "eslintConfig": {
-    "extends": [
-      "plugin:@typescript-eslint/recommended",
-      "prettier/@typescript-eslint",
-      "plugin:prettier/recommended",
-      "eslint:recommended"
-    ],
-    "plugins": [
-      "@typescript-eslint"
-    ],
-    "rules": {
-      "semi": "warn",
-      "@typescript-eslint/explicit-module-boundary-types": "off",
-      "prettier/prettier": "warn"
-    },
-    "env": {
-      "node": true
-    },
-    "parserOptions": {
-      "ecmaVersion": 2020,
-      "sourceType": "module"
+  "scripts": {
+    "dev": "nodemon --",
+    "clean": "rimraf dist esm",
+    "prepare": "pnpm run clean && pnpm run build",
+    "build": "pnpm run build:esm && pnpm run build:cjs",
+    "build:cjs": "ncc build src/index.ts -o dist -m",
+    "build:esm": "tsc --target ESNext --module ES6 --outDir esm",
+    "watch": "tsc --watch",
+    "types:check": "tsc --noEmit",
+    "format": "prettier --write \"{src,test,examples}/**/*.{ts,tsx}\"",
+    "lint": "eslint \"{src,test,examples}/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"{src,test,examples}/**/*.{ts,tsx}\" --fix",
+    "test": "jest"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pnpm run types:check && lint-staged"
     }
   },
-  "prettier": {
-    "arrowParens": "avoid",
-    "trailingComma": "none"
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "pnpm run lint:fix",
+      "pnpm run format",
+      "git add"
+    ]
   },
-  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "@types/puppeteer": "^5.4.3",
+    "@types/yargs": "^16.0.0",
+    "@typescript-eslint/eslint-plugin": "^2.28.0",
+    "@typescript-eslint/parser": "^2.28.0",
+    "@zeit/ncc": "^0.22.1",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.1",
+    "husky": "^4.2.5",
+    "jest": "^26.6.3",
+    "nodemon": "^2.0.7",
+    "prettier": "^2.0.4",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.8.3"
+  },
   "dependencies": {
     "camel-case": "^4.1.2",
     "dotenv": "^8.2.0",
     "prompt-promise": "^1.0.3",
     "puppeteer": "^7.1.0",
     "yargs": "^16.2.0"
-  },
-  "devDependencies": {
-    "@types/puppeteer": "^5.4.3",
-    "@types/yargs": "^16.0.0",
-    "@typescript-eslint/eslint-plugin": "^4.15.1",
-    "@typescript-eslint/parser": "^4.15.1",
-    "concurrently": "^5.3.0",
-    "eslint": "^7.20.0",
-    "eslint-config-prettier": "^7.2.0",
-    "eslint-plugin-prettier": "^3.3.1",
-    "nodemon": "^2.0.7",
-    "prettier": "^2.2.1",
-    "ts-node": "^9.1.1",
-    "typescript": "^4.1.5"
   }
 }
