@@ -3,7 +3,7 @@ dist
 esm
 *.log
 *.tgz
-.env
+*.env
 .DS_Store
 .idea
 examples/**/package-json.lock
