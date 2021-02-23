@@ -42,61 +42,34 @@ export class FirefoxOptions {
   /** If enabled, all the actions taken for each store will be logged to the console. */
   verbose?: boolean;
 
-  constructor({
-    email,
-    password,
-    extId,
-    zip,
-    zipSource,
-    changelog,
-    devChangelog,
-    verbose,
-  }: {
-    email: string;
-    password: string;
-    extId: string;
-    zip: string;
-    zipSource: string;
-    changelog: string;
-    devChangelog: string;
-    verbose: boolean;
-  }) {
-    this.email = email;
-    this.password = password;
-    this.extId = extId;
-    this.zip = zip;
-    this.zipSource = zipSource;
-    this.changelog = changelog;
-    this.devChangelog = devChangelog;
-    this.verbose = verbose;
+  constructor(options) {
+    if (!options.extId) {
+      throw new Error(getErrorMessage("No extension ID is provided, e.g. https://addons.mozilla.org/en-US/firefox/addon/EXT_ID"));
+    }
 
-    if (!this.email) {
+    if (!options.email) {
       throw new Error(getErrorMessage("No email is provided"));
     }
 
-    if (!this.password) {
+    if (!options.password) {
       throw new Error(getErrorMessage("No password is provided"));
     }
 
-    if (!this.extId) {
-      throw new Error(getErrorMessage("No extension ID is provided"));
-    }
-
     // Zip checking
-    if (!this.zip) {
+    if (!options.zip) {
       throw new Error(getErrorMessage("No zip is provided"));
     }
 
-    if (!getIsFileExists(this.zip)) {
+    if (!getIsFileExists(options.zip)) {
       throw new Error(
-        getErrorMessage(`Zip doesn't exist: ${getFullPath(this.zip)}`)
+        getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`)
       );
     }
 
-    if (this.zipSource && !getIsFileExists(this.zipSource)) {
+    if (options.zipSource && !getIsFileExists(options.zipSource)) {
       throw new Error(
         getErrorMessage(
-          `Zip source doesn't exist: ${getFullPath(this.zipSource)}`
+          `Zip source doesn't exist: ${getFullPath(options.zipSource)}`
         )
       );
     }
@@ -110,10 +83,6 @@ function getErrorMessage(message: string): string {
 export async function prepareToDeployFirefox(
   options: FirefoxOptions
 ): Promise<boolean | string> {
-  // Validate the options
-  // @ts-ignore
-  new FirefoxOptions(options);
-
   options.zip = getCorrectZip(options.zip);
   if (options.zipSource) {
     options.zipSource = getCorrectZip(options.zipSource);
@@ -126,6 +95,10 @@ export async function prepareToDeployFirefox(
   if (options.devChangelog) {
     options.devChangelog = options.devChangelog.split("\\\n").join("\n");
   }
+
+  // Validate the options
+  // @ts-ignore
+  new FirefoxOptions(options);
   return deployToFirefox(options);
 }
 
