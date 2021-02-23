@@ -64,7 +64,7 @@ export async function deployChrome(options: ChromeOptions) {
 
 export async function deployFirefox(
   options: Omit<FirefoxOptions, "twoFactor">
-): Promise<boolean | string> {
+): Promise<boolean> {
   (options as FirefoxOptions).twoFactor = argv.firefoxTwoFactor;
   if (argv.firefoxChangelog) {
     options.changelog = argv.firefoxChangelog;

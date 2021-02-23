@@ -82,7 +82,7 @@ function getErrorMessage(message: string): string {
 
 export async function prepareToDeployFirefox(
   options: FirefoxOptions
-): Promise<boolean | string> {
+): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
   if (options.zipSource) {
     options.zipSource = getCorrectZip(options.zipSource);
