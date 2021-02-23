@@ -38,7 +38,8 @@
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/avi12/web-ext-deploy#readme",
   "scripts": {
-    "dev": "nodemon --",
+    "debug:dev": "nodemon --config nodemon-prod.json",
+    "debug:prod": "nodemon --",
     "clean": "rimraf dist esm",
     "prepare": "pnpm run clean && pnpm run build",
     "build": "pnpm run build:esm && pnpm run build:cjs",
@@ -76,13 +77,16 @@
     "nodemon": "^2.0.7",
     "prettier": "^2.0.4",
     "rimraf": "^3.0.2",
+    "ts-node": "^9.1.1",
     "typescript": "^3.8.3"
   },
   "dependencies": {
     "camel-case": "^4.1.2",
     "dotenv": "^8.2.0",
     "prompt-promise": "^1.0.3",
-    "puppeteer": "^7.1.0",
+    "puppeteer": "5",
+    "puppeteer-extra": "^3.1.17",
+    "puppeteer-extra-plugin-recaptcha": "^3.3.3",
     "yargs": "^16.2.0"
   }
 }

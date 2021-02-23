@@ -1,10 +1,9 @@
-// eslint-disable-next-line no-unused-vars
 import yargs, { Arguments } from "yargs";
 import { isObjectEmpty } from "./utils";
 import dotenv from "dotenv";
 import { camelCase } from "camel-case";
-// eslint-disable-next-line no-unused-vars
 import { FirefoxOptions } from "./stores/firefox/firefox-input";
+import { OperaOptions } from "./stores/opera/opera-input";
 
 const { argv } = yargs(process.argv.slice(2)).options({
   env: { type: "boolean" },
@@ -37,6 +36,7 @@ const { argv } = yargs(process.argv.slice(2)).options({
   operaEmail: { type: "string" },
   operaPassword: { type: "string" },
   operaZip: { type: "string" },
+  operaChangelog: { type: "string" }
 });
 
 function getJsons(isUseEnv?: boolean): { [p: string]: any } {
@@ -89,7 +89,7 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }) {
     const entriesKeyValues = Object.entries(values);
     const entriesMapped = entriesKeyValues.map(([key, value]) => [
       camelCase(key),
-      value,
+      value
     ]);
 
     return [store, Object.fromEntries(entriesMapped)];
@@ -102,7 +102,7 @@ interface StoreObjects {
   chrome?: object;
   firefox?: FirefoxOptions;
   edge?: object;
-  opera?: object;
+  opera?: OperaOptions;
 }
 
 /**
