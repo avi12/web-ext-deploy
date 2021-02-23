@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { Page } from "puppeteer";
 
 export function getFullPath(file: string): string {
   return path.resolve(process.cwd(), file);
@@ -13,7 +14,18 @@ export function isObjectEmpty(object: object) {
   return Object.keys(object).length === 0;
 }
 
-export function getCorrectZip(zip: string) {
+export function getCorrectZip(zip: string): string {
   const { version } = require(path.resolve(process.cwd(), "package.json"));
   return zip.replace("{version}", version);
+}
+
+export async function disableImages(page: Page) {
+  await page.setRequestInterception(true);
+  page.on("request", request => {
+    if (request.resourceType() === "image") {
+      request.abort();
+      return;
+    }
+    request.continue();
+  });
 }
