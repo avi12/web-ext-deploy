@@ -11,8 +11,10 @@ Supported stores:
 
 ## Core packages used
 
-- [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Add-ons / Edge Add-ons / Opera
-  Add-ons.
+- [Puppeteer Extra](https://github.com/berstend/puppeteer-extra) - for updating extensions on Firefox Add-ons / Edge Add-ons / Opera
+  Add-ons.  
+  The Extra version is used to support the reCaptcha solver plugin.
+- [Puppeteer reCaptcha solver](https://github.com/berstend/puppeteer-extra/tree/master/packages/puppeteer-extra-plugin-recaptcha)
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 
 [comment]: <> (TODO: Add a disclaimer of not taking responsibility for stolen credentials)
@@ -49,39 +51,53 @@ web-ext-deploy --env
 - `--verbose` boolean?  
   If specified, the steps of every store will be logged to the console.
 
-<!-- prettier-ignore -->
+  
 - `--zip` string?  
   If specified, it will be used for every `.env` that the `ZIP` is not specified.
 
-<!-- prettier-ignore -->
+  
 - `--firefox-changelog` string?  
   If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox users.  
   New lines (`\n`) are supported.
 
-<!-- prettier-ignore -->
+  
 - `--firefox-dev-changelog` string?  
   If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox Add-ons reviewers.  
   New lines (`\n`) are supported.
 
-<!-- prettier-ignore -->
+  
 - `--edge-dev-changelog` string?  
   If specified and `edge.env` exists, it will be used to provide changelog for the Edge Add-ons reviewers.  
+  New lines (`\n`) are supported.
+
+
+- `--opera-changelog` string?  
+  If specified and `opera.env` exists, it will be used to provide changelog for the Opera users.  
   New lines (`\n`) are supported.
 
 #### Notes:
 
 <!-- prettier-ignore -->
-- Firefox Add-ons store: If the publisher account has two-factor authentication enabled - if it relies on an authentication generator (e.g., Google Authenticator), you can specify the code with `--firefox-two-factor`  
+- Firefox Add-ons store:  
+  If the publisher account has two-factor authentication enabled - if it relies on an authentication generator (e.g., Google Authenticator), you can specify the code with `--firefox-two-factor`  
   If you have email-based authentication, the module will prompt you to fill your OTP using [`prompt-promise`](https://www.npmjs.com/package/prompt-promise).  
   As for `EXT_ID`, you must provide the extension ID as seen in the store listing URL, e.g. `https://addons.mozilla.org/en-US/developers/EXT_ID`
 
-<!-- prettier-ignore -->
+
+- Opera Add-ons store:
+  - Two-factor code: The same applies. To specify the current OTP, use `--opera-two-factor`  
+  - `EXT_ID`: Taken from the dashboard, e.g. `https://addons.opera.com/developer/package/EXT_ID`
+  - `RE_CAPTCHA_SOLVER` - Available option: `2captcha`
+  - `RE_CAPTCHA_API_KEY` - Get one for 2Captcha [here](https://2captcha.com?from=11267395). Make sure to have credits in your account. Required to bypass the login screen.
+  - **Source code inspection**:  
+    The Opera Add-ons reviewers require inspecting your extension's source code.  
+    This can be done by doing **one** of the following:
+    - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
+    - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
+
+
 - Edge Add-ons store: The `EXT_ID` must be provided according to the dashboard URL.  
   I.e. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
-
-
-- Opera Add-ons store: The same applies. To specify the current OTP, use `--opera-two-factor`  
-  As for `EXT_ID`, you must provide the extension ID as seen in the store listing URL.
 
 #### Possible `.env` files:
 
@@ -120,7 +136,9 @@ EXT_ID="ExtensionID"
 EMAIL="some@email.com"
 PASSWORD="pass"
 ZIP="dist/some-zip-v{version}.zip"
-EXT_ID="ExtensionID"
+PACKAGE_ID=123456
+RE_CAPTCHA_SOLVER="2captcha"
+RE_CAPTCHA_API_KEY="ApiKey"
 ```
 
 ### if using CLI
@@ -183,7 +201,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     The path to the ZIP that contains the source code of your extension.  
     You can use `{version}` in the ZIP filename, which will be replaced by the version in `package.json`
   - `--firefox-changelog` string?  
-    The changes made in this version.  
+    The changes made in this version compared to the previous one. The Firefox users will see this.  
     You can use `\n` for new lines.
   - `--firefox-dev-changelog` string?  
     The technical changes made in this version, which will be seen by the Firefox Add-ons reviewers.  
@@ -211,24 +229,37 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
 
 
 - Opera Add-ons
-  - `--opera-ext-id` string  
-    The extension ID, e.g. `https://addons.opera.com/en/extensions/details/EXT_ID`
+  - `--opera-package-id` string  
+    The extension ID, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
   - `--opera-email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
   - `--opera-password` string  
     The publisher account's password. Used in Puppeteer to login to the account and update the extension.
+  - `--opera-re-captcha-service` string  
+    The reCaptcha service chosen. Available option: `2captcha`
+  - `--opera-re-captcha-api-key` string  
+    The reCaptcha [API key](https://2captcha.com?from=11267395). Make sure to have credits in your account.
   - `--opera-two-factor` number?  
     If the publisher account has two-factor authentication enabled using an authentication application such as Google Authenticator, it will be used in the login process.  
     If the OTP is sent to the publisher's email, the module will prompt you to enter the OTP.
   - `--opera-zip` string  
     The path to the ZIP from the root.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
+  - `--opera-changelog` string?  
+    The changes made in this version compared to the previous one. The Opera users will see this.  
+    You can use `\n` for new lines.
 
   Example:
 
   ```shell
   web-ext-deploy --opera-ext-id="ExtensionID" --opera-email="some@email.com" --opera-password="pass" --opera-two-factor=123456 --opera-zip="dist/some-zip-v{version}.zip"
   ```
+  
+  **Source code inspection:**  
+  The Opera Add-ons reviewers require inspecting your extension's source code.  
+  This can be done by doing **one** of the following:  
+  - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
+  - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
 ### If using Node.js
 
@@ -313,18 +344,27 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
 - `deployOpera` object  
   Options:
 
-  - `extId` string  
-    The extension ID from the store URL, e.g. `https://addons.opera.com/en/extensions/details/EXT_ID`
+  - `packageId` number  
+    The package ID from the store URL, e.g. `https://addons.opera.com/developer/package/PACAKGE_ID`
   - `email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
   - `password` string  
     The publisher account's password.
+  - `reCaptcha` object
+    - `service` - Currently `2captcha`
+    - `apiKey` - get one for 2Captcha [here](https://2captcha.com?from=11267395). Make sure to have credits in your account. Required to bypass the login screen.
   - `zip` string  
     The ZIP file location, relative from the root directory.
   - `verbose` boolean?  
     If specified, every step of uploading to Opera Add-ons will be logged to the console.
 
   returns `Promise<boolean>` or throws an exception.
+
+  **Source code inspection:**  
+  The Opera Add-ons reviewers require inspecting your extension's source code.  
+  This can be done by doing **one** of the following:
+  - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
+  - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
 Example:
 
@@ -347,8 +387,8 @@ deployFirefox({
   password: "pass",
   zip: "dist/some-zip-v{version}.zip",
   zipSource: "zip-source-v{version}.zip",
-  changes: "Some changes",
-  devChanges: "Changes for reviewers",
+  changelog: "Some changes",
+  devChangelog: "Changes for reviewers",
   verbose: false
 }).catch(console.error);
 
@@ -357,15 +397,18 @@ deployEdge({
   email: "some@email.com",
   password: "pass",
   zip: "dist/some-zip-v{version}.zip",
-  devChanges: "Changes for reviewers",
+  devChangelog: "Changes for reviewers",
   verbose: false
 }).catch(console.error);
 
 deployOpera({
-  extId: "EXT_ID",
+  packageId: 123456,
   email: "some@email.com",
   password: "pass",
+  reCaptchaSolver: "2captcha",
+  reCaptchaApiKey: "apiKey", // Register at https://2captcha.com/?from=11267395 , then get from https://2captcha.com
   zip: "dist/some-zip-v{version}.zip",
+  changelog: "Some changes",
   verbose: false
 }).catch(console.error);
 ```
@@ -377,8 +420,6 @@ node deploy.js --firefox-two-factor=123456 --opera-two-factor=123456
 ```
 
 ## Notes
-
-- If you update your extension on Opera Add-ons, make sure to either have the source ZIP uploaded to a folder which is accessible to the Opera Add-ons reviewers (e.g. on a Google Drive account), OR make the extension open source and link to its repository.
 
 <!-- prettier-ignore -->
 - If you have two-factor authentication enabled, but you don't provide the two-factor CLI argument _OR_ you provide an incorrect code, the module will prompt you using [`prompt-promise`](https://www.npmjs.com/package/prompt-promise)
