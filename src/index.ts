@@ -6,6 +6,10 @@ import {
 } from "./stores/firefox/firefox-input";
 import { getJsonStoresFromCli } from "./cli";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
+import {
+  ChromeOptions,
+  prepareToDeployChrome
+} from "./stores/chrome/chrome-input";
 
 const isUseCli = Boolean(
   process.argv[1].match(/web-ext-deploy[\\/](?:dist|src)[\\/]index\.(?:ts|js)$/)
@@ -25,6 +29,7 @@ async function initCli() {
     return;
   }
   const storeFuncs = {
+    chrome: deployChrome,
     firefox: deployFirefox,
     opera: deployOpera
   };
@@ -50,6 +55,12 @@ async function initCli() {
 }
 
 initCli().catch(console.error);
+
+export async function deployChrome(options: ChromeOptions) {
+  return new Promise((resolve, reject) =>
+    prepareToDeployChrome(options).then(resolve).catch(reject)
+  );
+}
 
 export async function deployFirefox(
   options: Omit<FirefoxOptions, "twoFactor">

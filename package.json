@@ -82,6 +82,7 @@
   },
   "dependencies": {
     "camel-case": "^4.1.2",
+    "chrome-webstore-upload": "^0.4.4",
     "dotenv": "^8.2.0",
     "prompt-promise": "^1.0.3",
     "puppeteer": "5",
