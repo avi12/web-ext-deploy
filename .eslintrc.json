@@ -21,7 +21,6 @@
   "rules": {
     "prefer-const": "warn",
     "@typescript-eslint/camelcase": 0,
-    "quotes": ["warn", "double"],
     "no-unused-vars": "warn",
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/interface-name-prefix": "off",
