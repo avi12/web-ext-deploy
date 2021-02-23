@@ -93,6 +93,10 @@ export async function prepareToDeployOpera(
 ): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
 
+  if (options.changelog) {
+    options.changelog = options.changelog.split("\\\n").join("\n");
+  }
+
   // Validate the options
   // @ts-ignore
   new OperaOptions(options);
