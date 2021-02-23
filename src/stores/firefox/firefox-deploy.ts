@@ -1,13 +1,11 @@
 // eslint-disable-next-line no-unused-vars
 import { FirefoxOptions } from "./firefox-input";
-import * as path from "path";
-import * as puppeteer from "puppeteer";
-// eslint-disable-next-line no-unused-vars
+import puppeteer from "puppeteer-extra";
 import { Page } from "puppeteer";
 import prompt from "prompt-promise";
-import { getFullPath } from "../../utils";
+import { disableImages, getFullPath } from "../../utils";
 
-const gUrlStart = "https://addons.mozilla.org/en-US/developers/";
+const gUrlStart = "https://addons.mozilla.org/en-US/developers";
 const gSelectors = {
   inputTwoFactor: ".totp-code",
   twoFactorError: "#error-tooltip-1053",
@@ -22,7 +20,7 @@ const gSelectors = {
   inputFile: "input[type=file]",
   inputRadio: "input[type=radio]",
   inputChangelog: "textarea[name*=release_notes]",
-  inputDevChangelog: "textarea[name=approval_notes]",
+  inputDevChangelog: "textarea[name=approval_notes]"
 };
 
 async function typeAndSubmit(page: Page, selector: string, value: string) {
@@ -35,7 +33,7 @@ async function getEvaluation(page: Page, selectors: string[]): Promise<string> {
   const promises = selectors.map(selector => page.waitForSelector(selector));
   const {
     // @ts-ignore
-    _remoteObject: { description },
+    _remoteObject: { description }
   } = await Promise.race(promises);
   return description;
 }
@@ -51,7 +49,7 @@ async function clearInput(page: Page, selector: string) {
 async function handleTwoFactor(page: Page, twoFactor?: number) {
   const description = await getEvaluation(page, [
     gSelectors.inputTwoFactor,
-    gSelectors.extEntryName,
+    gSelectors.extEntryName
   ]);
 
   if (!description.includes(gSelectors.inputTwoFactor)) {
@@ -59,7 +57,7 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
   }
 
   if (!twoFactor) {
-    twoFactor = await prompt("Firefox: two-factor code: ");
+    twoFactor = await prompt(getVerboseMessage("Enter two-factor code: "));
   }
   await page.type(gSelectors.inputTwoFactor, `${twoFactor}`);
   await page.click(gSelectors.buttonSubmit);
@@ -68,24 +66,26 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
       gSelectors.twoFactorError,
       gSelectors.twoFactorErrorAgain,
       gSelectors.twoFactorErrorAgainWait,
-      gSelectors.extEntryName,
+      gSelectors.extEntryName
     ]);
 
     if (
-      description.includes(gSelectors.twoFactorErrorAgain) ||
-      description.includes(gSelectors.twoFactorErrorAgainWait) ||
-      description.includes(gSelectors.twoFactorError)
+      !(
+        description.includes(gSelectors.twoFactorErrorAgain) ||
+        description.includes(gSelectors.twoFactorErrorAgainWait) ||
+        description.includes(gSelectors.twoFactorError)
+      )
     ) {
-      const message = description.includes(gSelectors.twoFactorErrorAgainWait)
-        ? "wait a bit, then type the code:"
-        : "two-factor code:";
-      const twoFactor = await prompt(`Firefox: ${message} `);
-      await clearInput(page, gSelectors.inputTwoFactor);
-      await page.type(gSelectors.inputTwoFactor, twoFactor);
-      await page.click(gSelectors.buttonSubmit);
-    } else {
       break;
     }
+    const message = description.includes(gSelectors.twoFactorErrorAgainWait)
+      ? "wait a bit, then type the code: "
+      : "two-factor code: ";
+    const twoFactor = await prompt(getVerboseMessage(message));
+    await clearInput(page, gSelectors.inputTwoFactor);
+    await page.type(gSelectors.inputTwoFactor, twoFactor);
+    await page.click(gSelectors.buttonSubmit);
+
     // eslint-disable-next-line no-constant-condition
   } while (true);
 }
@@ -94,7 +94,7 @@ async function loginToStore({
   page,
   email,
   password,
-  twoFactor,
+  twoFactor
 }: {
   page: Page;
   email: string;
@@ -110,7 +110,7 @@ async function loginToStore({
 
 async function openRelevantExtensionPage({
   page,
-  extId,
+  extId
 }: {
   page: Page;
   extId: string;
@@ -131,7 +131,7 @@ async function openRelevantExtensionPage({
 async function uploadZip({
   page,
   zip,
-  extId,
+  extId
 }: {
   page: Page;
   zip: string;
@@ -148,14 +148,14 @@ async function uploadZip({
         resolve(true);
       }).observe(elSubmit, {
         attributes: true,
-        attributeFilter: ["disabled"],
+        attributeFilter: ["disabled"]
       });
     });
   });
 
   const description = await getEvaluation(page, [
     gSelectors.listErrors,
-    gSelectors.inputRadio,
+    gSelectors.inputRadio
   ]);
   return new Promise(async (resolve, reject) => {
     if (!description.includes(gSelectors.listErrors)) {
@@ -185,7 +185,7 @@ async function uploadZip({
 async function uploadZipSourceIfNeeded({
   page,
   zipSource,
-  isUpload,
+  isUpload
 }: {
   page: Page;
   zipSource: string;
@@ -228,7 +228,7 @@ async function addChangelogsIfNeeded({
 }
 
 function getVerboseMessage(message: string): string {
-  return `Firefox: ${message}`;
+  return `Info Firefox: ${message}`;
 }
 
 export default async function deployToFirefox({
@@ -240,16 +240,19 @@ export default async function deployToFirefox({
   zipSource,
   changelog,
   devChangelog,
-  verbose: isVerbose,
+  verbose: isVerbose
 }: FirefoxOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const browser = await puppeteer.launch({
       // headless: false,
       // args: ["--window-size=1280,720", "--window-position=0,0"],
-      defaultViewport: { width: 1280, height: 720 },
+      defaultViewport: { width: 1280, height: 720 }
     });
 
     const page = (await browser.pages())[0];
+
+    await disableImages(page);
+
     await page.goto(gUrlStart, { waitUntil: "networkidle0" });
     if (isVerbose) {
       console.log(
@@ -261,7 +264,7 @@ export default async function deployToFirefox({
       page,
       email,
       password,
-      twoFactor,
+      twoFactor
     });
 
     if (isVerbose) {
@@ -284,10 +287,10 @@ export default async function deployToFirefox({
       await uploadZip({
         page,
         zip: getFullPath(zip),
-        extId: extId.trim(),
+        extId: extId.trim()
       });
     } catch (e) {
-      await browser.close();
+      browser.close().catch(() => {});
       reject(e);
       return;
     }
@@ -298,8 +301,8 @@ export default async function deployToFirefox({
 
     await uploadZipSourceIfNeeded({
       page,
-      zipSource: path.resolve(process.cwd(), zipSource),
-      isUpload: Boolean(zipSource),
+      zipSource: getFullPath(zipSource),
+      isUpload: Boolean(zipSource)
     });
 
     if (isVerbose && zipSource) {
