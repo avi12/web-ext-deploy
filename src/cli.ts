@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { camelCase } from "camel-case";
 import { FirefoxOptions } from "./stores/firefox/firefox-input";
 import { OperaOptions } from "./stores/opera/opera-input";
+import { ChromeOptions } from "./stores/chrome/chrome-input";
 
 const { argv } = yargs(process.argv.slice(2)).options({
   env: { type: "boolean" },
@@ -99,7 +100,7 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }) {
 }
 
 interface StoreObjects {
-  chrome?: object;
+  chrome?: ChromeOptions;
   firefox?: FirefoxOptions;
   edge?: object;
   opera?: OperaOptions;
