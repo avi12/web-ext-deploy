@@ -58,7 +58,5 @@ export async function prepareToDeployChrome(
   // @ts-ignore
   new ChromeOptions(options);
 
-  return new Promise((resolve, reject) =>
-    deployToChrome(options).then(resolve).catch(reject)
-  );
+  return deployToChrome(options);
 }

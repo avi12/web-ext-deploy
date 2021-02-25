@@ -101,7 +101,5 @@ export async function prepareToDeployOpera(
   // @ts-ignore
   new OperaOptions(options);
 
-  return new Promise((resolve, reject) =>
-    deployToOpera(options).then(resolve).catch(reject)
-  );
+  return deployToOpera(options);
 }
