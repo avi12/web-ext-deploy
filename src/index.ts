@@ -72,16 +72,12 @@ export async function deployFirefox(
   if (argv.firefoxDevChangelog) {
     options.devChangelog = argv.firefoxDevChangelog;
   }
-  return new Promise((resolve, reject) =>
-    prepareToDeployFirefox(options).then(resolve).catch(reject)
-  );
+  return prepareToDeployFirefox(options);
 }
 
 export async function deployOpera(
   options: Omit<OperaOptions, "twoFactor">
 ): Promise<boolean> {
   (options as OperaOptions).twoFactor = argv.operaTwoFactor;
-  return new Promise((resolve, reject) =>
-    prepareToDeployOpera(options).then(resolve).catch(reject)
-  );
+  return prepareToDeployOpera(options);
 }
