@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "strictNullChecks": false,
     "declaration": true,
     "esModuleInterop": true,
     "lib": ["esnext", "DOM"],
@@ -12,9 +11,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "outDir": "./dist",
-    "types": ["node", "jest"],
+    "strictNullChecks": false,
     "target": "ES2015",
-    "typeRoots": ["./types", "./node_modules/@types"]
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*"]
 }
