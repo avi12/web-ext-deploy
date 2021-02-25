@@ -3,7 +3,14 @@ import { FirefoxOptions } from "./firefox-input";
 import puppeteer from "puppeteer-extra";
 import { Page } from "puppeteer";
 import prompt from "prompt-promise";
-import { disableImages, getFullPath } from "../../utils";
+
+import {
+  clearInput,
+  disableImages,
+  getEvaluation,
+  getFullPath,
+  getVerboseMessage
+} from "../../utils";
 
 const gUrlStart = "https://addons.mozilla.org/en-US/developers";
 const gSelectors = {
@@ -29,23 +36,6 @@ async function typeAndSubmit(page: Page, selector: string, value: string) {
   await page.click(gSelectors.buttonSubmit);
 }
 
-async function getEvaluation(page: Page, selectors: string[]): Promise<string> {
-  const promises = selectors.map(selector => page.waitForSelector(selector));
-  const {
-    // @ts-ignore
-    _remoteObject: { description }
-  } = await Promise.race(promises);
-  return description;
-}
-
-async function clearInput(page: Page, selector: string) {
-  const elInput = await page.$(selector);
-  await elInput.click();
-  await elInput.focus();
-  await elInput.click({ clickCount: 3 });
-  await elInput.press("Backspace");
-}
-
 async function handleTwoFactor(page: Page, twoFactor?: number) {
   const description = await getEvaluation(page, [
     gSelectors.inputTwoFactor,
@@ -57,7 +47,12 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
   }
 
   if (!twoFactor) {
-    twoFactor = await prompt(getVerboseMessage("Enter two-factor code: "));
+    twoFactor = await prompt(
+      getVerboseMessage({
+        store: "Firefox",
+        message: "Enter two-factor code: "
+      })
+    );
   }
   await page.type(gSelectors.inputTwoFactor, `${twoFactor}`);
   await page.click(gSelectors.buttonSubmit);
@@ -80,8 +75,13 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
     }
     const message = description.includes(gSelectors.twoFactorErrorAgainWait)
       ? "wait a bit, then type the code: "
-      : "two-factor code: ";
-    const twoFactor = await prompt(getVerboseMessage(message));
+      : "Enter two-factor code: ";
+    const twoFactor = await prompt(
+      getVerboseMessage({
+        store: "Firefox",
+        message
+      })
+    );
     await clearInput(page, gSelectors.inputTwoFactor);
     await page.type(gSelectors.inputTwoFactor, twoFactor);
     await page.click(gSelectors.buttonSubmit);
@@ -121,7 +121,13 @@ async function openRelevantExtensionPage({
   const response = await page.goto(urlSubmission);
   return new Promise((resolve, reject) => {
     if (response.statusText() === "Forbidden") {
-      reject(getVerboseMessage(`Extension ID does not exist: ${extId}`));
+      reject(
+        getVerboseMessage({
+          store: "Firefox",
+          prefix: "Error",
+          message: `Extension ID does not exist: ${extId}`
+        })
+      );
       return;
     }
     resolve(true);
@@ -175,9 +181,13 @@ async function uploadZip({
     );
     const prefixError = errors.length > 1 ? "Errors" : "";
     reject(
-      getVerboseMessage(`${prefixError}at the upload of "${extId}":
+      getVerboseMessage({
+        store: "Firefox",
+        prefix: prefixError,
+        message: `${prefixError}at the upload of "${extId}":
       ${errors.join("\n")}
-      `)
+      `
+      })
     );
   });
 }
@@ -215,20 +225,24 @@ async function addChangelogsIfNeeded({
   await page.type(gSelectors.inputChangelog, changelog);
 
   if (isVerbose && changelog) {
-    console.log(getVerboseMessage(`Added changelog: ${changelog}`));
+    console.log(
+      getVerboseMessage({
+        store: "Firefox",
+        message: `Added changelog: ${changelog}`
+      })
+    );
   }
 
   await page.type(gSelectors.inputDevChangelog, devChangelog);
 
   if (isVerbose && devChangelog) {
     console.log(
-      getVerboseMessage(`Added changelog for reviewers: ${devChangelog}`)
+      getVerboseMessage({
+        store: "Firefox",
+        message: `Added changelog for reviewers: ${devChangelog}`
+      })
     );
   }
-}
-
-function getVerboseMessage(message: string): string {
-  return `Info Firefox: ${message}`;
 }
 
 export default async function deployToFirefox({
@@ -256,7 +270,10 @@ export default async function deployToFirefox({
     await page.goto(gUrlStart, { waitUntil: "networkidle0" });
     if (isVerbose) {
       console.log(
-        getVerboseMessage(`Launched Puppeteer session in ${gUrlStart}`)
+        getVerboseMessage({
+          store: "Firefox",
+          message: `Launched Puppeteer session in ${gUrlStart}`
+        })
       );
     }
 
@@ -268,7 +285,12 @@ export default async function deployToFirefox({
     });
 
     if (isVerbose) {
-      console.log(getVerboseMessage("Logged into the store"));
+      console.log(
+        getVerboseMessage({
+          store: "Firefox",
+          message: "Logged into the store"
+        })
+      );
     }
 
     try {
@@ -280,7 +302,12 @@ export default async function deployToFirefox({
     }
 
     if (isVerbose) {
-      console.log(getVerboseMessage(`Opened extension page of ${extId}`));
+      console.log(
+        getVerboseMessage({
+          store: "Firefox",
+          message: `Opened extension page of ${extId}`
+        })
+      );
     }
 
     try {
@@ -296,7 +323,12 @@ export default async function deployToFirefox({
     }
 
     if (isVerbose) {
-      console.log(getVerboseMessage(`Uploaded ZIP: ${zip}`));
+      console.log(
+        getVerboseMessage({
+          store: "Firefox",
+          message: `Uploaded ZIP: ${zip}`
+        })
+      );
     }
 
     await uploadZipSourceIfNeeded({
@@ -306,7 +338,12 @@ export default async function deployToFirefox({
     });
 
     if (isVerbose && zipSource) {
-      console.log(getVerboseMessage(`Uploaded source ZIP: ${zip}`));
+      console.log(
+        getVerboseMessage({
+          store: "Firefox",
+          message: `Uploaded source ZIP: ${zip}`
+        })
+      );
     }
 
     await addChangelogsIfNeeded({
@@ -317,7 +354,12 @@ export default async function deployToFirefox({
     });
 
     await page.click(gSelectors.buttonSubmit);
-    console.log(getVerboseMessage("Finished uploading"));
+    console.log(
+      getVerboseMessage({
+        store: "Firefox",
+        message: "Finished uploading"
+      })
+    );
 
     await browser.close();
     resolve(true);

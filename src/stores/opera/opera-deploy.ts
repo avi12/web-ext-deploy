@@ -3,7 +3,7 @@ import puppeteer from "puppeteer-extra";
 import pluginReCaptcha from "puppeteer-extra-plugin-recaptcha";
 import { Page } from "puppeteer";
 import prompt from "prompt-promise";
-import { disableImages, getFullPath } from "../../utils";
+import { disableImages, getFullPath, getVerboseMessage } from "../../utils";
 
 const gSelectors = {
   listExtensions: ".list-group",
@@ -53,7 +53,12 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
   const messageTwoFactor = "Enter two-factor code: ";
 
   if (!twoFactor) {
-    twoFactor = await prompt(getVerboseMessage(messageTwoFactor));
+    twoFactor = await prompt(
+      getVerboseMessage({
+        store: "Opera",
+        message: messageTwoFactor
+      })
+    );
   }
   const twoFactorString = twoFactor.toString();
   const elInputs = await page.$$(gSelectors.inputsTwoFactor);
@@ -81,7 +86,12 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
         return;
       }
 
-      const twoFactor = await prompt(getVerboseMessage(messageTwoFactor));
+      const twoFactor = await prompt(
+        getVerboseMessage({
+          store: "Opera",
+          message: messageTwoFactor
+        })
+      );
       const elInputs = await page.$$(gSelectors.inputsTwoFactor);
       for (let i = 0; i < elInputs.length; i++) {
         await clearInput(
@@ -148,12 +158,12 @@ async function getErrorsOrNone(
     );
     const prefixError = errors.length === 1 ? "Error" : "Errors";
     reject(
-      getVerboseMessage(
-        `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
+      getVerboseMessage({
+        store: "Opera",
+        message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
-      `,
-        ""
-      )
+      `
+      })
     );
   });
 }
@@ -186,14 +196,6 @@ async function uploadZip({
   return getErrorsOrNone(page, packageId);
 }
 
-function getVerboseMessage(message: string, prefix = "Info"): string {
-  const msg = `${prefix} Opera: ${message}`;
-  if (prefix === "") {
-    return msg.trim();
-  }
-  return msg;
-}
-
 async function openRelevantExtensionPage(page: Page, packageId: number) {
   const urlExtension = `https://addons.opera.com/developer/package/${packageId}?tab=versions`;
   return new Promise(async (resolve, reject) => {
@@ -207,10 +209,10 @@ async function openRelevantExtensionPage(page: Page, packageId: number) {
 
       if (response.statusText() === "Not Found") {
         reject(
-          getVerboseMessage(
-            `Extension with package ID ${packageId} does not exist`,
-            "Error:"
-          )
+          getVerboseMessage({
+            store: "Opera",
+            message: `Extension with package ID ${packageId} does not exist`
+          })
         );
         return;
       }
@@ -243,11 +245,19 @@ async function verifyPublicCodeExistence(page: Page) {
   }
 
   const urlSource = await prompt(
-    getVerboseMessage("Enter URL of source code: ")
+    getVerboseMessage({
+      store: "Opera",
+      message: "Enter URL of source code: "
+    })
   );
   return new Promise(async (resolve, reject) => {
     if (!urlSource) {
-      reject(getVerboseMessage("Providing source code is required", "Error:"));
+      reject(
+        getVerboseMessage({
+          store: "Opera",
+          message: "Providing source code is required"
+        })
+      );
       return;
     }
     resolve(true);
@@ -270,12 +280,12 @@ async function updateExtension(page: Page, packageId: number) {
 
     const prefixError = errors.length === 1 ? "Error" : "Errors";
     reject(
-      getVerboseMessage(
-        `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
+      getVerboseMessage({
+        store: "Opera",
+        message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
-      `,
-        ""
-      )
+      `
+      })
     );
   });
 }
@@ -310,8 +320,8 @@ export default async function deployToOpera(options: OperaOptions) {
   );
 
   const browser = await puppeteer.launch({
-    headless: false,
-    args: ["--window-size=1280,720", "--window-position=0,0"],
+    // headless: false,
+    // args: ["--window-size=1280,720", "--window-position=0,0"],
     defaultViewport: { width: 1280, height: 720 }
   });
 
@@ -322,8 +332,18 @@ export default async function deployToOpera(options: OperaOptions) {
   const urlStart = "https://addons.opera.com/developer";
   await page.goto(urlStart, { waitUntil: "networkidle0" });
   if (isVerbose) {
-    console.log(getVerboseMessage(`Launched Puppeteer session in ${urlStart}`));
-    console.log(getVerboseMessage("Logging in"));
+    console.log(
+      getVerboseMessage({
+        store: "Opera",
+        message: `Launched Puppeteer session in ${urlStart}`
+      })
+    );
+    console.log(
+      getVerboseMessage({
+        store: "Opera",
+        message: "Logging in"
+      })
+    );
   }
 
   try {
@@ -343,7 +363,12 @@ export default async function deployToOpera(options: OperaOptions) {
   }
 
   if (isVerbose) {
-    console.log(getVerboseMessage("Logged into the store"));
+    console.log(
+      getVerboseMessage({
+        store: "Opera",
+        message: "Logged into the store"
+      })
+    );
   }
 
   try {
@@ -354,7 +379,12 @@ export default async function deployToOpera(options: OperaOptions) {
   }
 
   if (isVerbose) {
-    console.log(getVerboseMessage("Opened relevant extension page"));
+    console.log(
+      getVerboseMessage({
+        store: "Opera",
+        message: "Opened relevant extension page"
+      })
+    );
   }
 
   try {
@@ -369,7 +399,12 @@ export default async function deployToOpera(options: OperaOptions) {
   }
 
   if (isVerbose) {
-    console.log(getVerboseMessage(`Uploaded ZIP: ${zip}`));
+    console.log(
+      getVerboseMessage({
+        store: "Opera",
+        message: `Uploaded ZIP: ${zip}`
+      })
+    );
   }
 
   try {
@@ -388,8 +423,12 @@ export default async function deployToOpera(options: OperaOptions) {
     throw new Error(e);
   }
 
-
-  console.log(getVerboseMessage("Finished uploading"));
+  console.log(
+    getVerboseMessage({
+      store: "Opera",
+      message: "Finished uploading"
+    })
+  );
 
   await browser.close();
   return true;
