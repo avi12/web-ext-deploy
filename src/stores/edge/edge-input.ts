@@ -8,7 +8,7 @@ export class EdgeOptions {
   /** The publisher account's password. */
   password?: string;
 
-  /** The extension ID. E.g. `https://addons.mozilla.org/en-US/developers/EXT_ID` */
+  /** The extension ID. E.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID` */
   extId: string;
 
   /**
@@ -20,7 +20,7 @@ export class EdgeOptions {
   /**
    * A description of the technical changes made in this version, compared to the previous one.<br>
    * This will only be seen by the Firefox Addons reviewers.<br>
-   * It's recommended to use instead `--firefox-dev-changelog` , so it's dynamic.
+   * It's recommended to use instead `--edge-dev-changelog` , so it's dynamic.
    */
   devChangelog?: string;
 
@@ -55,7 +55,7 @@ export class EdgeOptions {
 }
 
 function getErrorMessage(message: string): string {
-  return `Firefox: ${message}`;
+  return `Opera: ${message}`;
 }
 
 export async function prepareToDeployEdge(
@@ -68,7 +68,6 @@ export async function prepareToDeployEdge(
   }
 
   // Validate the options
-  // @ts-ignore
   new EdgeOptions(options);
   return deployToEdge(options);
 }

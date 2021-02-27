@@ -21,7 +21,7 @@ export class ChromeOptions {
   zip: string;
 
   /** If enabled, all the actions taken for each store will be logged to the console. */
-  verbose: false
+  verbose: false;
 
   constructor(options) {
     if (!options.extId) {
@@ -46,7 +46,7 @@ export class ChromeOptions {
 }
 
 function getErrorMessage(message: string): string {
-  return `Opera: ${message}`;
+  return `Chrome: ${message}`;
 }
 
 export async function prepareToDeployChrome(
@@ -55,8 +55,6 @@ export async function prepareToDeployChrome(
   options.zip = getCorrectZip(options.zip);
 
   // Validate the options
-  // @ts-ignore
   new ChromeOptions(options);
-
   return deployToChrome(options);
 }

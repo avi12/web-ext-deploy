@@ -98,8 +98,6 @@ export async function prepareToDeployOpera(
   }
 
   // Validate the options
-  // @ts-ignore
   new OperaOptions(options);
-
   return deployToOpera(options);
 }

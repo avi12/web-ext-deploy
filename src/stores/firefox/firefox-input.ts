@@ -97,7 +97,6 @@ export async function prepareToDeployFirefox(
   }
 
   // Validate the options
-  // @ts-ignore
   new FirefoxOptions(options);
   return deployToFirefox(options);
 }
