@@ -38,7 +38,7 @@
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/avi12/web-ext-deploy#readme",
   "scripts": {
-    "debug:dev": "nodemon --config nodemon-prod.json",
+    "debug:dev": "nodemon --config nodemon-dev.json",
     "debug:prod": "nodemon --",
     "clean": "rimraf dist dist-esm",
     "prepare": "pnpm run clean && pnpm run build",
@@ -66,12 +66,14 @@
   },
   "devDependencies": {
     "@types/async-lock": "^1.1.2",
+    "@types/inquirer": "^7.3.1",
     "@types/puppeteer": "^5.4.3",
+    "@types/user-agents": "^1.0.0",
     "@types/yargs": "^16.0.0",
     "@typescript-eslint/eslint-plugin": "^4.15.2",
     "@typescript-eslint/parser": "^4.15.2",
     "eslint": "^7.20.0",
-    "eslint-config-prettier": "^8.0.0",
+    "eslint-config-prettier": "^8.1.0",
     "husky": "^5.1.1",
     "jest": "^26.6.3",
     "nodemon": "^2.0.7",
@@ -83,11 +85,18 @@
   "dependencies": {
     "camel-case": "^4.1.2",
     "chrome-webstore-upload": "^0.4.4",
+    "compare-versions": "^3.6.0",
     "dotenv": "^8.2.0",
-    "prompt-promise": "^1.0.3",
-    "puppeteer": "5",
+    "inquirer": "^8.0.0",
+    "mitt": "^2.1.0",
+    "parse-duration": "^0.4.4",
+    "puppeteer": "^7.1.0",
     "puppeteer-extra": "^3.1.17",
-    "puppeteer-extra-plugin-recaptcha": "^3.3.3",
-    "yargs": "^16.2.0"
+    "puppeteer-extra-plugin-anonymize-ua": "^2.2.16",
+    "puppeteer-extra-plugin-minmax": "^1.1.2",
+    "puppeteer-extra-plugin-stealth": "^2.7.5",
+    "user-agents": "^1.0.574",
+    "yargs": "^16.2.0",
+    "zip-local": "^0.3.4"
   }
 }
