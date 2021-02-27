@@ -1,48 +1,41 @@
 import { OperaOptions } from "./opera-input";
 import puppeteer from "puppeteer-extra";
-import pluginReCaptcha from "puppeteer-extra-plugin-recaptcha";
 import { Page } from "puppeteer";
-import prompt from "prompt-promise";
-import { disableImages, getFullPath, getVerboseMessage } from "../../utils";
+
+import {
+  clearInput,
+  disableImages,
+  getExistingElementSelector,
+  getFullPath,
+  getVerboseMessage,
+  prompt
+} from "../../utils";
+import mitt from "mitt";
+
+const emitter = mitt();
+const store = "Opera";
 
 const gSelectors = {
   listExtensions: ".list-group",
+  extEntryName: ".DevHub-MyAddons-item-name",
+  listErrors: ".alert-danger",
+  buttonManageExtensions: "a.Button",
+  buttonNext: "button[type=submit]",
+  buttonUploadNewVersion: `[ng-click*="upload()"]`,
+  inputEmail: "input[name=email]",
+  inputPassword: "input[type=password]",
   inputsTwoFactor: ".otp-input",
   twoFactorError: ".msg-error",
   twoFactorErrorAgain: "#error-tooltip-1054",
   twoFactorErrorAgainWait: "#error-tooltip-114",
-  extEntryName: ".DevHub-MyAddons-item-name",
-  listErrors: ".alert-danger",
-  buttonManageExtensions: "a.Button",
-  buttonSubmit: "button[type=submit]",
-  buttonUploadNewVersion: `[ng-click*="upload()"]`,
-  inputEmail: "input[name=email]",
-  inputPassword: "input[type=password]",
   inputFile: "input[type=file]",
   inputCodePublic: `editable-field[field-value="packageVersion\\.source_url"] input`,
   inputCodePrivate: `editable-field[field-value="packageVersion\\.source_for_moderators_url"] input`,
   inputChangelog: `editable-field[field-value="translation\\.changelog"] textarea`
 };
 
-async function getEvaluation(page: Page, selectors: string[]): Promise<string> {
-  const promises = selectors.map(selector => page.waitForSelector(selector));
-  const {
-    // @ts-ignore
-    _remoteObject: { description }
-  } = await Promise.race(promises);
-  return description;
-}
-
-async function clearInput(page: Page, selector: string) {
-  const elInput = await page.$(selector);
-  await elInput.click();
-  await elInput.focus();
-  await elInput.click({ clickCount: 3 });
-  await elInput.press("Backspace");
-}
-
 async function handleTwoFactor(page: Page, twoFactor?: number) {
-  const description = await getEvaluation(page, [
+  const description = await getExistingElementSelector(page, [
     gSelectors.inputsTwoFactor,
     gSelectors.extEntryName
   ]);
@@ -52,28 +45,43 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
   }
   const messageTwoFactor = "Enter two-factor code: ";
 
-  if (!twoFactor) {
-    twoFactor = await prompt(
-      getVerboseMessage({
-        store: "Opera",
-        message: messageTwoFactor
-      })
-    );
-  }
-  const twoFactorString = twoFactor.toString();
-  const elInputs = await page.$$(gSelectors.inputsTwoFactor);
-  for (let i = 0; i < elInputs.length; i++) {
-    await elInputs[i].type(twoFactorString[i]);
-  }
-  await page.click(gSelectors.buttonSubmit);
   return new Promise(async (resolve, reject) => {
-    do {
-      const description = await getEvaluation(page, [
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (!twoFactor) {
+        console.log("Opera: lock for", process.env.LOCK_FOR_TWO_FACTOR);
+        if (!process.env.LOCK_FOR_TWO_FACTOR) {
+          process.env.LOCK_FOR_TWO_FACTOR = "opera";
+        }
+        if (process.env.LOCK_FOR_TWO_FACTOR === "firefox") {
+          await new Promise(resolve => {
+            emitter.on("logged-out", state => {
+              if (state === "firefox") {
+                resolve(true);
+              }
+            });
+          });
+          process.env.LOCK_FOR_TWO_FACTOR = "opera";
+        }
+        if (process.env.LOCK_FOR_TWO_FACTOR === "opera") {
+          twoFactor = Number(
+            await prompt(
+              getVerboseMessage({
+                store,
+                message: messageTwoFactor
+              })
+            )
+          );
+        }
+      }
+      let twoFactorString = twoFactor.toString();
+      const description = await getExistingElementSelector(page, [
         gSelectors.twoFactorError,
         gSelectors.listExtensions
       ]);
 
-      if (!description.includes(gSelectors.twoFactorError)) {
+      if (description.includes(gSelectors.listExtensions)) {
+        emitter.emit("logged-out", "opera");
         resolve(true);
         return;
       }
@@ -86,9 +94,9 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
         return;
       }
 
-      const twoFactor = await prompt(
+      twoFactorString = await prompt(
         getVerboseMessage({
-          store: "Opera",
+          store,
           message: messageTwoFactor
         })
       );
@@ -98,11 +106,11 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
           page,
           `${gSelectors.inputsTwoFactor}:nth-of-type(${i + 1})`
         );
-        await elInputs[i].type(twoFactor[i]);
+        await elInputs[i].type(twoFactorString[i]);
       }
-      await page.click(gSelectors.buttonSubmit);
+      await page.click(gSelectors.buttonNext);
       // eslint-disable-next-line no-constant-condition
-    } while (true);
+    }
   });
 }
 
@@ -120,20 +128,9 @@ async function loginToStore({
   await page.waitForSelector(gSelectors.inputEmail);
   await page.type(gSelectors.inputEmail, email);
   await page.type(gSelectors.inputPassword, password);
-  await page.click(gSelectors.buttonSubmit);
+  await page.click(gSelectors.buttonNext);
 
-  return new Promise(async (resolve, reject) => {
-    const { error } = await page.solveRecaptchas();
-    if (error) {
-      // If failed to solve the reCAPTCHA v2 on Opera's login,
-      // simply restart the Puppeteer browser
-      reject("invalid-token");
-      return;
-    }
-
-    await handleTwoFactor(page, twoFactor);
-    resolve(true);
-  });
+  await handleTwoFactor(page, twoFactor);
 }
 
 async function getErrorsOrNone(
@@ -141,7 +138,9 @@ async function getErrorsOrNone(
   packageId: number
 ): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
-    const description = await getEvaluation(page, [gSelectors.listErrors]);
+    const description = await getExistingElementSelector(page, [
+      gSelectors.listErrors
+    ]);
     if (!description.includes(gSelectors.listErrors)) {
       resolve(true);
       return;
@@ -159,7 +158,7 @@ async function getErrorsOrNone(
     const prefixError = errors.length === 1 ? "Error" : "Errors";
     reject(
       getVerboseMessage({
-        store: "Opera",
+        store,
         message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
       `
@@ -210,7 +209,7 @@ async function openRelevantExtensionPage(page: Page, packageId: number) {
       if (response.statusText() === "Not Found") {
         reject(
           getVerboseMessage({
-            store: "Opera",
+            store,
             message: `Extension with package ID ${packageId} does not exist`
           })
         );
@@ -246,7 +245,7 @@ async function verifyPublicCodeExistence(page: Page) {
 
   const urlSource = await prompt(
     getVerboseMessage({
-      store: "Opera",
+      store,
       message: "Enter URL of source code: "
     })
   );
@@ -254,7 +253,7 @@ async function verifyPublicCodeExistence(page: Page) {
     if (!urlSource) {
       reject(
         getVerboseMessage({
-          store: "Opera",
+          store,
           message: "Providing source code is required"
         })
       );
@@ -265,7 +264,7 @@ async function verifyPublicCodeExistence(page: Page) {
 }
 
 async function updateExtension(page: Page, packageId: number) {
-  await page.click(gSelectors.buttonSubmit);
+  await page.click(gSelectors.buttonNext);
 
   return new Promise(async (resolve, reject) => {
     const errors = await page.$$eval(gSelectors.listErrors, elErrors =>
@@ -281,7 +280,7 @@ async function updateExtension(page: Page, packageId: number) {
     const prefixError = errors.length === 1 ? "Error" : "Errors";
     reject(
       getVerboseMessage({
-        store: "Opera",
+        store,
         message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
       `
@@ -298,138 +297,124 @@ async function addChangelogIfNeeded(page: Page, changelog: string) {
   await page.goto(url);
 }
 
-export default async function deployToOpera(options: OperaOptions) {
-  const {
-    email,
-    password,
-    twoFactor,
-    packageId,
-    zip,
-    changelog,
-    reCaptchaSolver,
-    reCaptchaApiKey,
-    verbose: isVerbose
-  } = options;
-  puppeteer.use(
-    pluginReCaptcha({
-      provider: {
-        id: reCaptchaSolver,
-        token: reCaptchaApiKey
-      }
-    })
-  );
+export default async function deployToOpera({
+  email,
+  password,
+  twoFactor,
+  packageId,
+  zip,
+  changelog,
+  verbose: isVerbose
+}: OperaOptions): Promise<boolean> {
+  return new Promise(async (resolve, reject) => {
+    puppeteer.use(require("puppeteer-extra-plugin-stealth")());
 
-  const browser = await puppeteer.launch({
-    // headless: false,
-    // args: ["--window-size=1280,720", "--window-position=0,0"],
-    defaultViewport: { width: 1280, height: 720 }
-  });
+    const browser = await puppeteer.launch({
+      // @ts-ignore
+      // headless: true,
+      // args: ["--window-size=1280,720", "--window-position=0,0"]
+      // @ts-ignore
+      defaultViewport: { width: 1280, height: 720 }
+    });
 
-  const page = (await browser.pages())[0];
+    const [page] = await browser.pages();
 
-  await disableImages(page);
+    await disableImages(page);
 
-  const urlStart = "https://addons.opera.com/developer";
-  await page.goto(urlStart, { waitUntil: "networkidle0" });
-  if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: "Opera",
-        message: `Launched Puppeteer session in ${urlStart}`
-      })
-    );
-    console.log(
-      getVerboseMessage({
-        store: "Opera",
-        message: "Logging in"
-      })
-    );
-  }
+    const urlStart = "https://addons.opera.com/developer";
+    await page.goto(urlStart, { waitUntil: "networkidle0" });
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: `Launched Puppeteer session in ${urlStart}`
+        })
+      );
+      console.log(
+        getVerboseMessage({
+          store,
+          message: "Logging in"
+        })
+      );
+    }
 
-  try {
     await loginToStore({
       page,
       email,
       password,
       twoFactor
     });
-  } catch (e) {
-    await browser.close();
-    if (e === "invalid-token") {
-      await deployToOpera(options);
-    } else {
-      throw new Error(e);
+
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: "Logged into the store"
+        })
+      );
     }
-  }
+    try {
+      await openRelevantExtensionPage(page, packageId);
+    } catch (e) {
+      await browser.close();
+      throw new Error(getError(e));
+    }
 
-  if (isVerbose) {
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: "Opened relevant extension page"
+        })
+      );
+    }
+
+    try {
+      await uploadZip({
+        page,
+        zip: getFullPath(zip),
+        packageId
+      });
+    } catch (e) {
+      await browser.close();
+      reject(e);
+      return;
+    }
+
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: `Uploaded ZIP: ${zip}`
+        })
+      );
+    }
+
+    try {
+      await verifyPublicCodeExistence(page);
+    } catch (e) {
+      await browser.close();
+      throw new Error(getError(e));
+    }
+
+    await addChangelogIfNeeded(page, changelog);
+
+    try {
+      await updateExtension(page, packageId);
+    } catch (e) {
+      await browser.close();
+      reject(e);
+      return;
+    }
+
     console.log(
       getVerboseMessage({
-        store: "Opera",
-        message: "Logged into the store"
+        store,
+        message: "Finished uploading"
       })
     );
-  }
 
-  try {
-    await openRelevantExtensionPage(page, packageId);
-  } catch (e) {
     await browser.close();
-    throw new Error(getError(e));
-  }
-
-  if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: "Opera",
-        message: "Opened relevant extension page"
-      })
-    );
-  }
-
-  try {
-    await uploadZip({
-      page,
-      zip: getFullPath(zip),
-      packageId
-    });
-  } catch (e) {
-    await browser.close();
-    throw new Error(e);
-  }
-
-  if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: "Opera",
-        message: `Uploaded ZIP: ${zip}`
-      })
-    );
-  }
-
-  try {
-    await verifyPublicCodeExistence(page);
-  } catch (e) {
-    await browser.close();
-    throw new Error(getError(e));
-  }
-
-  await addChangelogIfNeeded(page, changelog);
-
-  try {
-    await updateExtension(page, packageId);
-  } catch (e) {
-    await browser.close();
-    throw new Error(e);
-  }
-
-  console.log(
-    getVerboseMessage({
-      store: "Opera",
-      message: "Finished uploading"
-    })
-  );
-
-  await browser.close();
-  return true;
+    resolve(true);
+  });
 }
