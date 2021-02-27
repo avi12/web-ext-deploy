@@ -1,6 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { Page } from "puppeteer";
+import mitt, { Emitter } from "mitt";
+import inquirer from "inquirer";
 
 export function getFullPath(file: string): string {
   return path.resolve(process.cwd(), file);
@@ -30,7 +32,7 @@ export async function disableImages(page: Page) {
   });
 }
 
-export async function getEvaluation(
+export async function getExistingElementSelector(
   page: Page,
   selectors: string[]
 ): Promise<string> {
@@ -64,4 +66,30 @@ export function getVerboseMessage({
     return msg.trim();
   }
   return msg;
+}
+
+export async function emitterWait(
+  emitter: Emitter,
+  listenToState: string,
+  site: string
+) {
+  new Promise(resolve => {
+    emitter.on(listenToState, state => {
+      if (state === site) {
+        resolve(true);
+      }
+    });
+  });
+}
+
+export async function prompt(message: string): Promise<string> {
+  const answer = await inquirer.prompt([
+    {
+      type: "input",
+      name: "0",
+      message
+    }
+  ]);
+
+  return answer[0];
 }
