@@ -7,11 +7,12 @@ Supported stores:
 - [Chrome Web Store](https://chrome.google.com/webstore/category/extensions)
 - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/extensions)
 - [Edge Add-ons](https://microsoftedge.microsoft.com/addons)
+- [Opera Add-ons](https://addons.opera.com/en/extensions)
 
 ## Core packages used
 
 - [Puppeteer Extra](https://github.com/berstend/puppeteer-extra) - for updating extensions on Firefox Add-ons / Edge Add-ons
-  Add-ons.
+  Add-ons / Opera Add-ons store.
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 
 [comment]: <> (TODO: Add a disclaimer of not taking responsibility for stolen credentials)
@@ -90,7 +91,8 @@ web-ext-deploy --env
 
 
 - Opera Add-ons store:
-  - Two-factor code: The same applies. To specify the current OTP, use `--opera-two-factor`  
+  - **This is not guaranteed to work!** This store uses [Google reCAPTCHA v2](https://www.google.com/recaptcha/about) which will not always be bypassable.
+  - Two-factor code: The same applies as for Firefox Add-ons store. To specify the current OTP, use `--opera-two-factor`  
   - `EXT_ID`: Taken from the dashboard, e.g. `https://addons.opera.com/developer/package/EXT_ID`
   - `RE_CAPTCHA_SOLVER` - Available option: `2captcha`
   - `RE_CAPTCHA_API_KEY` - Get one for 2Captcha [here](https://2captcha.com?from=11267395). Make sure to have credits in your account. Required to bypass the login screen.
@@ -99,7 +101,6 @@ web-ext-deploy --env
     This can be done by doing **one** of the following:
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
-
 
 #### Possible `.env` files:
 
