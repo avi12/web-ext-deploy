@@ -5,11 +5,11 @@ import {
   prepareToDeployFirefox
 } from "./stores/firefox/firefox-input";
 import { getJsonStoresFromCli } from "./cli";
-import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
 import {
   ChromeOptions,
   prepareToDeployChrome
 } from "./stores/chrome/chrome-input";
+import { EdgeOptions, prepareToDeployEdge } from "./stores/edge/edge-input";
 
 const isUseCli = Boolean(
   process.argv[1].match(/web-ext-deploy[\\/](?:dist|src)[\\/]index\.(?:ts|js)$/)
@@ -31,13 +31,12 @@ async function initCli() {
   const storeFuncs = {
     chrome: deployChrome,
     firefox: deployFirefox,
-    opera: deployOpera
+    edge: deployEdge
   };
   const storeNames = {
     chrome: "Chrome Web Store",
     edge: "Edge Add-ons",
     firefox: "Firefox Add-ons",
-    opera: "Opera Add-ons"
   };
 
   const storeJsons = getJsonStoresFromCli();
@@ -75,9 +74,6 @@ export async function deployFirefox(
   return prepareToDeployFirefox(options);
 }
 
-export async function deployOpera(
-  options: Omit<OperaOptions, "twoFactor">
-): Promise<boolean> {
-  (options as OperaOptions).twoFactor = argv.operaTwoFactor;
-  return prepareToDeployOpera(options);
+export async function deployEdge(options: EdgeOptions) {
+  return prepareToDeployEdge(options);
 }

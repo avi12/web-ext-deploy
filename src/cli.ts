@@ -2,9 +2,10 @@ import yargs, { Arguments } from "yargs";
 import { isObjectEmpty } from "./utils";
 import dotenv from "dotenv";
 import { camelCase } from "camel-case";
-import { FirefoxOptions } from "./stores/firefox/firefox-input";
-import { OperaOptions } from "./stores/opera/opera-input";
 import { ChromeOptions } from "./stores/chrome/chrome-input";
+import { FirefoxOptions } from "./stores/firefox/firefox-input";
+import { EdgeOptions } from "./stores/edge/edge-input";
+import { OperaOptions } from "./stores/opera/opera-input";
 
 const { argv } = yargs(process.argv.slice(2)).options({
   env: { type: "boolean" },
@@ -102,7 +103,7 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }) {
 interface StoreObjects {
   chrome?: ChromeOptions;
   firefox?: FirefoxOptions;
-  edge?: object;
+  edge?: EdgeOptions;
   opera?: OperaOptions;
 }
 
@@ -139,6 +140,5 @@ export function getJsonStoresFromCli(): StoreObjects {
     );
   }
 
-  // eslint-disable-next-line no-unused-vars
   return fillMissing(jsonStoresRaw);
 }
