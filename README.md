@@ -7,14 +7,11 @@ Supported stores:
 - [Chrome Web Store](https://chrome.google.com/webstore/category/extensions)
 - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/extensions)
 - [Edge Add-ons](https://microsoftedge.microsoft.com/addons)
-- [Opera Add-ons](https://addons.opera.com/en/extensions)
 
 ## Core packages used
 
-- [Puppeteer Extra](https://github.com/berstend/puppeteer-extra) - for updating extensions on Firefox Add-ons / Edge Add-ons / Opera
-  Add-ons.  
-  The Extra version is used to support the reCaptcha solver plugin.
-- [Puppeteer reCaptcha solver](https://github.com/berstend/puppeteer-extra/tree/master/packages/puppeteer-extra-plugin-recaptcha)
+- [Puppeteer Extra](https://github.com/berstend/puppeteer-extra) - for updating extensions on Firefox Add-ons / Edge Add-ons
+  Add-ons.
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 
 [comment]: <> (TODO: Add a disclaimer of not taking responsibility for stolen credentials)
@@ -82,6 +79,14 @@ web-ext-deploy --env
   If the publisher account has two-factor authentication enabled - if it relies on an authentication generator (e.g., Google Authenticator), you can specify the code with `--firefox-two-factor`  
   If you have email-based authentication, the module will prompt you to fill your OTP using [`prompt-promise`](https://www.npmjs.com/package/prompt-promise).  
   As for `EXT_ID`, you must provide the extension ID as seen in the store listing URL, e.g. `https://addons.mozilla.org/en-US/developers/EXT_ID`
+  
+
+- Edge Add-ons store:
+  - `PASSWORD` is optional, as if you enable the login through the [Microsoft Authenticator](https://www.microsoft.com/en-us/account/authenticator#getapp) app - it will be used instead of your password.  
+    If you do *not* use Microsoft Authenticator, you can use `PASSWORD` to automatically fill-in the password for you, so you only have to deal with a two-factor authentication method of your choice.
+  - The Puppeteer instance for this store will always be headless (i.e. the Chromium window will launch), to let you handle the two-factor authentication on Microsoft's site.
+  - The `EXT_ID` must be provided according to the dashboard URL.  
+    I.e. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
 
 
 - Opera Add-ons store:
@@ -95,9 +100,6 @@ web-ext-deploy --env
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
-
-- Edge Add-ons store: The `EXT_ID` must be provided according to the dashboard URL.  
-  I.e. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
 
 #### Possible `.env` files:
 
@@ -218,8 +220,10 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     The extension ID from the Edge Add-ons Dashboard, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
   - `--edge-email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
-  - `--edge-password` string  
-    The publisher account's password. Used in Puppeteer to login to the account and update the extension.
+  - `--edge-password` string?  
+    - If the publisher's account is linked to a [Microsoft Authenticator](https://www.microsoft.com/en-us/account/authenticator#getapp) app, you can leave this argument out.  
+      If the account is *not* linked to Microsoft Authenticator, if you provide the password - it will be filled in.  
+    - The Puppeteer instance for this store will never be headless (i.e. the Chromium window will open), to let you handle the two-factor authentication on Microsoft's site.
   - `--edge-zip` string  
     The path to the ZIP from the root.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
@@ -227,54 +231,18 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     The technical changes made in this version, which will be seen by the Edge Add-ons reviewers.  
     You can use `\n` for new lines.
 
-
-- Opera Add-ons
-  - `--opera-package-id` string  
-    The extension ID, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
-  - `--opera-email` string  
-    The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
-  - `--opera-password` string  
-    The publisher account's password. Used in Puppeteer to login to the account and update the extension.
-  - `--opera-re-captcha-service` string  
-    The reCaptcha service chosen. Available option: `2captcha`
-  - `--opera-re-captcha-api-key` string  
-    The reCaptcha [API key](https://2captcha.com?from=11267395). Make sure to have credits in your account.
-  - `--opera-two-factor` number?  
-    If the publisher account has two-factor authentication enabled using an authentication application such as Google Authenticator, it will be used in the login process.  
-    If the OTP is sent to the publisher's email, the module will prompt you to enter the OTP.
-  - `--opera-zip` string  
-    The path to the ZIP from the root.  
-    You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
-  - `--opera-changelog` string?  
-    The changes made in this version compared to the previous one. The Opera users will see this.  
-    You can use `\n` for new lines.
-
-  Example:
-
-  ```shell
-  web-ext-deploy --opera-ext-id="ExtensionID" --opera-email="some@email.com" --opera-password="pass" --opera-two-factor=123456 --opera-zip="dist/some-zip-v{version}.zip"
-  ```
-  
-  **Source code inspection:**  
-  The Opera Add-ons reviewers require inspecting your extension's source code.  
-  This can be done by doing **one** of the following:  
-  - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
-  - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
-
 ### If using Node.js
 
 #### ESM
 
-<!-- prettier-ignore -->
 ```js
-import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
+import { deployChrome, deployFirefox, deployEdge } from "web-ext-deploy";
 ```
 
 #### CommonJS
 
-<!-- prettier-ignore -->
 ```js
-const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ext-deploy");
+const { deployChrome, deployFirefox, deployEdge } = require("web-ext-deploy");
 ```
 
 ### Node.js API
@@ -329,8 +297,10 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
     The extension ID from the Edge Extensions Dashboard URL, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
   - `email` string  
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
-  - `password` string  
-    The publisher account's password.
+  - `password` string?  
+    - If the publisher's account is linked to a [Microsoft Authenticator](https://www.microsoft.com/en-us/account/authenticator#getapp) app, you can leave this argument out.  
+      If the account is *not* linked to Microsoft Authenticator, if you provide the password - it will be filled in.
+    - The Puppeteer instance for this store will never be headless (i.e. the Chromium window will open), to let you handle the two-factor authentication on Microsoft's site.
   - `zip` string  
     The ZIP file location, relative from the root directory.
   - `devChangelog` string?  
@@ -368,9 +338,8 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
 
 Example:
 
-<!-- prettier-ignore -->
 ```js
-import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
+import { deployChrome, deployFirefox, deployEdge } from "web-ext-deploy";
 
 deployChrome({
   extId: "EXT_ID",
