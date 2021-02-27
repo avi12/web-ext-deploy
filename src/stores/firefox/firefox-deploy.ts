@@ -1,16 +1,18 @@
-// eslint-disable-next-line no-unused-vars
 import { FirefoxOptions } from "./firefox-input";
 import puppeteer from "puppeteer-extra";
 import { Page } from "puppeteer";
-import prompt from "prompt-promise";
+import mitt from "mitt";
 
 import {
   clearInput,
   disableImages,
-  getEvaluation,
+  getExistingElementSelector,
   getFullPath,
-  getVerboseMessage
+  getVerboseMessage,
+  prompt
 } from "../../utils";
+
+const emitter = mitt();
 
 const gUrlStart = "https://addons.mozilla.org/en-US/developers";
 const gSelectors = {
@@ -21,7 +23,7 @@ const gSelectors = {
   extEntryName: ".DevHub-MyAddons-item-name",
   listErrors: ".errorlist",
   buttonManageExtensions: "a.Button",
-  buttonSubmit: "button[type=submit]",
+  buttonNext: "button[type=submit]",
   inputEmail: "input[type=email]",
   inputPassword: "input[type=password]",
   inputFile: "input[type=file]",
@@ -33,11 +35,11 @@ const gSelectors = {
 async function typeAndSubmit(page: Page, selector: string, value: string) {
   await page.waitForSelector(selector);
   await page.type(selector, value);
-  await page.click(gSelectors.buttonSubmit);
+  await page.click(gSelectors.buttonNext);
 }
 
 async function handleTwoFactor(page: Page, twoFactor?: number) {
-  const description = await getEvaluation(page, [
+  const description = await getExistingElementSelector(page, [
     gSelectors.inputTwoFactor,
     gSelectors.extEntryName
   ]);
@@ -46,48 +48,60 @@ async function handleTwoFactor(page: Page, twoFactor?: number) {
     return;
   }
 
-  if (!twoFactor) {
-    twoFactor = await prompt(
-      getVerboseMessage({
-        store: "Firefox",
-        message: "Enter two-factor code: "
-      })
-    );
-  }
-  await page.type(gSelectors.inputTwoFactor, `${twoFactor}`);
-  await page.click(gSelectors.buttonSubmit);
-  do {
-    const description = await getEvaluation(page, [
+  const messageOriginal = "Enter two-factor code: ";
+  let message = messageOriginal;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    if (!twoFactor) {
+      console.log("Firefox: lock for", process.env.LOCK_FOR_TWO_FACTOR);
+      if (!process.env.LOCK_FOR_TWO_FACTOR) {
+        process.env.LOCK_FOR_TWO_FACTOR = "firefox";
+      }
+      if (process.env.LOCK_FOR_TWO_FACTOR === "opera") {
+        await new Promise(resolve => {
+          emitter.on("logged-out", state => {
+            if (state === "opera") {
+              resolve(true);
+            }
+          });
+        });
+        process.env.LOCK_FOR_TWO_FACTOR = "firefox";
+      }
+      if (process.env.LOCK_FOR_TWO_FACTOR === "firefox") {
+        twoFactor = Number(
+          await prompt(
+            getVerboseMessage({
+              store: "Firefox",
+              message
+            })
+          )
+        );
+      }
+    }
+    await page.type(gSelectors.inputTwoFactor, `${twoFactor}`);
+    await page.click(gSelectors.buttonNext);
+    const description = await getExistingElementSelector(page, [
       gSelectors.twoFactorError,
       gSelectors.twoFactorErrorAgain,
       gSelectors.twoFactorErrorAgainWait,
       gSelectors.extEntryName
     ]);
 
-    if (
-      !(
-        description.includes(gSelectors.twoFactorErrorAgain) ||
-        description.includes(gSelectors.twoFactorErrorAgainWait) ||
-        description.includes(gSelectors.twoFactorError)
-      )
-    ) {
+    const isTwoFactorCodeCorrect = description.includes(
+      gSelectors.extEntryName
+    );
+    if (isTwoFactorCodeCorrect) {
+      emitter.emit("logged-out", "firefox");
       break;
     }
-    const message = description.includes(gSelectors.twoFactorErrorAgainWait)
+    message = description.includes(gSelectors.twoFactorErrorAgainWait)
       ? "wait a bit, then type the code: "
-      : "Enter two-factor code: ";
-    const twoFactor = await prompt(
-      getVerboseMessage({
-        store: "Firefox",
-        message
-      })
-    );
-    await clearInput(page, gSelectors.inputTwoFactor);
-    await page.type(gSelectors.inputTwoFactor, twoFactor);
-    await page.click(gSelectors.buttonSubmit);
+      : messageOriginal;
 
-    // eslint-disable-next-line no-constant-condition
-  } while (true);
+    await clearInput(page, gSelectors.inputTwoFactor);
+    // Resetting two-factor code to receive as input
+    twoFactor = 0;
+  }
 }
 
 async function loginToStore({
@@ -146,7 +160,7 @@ async function uploadZip({
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 
-  await page.$eval(gSelectors.buttonSubmit, elSubmit => {
+  await page.$eval(gSelectors.buttonNext, elSubmit => {
     return new Promise(resolve => {
       new MutationObserver(() => {
         // @ts-ignore
@@ -159,7 +173,7 @@ async function uploadZip({
     });
   });
 
-  const description = await getEvaluation(page, [
+  const description = await getExistingElementSelector(page, [
     gSelectors.listErrors,
     gSelectors.inputRadio
   ]);
@@ -207,7 +221,7 @@ async function uploadZipSourceIfNeeded({
   if (isUpload) {
     const elFileInput = await page.$(gSelectors.inputFile);
     await elFileInput.uploadFile(zipSource);
-    await page.click(gSelectors.buttonSubmit);
+    await page.click(gSelectors.buttonNext);
   }
 }
 
@@ -256,112 +270,109 @@ export default async function deployToFirefox({
   devChangelog,
   verbose: isVerbose
 }: FirefoxOptions): Promise<boolean> {
-  return new Promise(async (resolve, reject) => {
-    const browser = await puppeteer.launch({
-      // headless: false,
-      // args: ["--window-size=1280,720", "--window-position=0,0"],
-      defaultViewport: { width: 1280, height: 720 }
-    });
+  const browser = await puppeteer.launch({
+    // @ts-ignore
+    headless: true,
+    args: ["--window-size=1280,720", "--window-position=0,720"],
+    defaultViewport: { width: 1280, height: 720 }
+  });
 
-    const page = (await browser.pages())[0];
+  const [page] = await browser.pages();
 
-    await disableImages(page);
+  await disableImages(page);
+  await page.goto(gUrlStart, { waitUntil: "networkidle0" });
 
-    await page.goto(gUrlStart, { waitUntil: "networkidle0" });
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: "Firefox",
-          message: `Launched Puppeteer session in ${gUrlStart}`
-        })
-      );
-    }
-
-    await loginToStore({
-      page,
-      email,
-      password,
-      twoFactor
-    });
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: "Firefox",
-          message: "Logged into the store"
-        })
-      );
-    }
-
-    try {
-      await openRelevantExtensionPage({ page, extId: extId.trim() });
-    } catch (e) {
-      await browser.close();
-      reject(e);
-      return;
-    }
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: "Firefox",
-          message: `Opened extension page of ${extId}`
-        })
-      );
-    }
-
-    try {
-      await uploadZip({
-        page,
-        zip: getFullPath(zip),
-        extId: extId.trim()
-      });
-    } catch (e) {
-      browser.close().catch(() => {});
-      reject(e);
-      return;
-    }
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: "Firefox",
-          message: `Uploaded ZIP: ${zip}`
-        })
-      );
-    }
-
-    await uploadZipSourceIfNeeded({
-      page,
-      zipSource: getFullPath(zipSource),
-      isUpload: Boolean(zipSource)
-    });
-
-    if (isVerbose && zipSource) {
-      console.log(
-        getVerboseMessage({
-          store: "Firefox",
-          message: `Uploaded source ZIP: ${zip}`
-        })
-      );
-    }
-
-    await addChangelogsIfNeeded({
-      page,
-      changelog,
-      devChangelog,
-      isVerbose
-    });
-
-    await page.click(gSelectors.buttonSubmit);
+  if (isVerbose) {
     console.log(
       getVerboseMessage({
         store: "Firefox",
-        message: "Finished uploading"
+        message: `Launched Puppeteer session in ${gUrlStart}`
       })
     );
+  }
 
-    await browser.close();
-    resolve(true);
+  await loginToStore({
+    page,
+    email,
+    password,
+    twoFactor
   });
+
+  if (isVerbose) {
+    console.log(
+      getVerboseMessage({
+        store: "Firefox",
+        message: "Logged into the store"
+      })
+    );
+  }
+
+  try {
+    await openRelevantExtensionPage({ page, extId: extId.trim() });
+  } catch (e) {
+    await browser.close();
+    throw new Error(e);
+  }
+
+  if (isVerbose) {
+    console.log(
+      getVerboseMessage({
+        store: "Firefox",
+        message: `Opened extension page of ${extId}`
+      })
+    );
+  }
+
+  try {
+    await uploadZip({
+      page,
+      zip: getFullPath(zip),
+      extId: extId.trim()
+    });
+  } catch (e) {
+    await browser.close();
+    throw new Error(e);
+  }
+
+  if (isVerbose) {
+    console.log(
+      getVerboseMessage({
+        store: "Firefox",
+        message: `Uploaded ZIP: ${zip}`
+      })
+    );
+  }
+
+  await uploadZipSourceIfNeeded({
+    page,
+    zipSource: getFullPath(zipSource),
+    isUpload: Boolean(zipSource)
+  });
+
+  if (isVerbose && zipSource) {
+    console.log(
+      getVerboseMessage({
+        store: "Firefox",
+        message: `Uploaded source ZIP: ${zip}`
+      })
+    );
+  }
+
+  await addChangelogsIfNeeded({
+    page,
+    changelog,
+    devChangelog,
+    isVerbose
+  });
+
+  await page.click(gSelectors.buttonNext);
+  console.log(
+    getVerboseMessage({
+      store: "Firefox",
+      message: "Finished uploading"
+    })
+  );
+
+  await browser.close();
+  return true;
 }
