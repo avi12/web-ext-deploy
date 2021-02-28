@@ -2,7 +2,7 @@ import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
 import { deployToChrome } from "./chrome-deploy";
 
 export class ChromeOptions {
-  /** The extension ID. E.g. `https://chrome.google.com/webstore/detail/EXT_ID` */
+  /** The extension ID. E.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone` */
   extId: string;
 
   /** The refresh token. */
@@ -27,7 +27,7 @@ export class ChromeOptions {
     if (!options.extId) {
       throw new Error(
         getErrorMessage(
-          "No extension ID is provided, e.g. https://chrome.google.com/webstore/detail/EXT_ID"
+          "No extension ID is provided, e.g. https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone"
         )
       );
     }
