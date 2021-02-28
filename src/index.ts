@@ -32,12 +32,14 @@ async function initCli() {
   const storeFuncs = {
     chrome: deployChrome,
     firefox: deployFirefox,
-    edge: deployEdge
+    edge: deployEdge,
+    opera: deployOpera
   };
   const storeNames = {
     chrome: "Chrome Web Store",
     edge: "Edge Add-ons",
     firefox: "Firefox Add-ons",
+    opera: "Opera Add-ons"
   };
 
   const storeJsons = getJsonStoresFromCli();
