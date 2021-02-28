@@ -11,11 +11,11 @@ export class OperaOptions {
   /** The two-factor code of the publisher account, if applicable. */
   twoFactor?: number;
 
-  /** The reCaptcha service to bypass the login screen. */
+  /** The reCaptcha service to attempt to bypass the login screen. */
   reCaptchaSolver: "2captcha";
 
   /**
-   * The reCaptcha API key to bypass the login screen.<br>
+   * The reCaptcha API key to attempt to bypass the login screen.<br>
    * [Get your 2Captcha API key here](https://2captcha.com?from=11267395)
    */
   reCaptchaApiKey: string;
