@@ -10,6 +10,7 @@ import {
   prepareToDeployChrome
 } from "./stores/chrome/chrome-input";
 import { EdgeOptions, prepareToDeployEdge } from "./stores/edge/edge-input";
+import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
 
 const isUseCli = Boolean(
   process.argv[1].match(/web-ext-deploy[\\/](?:dist|src)[\\/]index\.(?:ts|js)$/)
@@ -76,4 +77,11 @@ export async function deployFirefox(
 
 export async function deployEdge(options: EdgeOptions) {
   return prepareToDeployEdge(options);
+}
+
+export async function deployOpera(
+  options: Omit<OperaOptions, "twoFactor">
+): Promise<boolean> {
+  (options as OperaOptions).twoFactor = argv.operaTwoFactor;
+  return prepareToDeployOpera(options);
 }
