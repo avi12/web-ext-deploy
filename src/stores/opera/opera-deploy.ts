@@ -31,7 +31,8 @@ const gSelectors = {
   inputFile: "input[type=file]",
   inputCodePublic: `editable-field[field-value="packageVersion\\.source_url"] input`,
   inputCodePrivate: `editable-field[field-value="packageVersion\\.source_for_moderators_url"] input`,
-  inputChangelog: `editable-field[field-value="translation\\.changelog"] textarea`
+  inputChangelog: `editable-field[field-value="translation\\.changelog"] textarea`,
+  buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
 };
 
 async function handleTwoFactor(page: Page, twoFactor?: number) {
@@ -221,25 +222,17 @@ async function openRelevantExtensionPage(page: Page, packageId: number) {
   });
 }
 
-function getError(e: string): string {
-  const errorParts = e.split("\n")[0].split("Opera");
-  if (errorParts.length === 1) {
-    return e;
-  }
-  return "Opera" + errorParts[1];
-}
-
 async function verifyPublicCodeExistence(page: Page) {
   await page.waitForSelector(gSelectors.inputCodePublic);
 
-  const isSourceInputEmpty = (async () => {
+  const isSourceInputEmpty = async () => {
     const elInputPublic = await page.$(gSelectors.inputCodePublic);
     const elInputPrivate = await page.$(gSelectors.inputCodePrivate);
     // @ts-ignore
     return !elInputPublic.value || !elInputPrivate.value;
-  })();
+  };
 
-  if (!isSourceInputEmpty) {
+  if (!(await isSourceInputEmpty())) {
     return;
   }
 
@@ -263,7 +256,13 @@ async function verifyPublicCodeExistence(page: Page) {
   });
 }
 
-async function updateExtension(page: Page, packageId: number) {
+async function updateExtension({
+  page,
+  packageId
+}: {
+  page: Page;
+  packageId: number;
+}) {
   await page.click(gSelectors.buttonNext);
 
   return new Promise(async (resolve, reject) => {
@@ -289,9 +288,24 @@ async function updateExtension(page: Page, packageId: number) {
   });
 }
 
-async function addChangelogIfNeeded(page: Page, changelog: string) {
+async function addChangelogIfNeeded({
+  page,
+  changelog
+}: {
+  page: Page;
+  changelog?: string;
+}) {
+  // If the extension is available in English,
+  // the changelog will be filled into the English textarea
+
+  // If the extension is NOT available in English, the
+  // extension dashboard will fall back to the first language
+  // that IS supported, and its textarea will be filled instead
   await page.goto(`${page.url()}?tab=translations&language=en`);
-  await page.type(gSelectors.inputChangelog, changelog);
+  if (changelog) {
+    await page.type(gSelectors.inputChangelog, changelog);
+    await page.click(gSelectors.buttonSubmitChangelog);
+  }
 
   const url = page.url().split("?")[0];
   await page.goto(url);
@@ -357,7 +371,8 @@ export default async function deployToOpera({
       await openRelevantExtensionPage(page, packageId);
     } catch (e) {
       await browser.close();
-      throw new Error(getError(e));
+      reject(e);
+      return;
     }
 
     if (isVerbose) {
@@ -394,13 +409,14 @@ export default async function deployToOpera({
       await verifyPublicCodeExistence(page);
     } catch (e) {
       await browser.close();
-      throw new Error(getError(e));
+      reject(e);
+      return;
     }
 
-    await addChangelogIfNeeded(page, changelog);
+    await addChangelogIfNeeded({ page, changelog });
 
     try {
-      await updateExtension(page, packageId);
+      await updateExtension({ page, packageId });
     } catch (e) {
       await browser.close();
       reject(e);
