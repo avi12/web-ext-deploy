@@ -76,6 +76,10 @@ web-ext-deploy --env
 #### Notes:
 
 <!-- prettier-ignore -->
+- Chrome Web Store:  
+  To get your `REFRESH_TOKEN`, `CLIENT_ID`, and `CLIENT_SECRET`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).
+
+
 - Firefox Add-ons store:  
   If the publisher account has two-factor authentication enabled - if it relies on an authentication generator (e.g., Google Authenticator), you can specify the code with `--firefox-two-factor`  
   If you have email-based authentication, the module will prompt you to fill your OTP using [`prompt-promise`](https://www.npmjs.com/package/prompt-promise).  
@@ -91,15 +95,15 @@ web-ext-deploy --env
 
 
 - Opera Add-ons store:
-  - **This is not guaranteed to work!** This store uses [Google reCAPTCHA v2](https://www.google.com/recaptcha/about) which will not always be bypassable.
+  - **This is not guaranteed to work!** This store uses [Google reCAPTCHA v2](https://www.google.com/recaptcha/about), which will not always be bypassable.
   - Two-factor code: The same applies as for Firefox Add-ons store. To specify the current OTP, use `--opera-two-factor`  
   - `EXT_ID`: Taken from the dashboard, e.g. `https://addons.opera.com/developer/package/EXT_ID`
   - `RE_CAPTCHA_SOLVER` - Available option: `2captcha`
-  - `RE_CAPTCHA_API_KEY` - Get one for 2Captcha [here](https://2captcha.com?from=11267395). Make sure to have credits in your account. Required to bypass the login screen.
+  - `RE_CAPTCHA_API_KEY` - Get one for 2Captcha [here](https://2captcha.com?from=11267395). Make sure to have credits in your account.
   - **Source code inspection**:  
     The Opera Add-ons reviewers require inspecting your extension's source code.  
     This can be done by doing **one** of the following:
-    - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
+    - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com)).
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
 #### Possible `.env` files:
@@ -170,7 +174,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
 
 - Chrome Web Store
   - `--chrome-ext-id` string  
-    The extension ID from the store URL, e.g. `https://chrome.google.com/webstore/detail/EXT_ID`
+    The extension ID from the store URL, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
   - `--chrome-refresh-token` string  
     The refreshToken you have registered.
   - `--chrome-client-id` string  
@@ -180,6 +184,8 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
   - `--chrome-zip` string  
     The path to the ZIP from the root.  
      You can use `{version}` in the ZIP filename, which will be replaced by the version in `package.json`
+
+  To get your `--chrome-refresh-token`, `--chrome-client-id` and `--chrome-client-secret`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).
 
   Example:
 
@@ -232,18 +238,54 @@ web-ext-deploy --chrome-zip="some-zip-v{version).zip" --chrome-ext-id="Extension
     The technical changes made in this version, which will be seen by the Edge Add-ons reviewers.  
     You can use `\n` for new lines.
 
+
+- Opera Add-ons
+  - `--opera-package-id` string  
+    The extension ID, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
+  - `--opera-email` string  
+    The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
+  - `--opera-password` string  
+    The publisher account's password. Used in Puppeteer to login to the account and update the extension.
+  - `--opera-recaptcha-solver` string  
+    The reCaptcha service chosen. Available option: `2captcha`
+  - `--opera-recaptcha-api-key` string  
+    The reCaptcha [API key](https://2captcha.com?from=11267395). Make sure to have credits in your account.
+  - `--opera-two-factor` number?  
+    If the publisher account has two-factor authentication enabled using an authentication application such as Google Authenticator, it will be used in the login process.  
+    If the OTP is sent to the publisher's email, the module will prompt you to enter the OTP.
+  - `--opera-zip` string  
+    The path to the ZIP from the root.  
+    You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
+  - `--opera-changelog` string?  
+    The changes made in this version compared to the previous one. The Opera users will see this.  
+    You can use `\n` for new lines.  
+
+  Example:
+
+  ```shell
+  web-ext-deploy --opera-ext-id="ExtensionID" --opera-email="some@email.com" --opera-password="pass" --opera-two-factor=123456 --opera-zip="dist/some-zip-v{version}.zip"
+  ```
+  
+  **Notes:**
+  - **This is not guaranteed to work!** This store uses [Google reCAPTCHA v2](https://www.google.com/recaptcha/about), which will not always be bypassable.
+  - **Source code inspection:**  
+    The Opera Add-ons reviewers require inspecting your extension's source code.  
+    This can be done by doing **one** of the following:
+    - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
+    - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
+
 ### If using Node.js
 
-#### ESM
+#### ESM / TypeScript
 
 ```js
-import { deployChrome, deployFirefox, deployEdge } from "web-ext-deploy";
+import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
 ```
 
 #### CommonJS
 
 ```js
-const { deployChrome, deployFirefox, deployEdge } = require("web-ext-deploy");
+const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ext-deploy");
 ```
 
 ### Node.js API
@@ -253,7 +295,7 @@ const { deployChrome, deployFirefox, deployEdge } = require("web-ext-deploy");
   Options:
 
   - `extId` string  
-    The extension ID from the store URL, e.g. `https://chrome.google.com/webstore/detail/EXT_ID`
+    The extension ID from the store URL, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
   - `refreshToken` string  
     The refresh token.
   - `clientId` string  
@@ -265,7 +307,8 @@ const { deployChrome, deployFirefox, deployEdge } = require("web-ext-deploy");
   - `verbose` boolean?  
     If specified, it wil be logged to the console when the upload has been finished.
 
-  returns `Promise<boolean>` or throws an exception.
+  To get your `refreshToken`, `clientId` and `clientSecret`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).  
+  Returns `Promise<boolean>` or throws an exception.
 
 
 - `deployFirefox` object  
@@ -288,7 +331,7 @@ const { deployChrome, deployFirefox, deployEdge } = require("web-ext-deploy");
   - `verbose` boolean?  
     If specified, every step of uploading to Firefox Add-ons will be logged to the console.
 
-  returns `Promise<boolean>` or throws an exception.
+  Returns `Promise<boolean>` or throws an exception.
 
 
 - `deployEdge` object  
@@ -309,7 +352,7 @@ const { deployChrome, deployFirefox, deployEdge } = require("web-ext-deploy");
   - `verbose` boolean?  
     If specified, every step of uploading to Edge Add-ons will be logged to the console.
 
-  returns `Promise<boolean>` or throws an exception.
+  Returns `Promise<boolean>` or throws an exception.
 
 
 - `deployOpera` object  
@@ -321,26 +364,29 @@ const { deployChrome, deployFirefox, deployEdge } = require("web-ext-deploy");
     The publisher account's email address. Used in Puppeteer to login to the account and update the extension.
   - `password` string  
     The publisher account's password.
-  - `reCaptcha` object
-    - `service` - Currently `2captcha`
-    - `apiKey` - get one for 2Captcha [here](https://2captcha.com?from=11267395). Make sure to have credits in your account. Required to bypass the login screen.
+  - `reCaptchaSolver` string
+    - Currently: `2captcha`
+  - `reCaptchaApiKey` string
+    Get one for 2Captcha [here](https://2captcha.com?from=11267395). Make sure to have credits in your account.
   - `zip` string  
     The ZIP file location, relative from the root directory.
   - `verbose` boolean?  
     If specified, every step of uploading to Opera Add-ons will be logged to the console.
 
-  returns `Promise<boolean>` or throws an exception.
+  Returns `Promise<boolean>` or throws an exception.
 
-  **Source code inspection:**  
-  The Opera Add-ons reviewers require inspecting your extension's source code.  
-  This can be done by doing **one** of the following:
-  - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
-  - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
+  **Notes:**
+  - **This is not guaranteed to work!** This store uses [Google reCAPTCHA v2](https://www.google.com/recaptcha/about), which will not always be bypassable. 
+  - **Source code inspection:**  
+    The Opera Add-ons reviewers require inspecting your extension's source code.  
+    This can be done by doing **one** of the following:
+    - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
+    - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
 Example:
 
 ```js
-import { deployChrome, deployFirefox, deployEdge } from "web-ext-deploy";
+import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
 
 deployChrome({
   extId: "EXT_ID",
