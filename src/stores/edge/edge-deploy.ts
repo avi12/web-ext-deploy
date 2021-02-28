@@ -1,7 +1,7 @@
 import puppeteer from "puppeteer-extra";
 import { EdgeOptions } from "./edge-input";
 import { getExistingElementSelector, getVerboseMessage } from "../../utils";
-import { Browser, HTTPResponse, Page } from "puppeteer";
+import { Browser, Page } from "puppeteer";
 import duration from "parse-duration";
 import compareVersions from "compare-versions";
 import zipper from "zip-local";
@@ -106,7 +106,7 @@ async function openRelevantExtensionPage({
   extId: any;
 }) {
   return new Promise(async (resolve, reject) => {
-    page.on("response", (response: HTTPResponse) => {
+    page.on("response", response => {
       if (!response.url().endsWith("lastUploadedPackage")) {
         return;
       }
@@ -162,13 +162,7 @@ function getNewVersion(zip: string) {
   return version;
 }
 
-async function uploadZip({
-  page,
-  zip
-}: {
-  page: Page;
-  zip: string;
-}) {
+async function uploadZip({ page, zip }: { page: Page; zip: string }) {
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 }
