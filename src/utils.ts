@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import { Page } from "puppeteer";
-import inquirer from "inquirer";
 
 export function getFullPath(file: string): string {
   return path.resolve(process.cwd(), file);
@@ -65,16 +64,4 @@ export function getVerboseMessage({
     msg = msg.trimLeft();
   }
   return msg;
-}
-
-export async function prompt(message: string): Promise<string> {
-  const answer = await inquirer.prompt([
-    {
-      type: "input",
-      name: "0",
-      message
-    }
-  ]);
-
-  return answer[0];
 }

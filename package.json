@@ -66,7 +66,6 @@
   },
   "devDependencies": {
     "@types/async-lock": "^1.1.2",
-    "@types/inquirer": "^7.3.1",
     "@types/puppeteer": "^5.4.3",
     "@types/user-agents": "^1.0.0",
     "@types/yargs": "^16.0.0",
@@ -89,7 +88,6 @@
     "chrome-webstore-upload": "^0.4.4",
     "compare-versions": "^3.6.0",
     "dotenv": "^8.2.0",
-    "inquirer": "^8.0.0",
     "parse-duration": "^0.4.4",
     "puppeteer": "^8.0.0",
     "yargs": "^16.2.0",

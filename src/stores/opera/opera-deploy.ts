@@ -4,8 +4,7 @@ import puppeteer, { Page } from "puppeteer";
 import {
   getExistingElementSelector,
   getFullPath,
-  getVerboseMessage,
-  prompt
+  getVerboseMessage
 } from "../../utils";
 
 const store = "Opera";
@@ -115,7 +114,7 @@ async function openRelevantExtensionPage({
   });
 }
 
-async function verifyPublicCodeExistence(page: Page) {
+async function verifyPublicCodeExistence({ page }: { page: Page }) {
   await page.waitForSelector(gSelectors.inputCodePublic);
 
   const isSourceInputEmpty = async () => {
@@ -129,24 +128,15 @@ async function verifyPublicCodeExistence(page: Page) {
     return;
   }
 
-  const urlSource = await prompt(
+  const urlCurrent = page.url();
+
+  console.log(
     getVerboseMessage({
       store,
-      message: "Enter URL of source code: "
+      message: `You must provide a link to your extension's source code. ${urlCurrent}`,
+      prefix: "Error"
     })
   );
-  return new Promise(async (resolve, reject) => {
-    if (!urlSource) {
-      reject(
-        getVerboseMessage({
-          store,
-          message: "Providing source code is required"
-        })
-      );
-      return;
-    }
-    resolve(true);
-  });
 }
 
 async function updateExtension({
@@ -227,6 +217,7 @@ async function addLoginCookie({
 
   await page.setCookie(...cookies);
 }
+
 function getBaseDashboardUrl(packageId: number) {
   return `https://addons.opera.com/developer/package/${packageId}`;
 }
@@ -304,16 +295,9 @@ export default async function deployToOpera({
       );
     }
 
-    try {
-      await verifyPublicCodeExistence(page);
-    } catch (e) {
-      await browser.close();
-      reject(e);
-      return;
-    }
+    await verifyPublicCodeExistence({ page });
 
     await addChangelogIfNeeded({ page, changelog });
-
     try {
       await updateExtension({ page, packageId });
     } catch (e) {
