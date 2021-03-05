@@ -10,7 +10,7 @@ export class EdgeOptions {
   extId: string;
 
   /**
-   * The path to the ZIP, relative from the current working directory (`process.cwd()`).<br>
+   * The path to the ZIP, relative from the current working directory (`process.cwd()`)<br>
    * You can use `{version}`, which will be replaced by the `version` entry from your `package.json`, e.g. `some-zip-v{version}.zip`
    */
   zip: string;
@@ -22,7 +22,7 @@ export class EdgeOptions {
    */
   devChangelog?: string;
 
-  /** If enabled, all the actions taken for each store will be logged to the console. */
+  /** If `true`, every step of uploading to the Edge Add-ons will be logged to the console. */
   verbose?: boolean;
 
   constructor(options) {
@@ -55,7 +55,7 @@ function getErrorMessage(message: string): string {
 
 export async function prepareToDeployEdge(
   options: EdgeOptions
-) {
+): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
 
   if (options.devChangelog) {

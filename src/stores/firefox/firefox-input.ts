@@ -9,13 +9,13 @@ export class FirefoxOptions {
   extId: string;
 
   /**
-   * The path to the ZIP, relative from the current working directory (`process.cwd()`).<br>
-   * You can use `{version}` to pull the current version of the `package.json`, e.g. `some-zip-v{version}.zip`
+   * The path to the ZIP, relative from the current working directory (`process.cwd()`)<br>
+   * You can use `{version}`, which will be replaced by the `version` entry from your `package.json`, e.g. `some-zip-v{version}.zip`
    */
   zip: string;
 
   /**
-   * If applicable, the path to the ZIP source, relative from the current working directory (`process.cwd()`).<br>
+   * If applicable, the path to the ZIP source, relative from the current working directory (`process.cwd()`)<br>
    * You can use `{version}`, which will be replaced by the `version` entry from your `package.json`, e.g. `some-zip-v{version}.zip`
    */
   zipSource?: string;
@@ -33,7 +33,7 @@ export class FirefoxOptions {
    */
   devChangelog?: string;
 
-  /** If enabled, all the actions taken for each store will be logged to the console. */
+  /** If `true`, every step of uploading to the Firefox Add-ons will be logged to the console. */
   verbose?: boolean;
 
   constructor(options) {
