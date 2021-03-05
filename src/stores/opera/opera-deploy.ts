@@ -1,33 +1,19 @@
 import { OperaOptions } from "./opera-input";
-import puppeteer from "puppeteer-extra";
-import { Page } from "puppeteer";
+import puppeteer, { Page } from "puppeteer";
 
 import {
-  clearInput,
-  disableImages,
   getExistingElementSelector,
   getFullPath,
   getVerboseMessage,
   prompt
 } from "../../utils";
-import mitt from "mitt";
 
-const emitter = mitt();
 const store = "Opera";
 
 const gSelectors = {
-  listExtensions: ".list-group",
-  extEntryName: ".DevHub-MyAddons-item-name",
   listErrors: ".alert-danger",
-  buttonManageExtensions: "a.Button",
   buttonNext: "button[type=submit]",
   buttonUploadNewVersion: `[ng-click*="upload()"]`,
-  inputEmail: "input[name=email]",
-  inputPassword: "input[type=password]",
-  inputsTwoFactor: ".otp-input",
-  twoFactorError: ".msg-error",
-  twoFactorErrorAgain: "#error-tooltip-1054",
-  twoFactorErrorAgainWait: "#error-tooltip-114",
   inputFile: "input[type=file]",
   inputCodePublic: `editable-field[field-value="packageVersion\\.source_url"] input`,
   inputCodePrivate: `editable-field[field-value="packageVersion\\.source_for_moderators_url"] input`,
@@ -35,109 +21,13 @@ const gSelectors = {
   buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
 };
 
-async function handleTwoFactor(page: Page, twoFactor?: number) {
-  const description = await getExistingElementSelector(page, [
-    gSelectors.inputsTwoFactor,
-    gSelectors.extEntryName
-  ]);
-
-  if (!description.includes(gSelectors.inputsTwoFactor)) {
-    return;
-  }
-  const messageTwoFactor = "Enter two-factor code: ";
-
-  return new Promise(async (resolve, reject) => {
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      if (!twoFactor) {
-        console.log("Opera: lock for", process.env.LOCK_FOR_TWO_FACTOR);
-        if (!process.env.LOCK_FOR_TWO_FACTOR) {
-          process.env.LOCK_FOR_TWO_FACTOR = "opera";
-        }
-        if (process.env.LOCK_FOR_TWO_FACTOR === "firefox") {
-          await new Promise(resolve => {
-            emitter.on("logged-out", state => {
-              if (state === "firefox") {
-                resolve(true);
-              }
-            });
-          });
-          process.env.LOCK_FOR_TWO_FACTOR = "opera";
-        }
-        if (process.env.LOCK_FOR_TWO_FACTOR === "opera") {
-          twoFactor = Number(
-            await prompt(
-              getVerboseMessage({
-                store,
-                message: messageTwoFactor
-              })
-            )
-          );
-        }
-      }
-      let twoFactorString = twoFactor.toString();
-      const description = await getExistingElementSelector(page, [
-        gSelectors.twoFactorError,
-        gSelectors.listExtensions
-      ]);
-
-      if (description.includes(gSelectors.listExtensions)) {
-        emitter.emit("logged-out", "opera");
-        resolve(true);
-        return;
-      }
-      const isTokenInvalid = await page.$eval(
-        gSelectors.twoFactorError,
-        elError => elError.textContent.trim().startsWith("Token")
-      );
-      if (isTokenInvalid) {
-        reject("invalid-token");
-        return;
-      }
-
-      twoFactorString = await prompt(
-        getVerboseMessage({
-          store,
-          message: messageTwoFactor
-        })
-      );
-      const elInputs = await page.$$(gSelectors.inputsTwoFactor);
-      for (let i = 0; i < elInputs.length; i++) {
-        await clearInput(
-          page,
-          `${gSelectors.inputsTwoFactor}:nth-of-type(${i + 1})`
-        );
-        await elInputs[i].type(twoFactorString[i]);
-      }
-      await page.click(gSelectors.buttonNext);
-      // eslint-disable-next-line no-constant-condition
-    }
-  });
-}
-
-async function loginToStore({
+async function getErrorsOrNone({
   page,
-  email,
-  password,
-  twoFactor
+  packageId
 }: {
   page: Page;
-  email: string;
-  password: string;
-  twoFactor?: number;
-}) {
-  await page.waitForSelector(gSelectors.inputEmail);
-  await page.type(gSelectors.inputEmail, email);
-  await page.type(gSelectors.inputPassword, password);
-  await page.click(gSelectors.buttonNext);
-
-  await handleTwoFactor(page, twoFactor);
-}
-
-async function getErrorsOrNone(
-  page: Page,
-  packageId: number
-): Promise<boolean> {
+  packageId: number;
+}): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const description = await getExistingElementSelector(page, [
       gSelectors.listErrors
@@ -162,7 +52,8 @@ async function getErrorsOrNone(
         store,
         message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
-      `
+      `,
+        prefix: "Error"
       })
     );
   });
@@ -181,23 +72,22 @@ async function uploadZip({
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 
-  await page.$eval(gSelectors.buttonUploadNewVersion, elSubmit => {
-    return new Promise(resolve => {
-      // @ts-ignore
-      elSubmit.click();
-      resolve(true);
-      new MutationObserver(() => {}).observe(elSubmit, {
-        attributes: true,
-        attributeFilter: ["disabled"]
-      });
-    });
-  });
+  await page.$eval(
+    gSelectors.buttonUploadNewVersion,
+    (elSubmit: HTMLButtonElement) => elSubmit.click()
+  );
 
-  return getErrorsOrNone(page, packageId);
+  return getErrorsOrNone({ page, packageId });
 }
 
-async function openRelevantExtensionPage(page: Page, packageId: number) {
-  const urlExtension = `https://addons.opera.com/developer/package/${packageId}?tab=versions`;
+async function openRelevantExtensionPage({
+  page,
+  packageId
+}: {
+  page: Page;
+  packageId: number;
+}) {
+  const urlExtension = `${getBaseDashboardUrl(packageId)}?tab=versions`;
   return new Promise(async (resolve, reject) => {
     page.on("response", response => {
       if (
@@ -218,7 +108,10 @@ async function openRelevantExtensionPage(page: Page, packageId: number) {
       }
       resolve(true);
     });
-    await page.goto(urlExtension);
+    try {
+      await page.goto(urlExtension);
+      // eslint-disable-next-line no-empty
+    } catch {}
   });
 }
 
@@ -311,32 +204,52 @@ async function addChangelogIfNeeded({
   await page.goto(url);
 }
 
+async function addLoginCookie({
+  page,
+  sessionid
+}: {
+  page: Page;
+  sessionid: string;
+}) {
+  const cookies = [
+    {
+      name: "sessionid",
+      value: sessionid,
+      domain: "addons.opera.com"
+    },
+    {
+      name: "csrftoken",
+      value: "8H2vyjMA91ozfeDXEIrTy3rG4VXt3ErfuaftZrLp4ssXqzY7cI9vAuSW110VYVl7",
+      domain: "addons.opera.com"
+    }
+  ];
+
+  await page.setCookie(...cookies);
+}
+function getBaseDashboardUrl(packageId: number) {
+  return `https://addons.opera.com/developer/package/${packageId}`;
+}
+
 export default async function deployToOpera({
-  email,
-  password,
-  twoFactor,
+  sessionid,
   packageId,
   zip,
   changelog,
   verbose: isVerbose
 }: OperaOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
-    puppeteer.use(require("puppeteer-extra-plugin-stealth")());
-
+    const [width, height] = [1280, 720];
     const browser = await puppeteer.launch({
-      // @ts-ignore
-      // headless: true,
-      // args: ["--window-size=1280,720", "--window-position=0,0"]
-      // @ts-ignore
-      defaultViewport: { width: 1280, height: 720 }
+      // headless: false,
+      // args: [`--window-size=${width},${height}`, "--window-position=0,0"],
+      defaultViewport: { width, height }
     });
 
     const [page] = await browser.pages();
+    // await disableImages(page);
+    await addLoginCookie({ page, sessionid });
+    const urlStart = `${getBaseDashboardUrl(packageId)}?tab=versions`;
 
-    await disableImages(page);
-
-    const urlStart = "https://addons.opera.com/developer";
-    await page.goto(urlStart, { waitUntil: "networkidle0" });
     if (isVerbose) {
       console.log(
         getVerboseMessage({
@@ -347,28 +260,13 @@ export default async function deployToOpera({
       console.log(
         getVerboseMessage({
           store,
-          message: "Logging in"
-        })
-      );
-    }
-
-    await loginToStore({
-      page,
-      email,
-      password,
-      twoFactor
-    });
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store,
           message: "Logged into the store"
         })
       );
     }
+
     try {
-      await openRelevantExtensionPage(page, packageId);
+      await openRelevantExtensionPage({ page, packageId });
     } catch (e) {
       await browser.close();
       reject(e);
