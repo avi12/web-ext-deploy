@@ -105,6 +105,8 @@ web-ext-deploy --env
     This can be done by doing **one** of the following:
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com)).
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
+  
+- The keys are case-insensitive, as they will be camel-cased anyway.
 
 #### Possible `.env` files
 
@@ -298,7 +300,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
     The relative path from the root to the ZIP.  
     You can use `{version}` to use the `version` entry from your `package.json`
   - `verbose` boolean?  
-    If specified, it will be logged to the console when the uploading has begun.
+    If `true`, it will be logged to the console when the uploading has begun.
 
   To get your `refreshToken`, `clientId`, and `clientSecret`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).  
   Returns `Promise<true>` or throws an exception.
