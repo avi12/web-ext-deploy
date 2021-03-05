@@ -195,7 +195,7 @@ export async function deployToEdge({
   devChangelog = "",
   zip,
   verbose: isVerbose
-}: EdgeOptions) {
+}: EdgeOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
     const browser = await puppeteer.launch({
