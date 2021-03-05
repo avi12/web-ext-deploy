@@ -40,7 +40,7 @@ export class FirefoxOptions {
     if (!options.extId) {
       throw new Error(
         getErrorMessage(
-          "No extension ID is provided, e.g. https://addons.mozilla.org/en-US/firefox/addon/EXT_ID"
+          "No extension ID is provided, e.g. https://addons.mozilla.org/addon/EXT_ID"
         )
       );
     }
