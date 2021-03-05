@@ -2,10 +2,10 @@ import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
 import deployToFirefox from "./firefox-deploy";
 
 export class FirefoxOptions {
-  /** The `sessionid` cookie value to login to the publisher's account. If you're having a hard time obtaining it, run: `web-ext-deploy --get-cookies=firefox` */
+  /** The `sessionid` cookie value to login to the publisher's account. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=firefox` */
   sessionid: string;
 
-  /** The extension ID. E.g. `https://addons.mozilla.org/en-US/developers/EXT_ID` */
+  /** The extension ID. E.g. `https://addons.mozilla.org/addon/EXT_ID` */
   extId: string;
 
   /**
@@ -16,7 +16,7 @@ export class FirefoxOptions {
 
   /**
    * If applicable, the path to the ZIP source, relative from the current working directory (`process.cwd()`).<br>
-   * You can use `{version}` to pull the current version of the `package.json`, e.g. `some-zip-v{version}.zip`
+   * You can use `{version}`, which will be replaced by the `version` entry from your `package.json`, e.g. `some-zip-v{version}.zip`
    */
   zipSource?: string;
 
@@ -48,7 +48,7 @@ export class FirefoxOptions {
     if (!options.sessionid) {
       throw new Error(
         getErrorMessage(
-          `No cookie header is provided. If you're having a hard time obtaining it, run:
+          `No cookie header is provided. If you have a hard time obtaining it, run:
 web-ext-deploy --get-cookies=firefox`
         )
       );

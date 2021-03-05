@@ -3,7 +3,7 @@ import { deployToEdge } from "./edge-deploy";
 
 export class EdgeOptions {
   /** The cookie required to login to the publisher's account, called: `.AspNet.Cookies`<br>
-   * If you're having a hard time obtaining it, run: `--get-cookies=edge` */
+   * If you have a hard time obtaining it, run: `--get-cookies=edge` */
   cookie: string;
 
   /** The extension ID. E.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID` */
@@ -11,7 +11,7 @@ export class EdgeOptions {
 
   /**
    * The path to the ZIP, relative from the current working directory (`process.cwd()`).<br>
-   * You can use `{version}` to pull the current version of the `package.json`, e.g. `some-zip-v{version}.zip`
+   * You can use `{version}`, which will be replaced by the `version` entry from your `package.json`, e.g. `some-zip-v{version}.zip`
    */
   zip: string;
 
@@ -31,7 +31,7 @@ export class EdgeOptions {
     }
 
     if (!options.cookie) {
-      throw new Error(getErrorMessage(`No cookie is provided. The cookie's name is ".AspNet.Cookies". If you're having a hard time obtaining it, run:
+      throw new Error(getErrorMessage(`No cookie is provided. The cookie's name is ".AspNet.Cookies". If you have a hard time obtaining it, run:
 web-ext-deploy --get-cookies=edge`))
     }
 

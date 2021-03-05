@@ -2,21 +2,22 @@ import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
 import { deployToChrome } from "./chrome-deploy";
 
 export class ChromeOptions {
-  /** The extension ID. E.g. `https://chrome.google.com/webstore/detail/EXT_ID` */
+  /** The extension ID. `https://chrome.google.com/webstore/detail/EXT_ID`<br>
+   * E.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone` */
   extId: string;
 
-  /** The refresh token. */
+  /** The refresh token. If you don't have it, use [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md) */
   refreshToken: string;
 
-  /** The client ID. */
+  /** The client ID. If you don't have it, use [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md) */
   clientId: string;
 
-  /** The client secret. */
+  /** The client secret. If you don't have it, use [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md) */
   clientSecret: string;
 
   /**
    * The path to the ZIP, relative from the current working directory (`process.cwd()`).<br>
-   * You can use `{version}` to pull the current version of the `package.json`, e.g. `some-zip-v{version}.zip`
+   * You can use `{version}`, which will be replaced by the `version` entry from your `package.json`, e.g. `some-zip-v{version}.zip`
    */
   zip: string;
 

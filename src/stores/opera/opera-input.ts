@@ -2,10 +2,10 @@ import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
 import deployToOpera from "./opera-deploy";
 
 export class OperaOptions {
-  /** The `sessionid` cookie to login to the publisher's account. If you're having a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
+  /** The `sessionid` cookie to login to the publisher's account. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
   sessionid: string;
 
-  /** The `csrftoken` cookie to login to the publisher's account. If you're having a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
+  /** The `csrftoken` cookie to upload the ZIP. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
   csrftoken: string;
 
   /** The extension ID. E.g. `https://addons.opera.com/en/extensions/details/EXT_ID` */
@@ -13,7 +13,7 @@ export class OperaOptions {
 
   /**
    * The path to the ZIP, relative from the current working directory (`process.cwd()`).<br>
-   * You can use `{version}` to pull the current version of the `package.json`, e.g. `some-zip-v{version}.zip`
+   * You can use `{version}`, which will be replaced by the `version` entry from your `package.json`, e.g. `some-zip-v{version}.zip`
    */
   zip: string;
 
@@ -38,7 +38,7 @@ export class OperaOptions {
     if (!options.sessionid) {
       throw new Error(
         getErrorMessage(
-          `No "sessionid" is provided. If you're having a hard time obtaining it, run:
+          `No "sessionid" is provided. If you have a hard time obtaining it, run:
 web-ext-deploy --get-cookies=opera`
         )
       );
@@ -47,7 +47,7 @@ web-ext-deploy --get-cookies=opera`
     if (!options.csrftoken) {
       throw new Error(
         getErrorMessage(
-          `No "csrftoken" is provided. If you're having a hard time obtaining it, run:
+          `No "csrftoken" is provided. If you have a hard time obtaining it, run:
 web-ext-deploy --get-cookies=opera`
         )
       );
