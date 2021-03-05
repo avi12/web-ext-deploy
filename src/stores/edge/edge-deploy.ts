@@ -11,7 +11,8 @@ const gSelectors = {
   inputFile: "input[type=file]",
   buttonPublishText: ".win-icon-Publish",
   buttonPublish: "#publishButton",
-  imgReview: ".win-icon-TaskStateCircleFull",
+  imgCheckmarkSecondary: ".win-color-fg-secondary",
+  errorIncompleteTranslations: `[data-l10n-key="Common_Incomplete"]`,
   buttonPackageNext: "[data-l10n-key=Package_Next]",
   buttonSubmissionUpdate: "[data-l10n-key=Common_Text_Update]",
   buttonSubmissionEdit: "[data-l10n-key=Common_Text_Edit]",
@@ -144,25 +145,68 @@ async function clickButtonNext({ page }: { page: Page }) {
 
   await page.click(gSelectors.buttonPackageNext);
 }
-async function clickButtonPublishText({ page }: { page: Page }) {
-  await page.waitForSelector(gSelectors.buttonPublishText);
 
-  await page.$eval(
-    gSelectors.buttonPublishText,
-    (elPublish: HTMLButtonElement) => {
-      return new Promise(resolve => {
-        new MutationObserver(() => resolve(true)).observe(
-          elPublish.parentElement,
-          {
-            attributes: true,
-            attributeFilter: ["disabled"]
-          }
-        );
-      });
-    }
+async function getLanguages({ page }: { page: Page }) {
+  return page.$$eval(
+    gSelectors.errorIncompleteTranslations,
+    (elIncompletes: HTMLDivElement[]) =>
+      elIncompletes
+        .map(elIncomplete =>
+          elIncomplete
+            .closest("tr")
+            .querySelector(".action-link")
+            .childNodes[0].textContent.trim()
+        )
+        .join(", ")
   );
+}
 
-  await page.click(gSelectors.buttonPublishText);
+async function clickButtonPublishTextIfPossible({
+  page,
+  extId
+}: {
+  page: Page;
+  extId: string;
+}) {
+  return new Promise(async (resolve, reject) => {
+    await page.waitForSelector(gSelectors.buttonPublishText);
+
+    const waitForEnable = page.$eval(
+      gSelectors.buttonPublishText,
+      (elPublish: HTMLButtonElement) => {
+        return new Promise(resolve => {
+          new MutationObserver(() => resolve(true)).observe(
+            elPublish.parentElement,
+            {
+              attributes: true,
+              attributeFilter: ["disabled"]
+            }
+          );
+        });
+      }
+    );
+    const result = await Promise.race([
+      waitForEnable,
+      page.waitForSelector(gSelectors.imgCheckmarkSecondary)
+    ]);
+
+    if (typeof result === "boolean") {
+      await page.click(gSelectors.buttonPublishText);
+      resolve(true);
+      return;
+    }
+
+    await page.goto(getBaseDashboardUrl(extId));
+    reject(
+      getVerboseMessage({
+        store,
+        message: `The following languages lack their translated descriptions and/or logos: ${await getLanguages(
+          { page }
+        )}`,
+        prefix: "Error"
+      })
+    );
+  });
 }
 
 async function addChangelogIfNeeded({
@@ -265,9 +309,16 @@ export async function deployToEdge({
     }
 
     await clickButtonNext({ page });
-    await clickButtonPublishText({ page });
+
+    try {
+      await clickButtonPublishTextIfPossible({ page, extId });
+    } catch (e) {
+      await browser.close();
+      reject(e);
+      return;
+    }
+
     await addChangelogIfNeeded({ page, devChangelog });
-    // TODO: Handle issues that prevent publishing
     await clickButtonPublish({ page });
     await page.waitForSelector(gSelectors.buttonSubmissionUpdate);
     await browser.close();
