@@ -118,11 +118,12 @@ async function addLoginCookie({
   page: Page;
   cookie: string;
 }) {
+  const domain = "partner.microsoft.com";
   const cookies = [
     {
       name: ".AspNet.Cookies",
       value: cookie,
-      domain: "partner.microsoft.com"
+      domain
     }
   ];
   await page.setCookie(...cookies);

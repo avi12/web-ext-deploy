@@ -169,11 +169,12 @@ async function addLoginCookie({
   page: Page;
   sessionid: string;
 }) {
+  const domain = "addons.mozilla.org";
   const cookies = [
     {
       name: "sessionid",
       value: sessionid,
-      domain: "addons.mozilla.org"
+      domain
     }
   ];
   await page.setCookie(...cookies);

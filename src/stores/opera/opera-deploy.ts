@@ -211,16 +211,17 @@ async function addLoginCookie({
   page: Page;
   sessionid: string;
 }) {
+  const domain = "addons.opera.com";
   const cookies = [
     {
       name: "sessionid",
       value: sessionid,
-      domain: "addons.opera.com"
+      domain
     },
     {
       name: "csrftoken",
       value: "8H2vyjMA91ozfeDXEIrTy3rG4VXt3ErfuaftZrLp4ssXqzY7cI9vAuSW110VYVl7",
-      domain: "addons.opera.com"
+      domain
     }
   ];
 
