@@ -35,7 +35,7 @@ Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/ch
 - Opera: `sessionid`, `csrftoken`
 - Edge: `.AspNet.Cookies`
 
-If you're having a hard time obtaining the cookie(s), you can run:
+If you have a hard time obtaining the cookie(s), you can run:
 
 ```shell
 web-ext-deploy --get-cookies=firefox edge opera
@@ -56,7 +56,7 @@ To use the `.env` files, in the CLI:
 web-ext-deploy --env
 ```
 
-#### Additional arguments:
+#### Additional arguments for the `.env` mode:
 
 - `--verbose` boolean?  
   If specified, the steps of every store will be logged to the console.
@@ -95,11 +95,11 @@ web-ext-deploy --env
 - Edge Add-ons store:
 
   - `EXT_ID` - Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
-  - `ZIP` - You can use `{version}`, which will be replace by the `version` entry from your `package.json`
+  - `ZIP` - You can use `{version}`
 
 - Opera Add-ons store:
   - `PACKAGE_ID` - Get it from `https://addons.opera.com/developer/package/PACKAGE_ID`
-  - `ZIP` - You can use `{version}`, which will be replace by the `version` entry from your `package.json`
+  - `ZIP` - You can use `{version}`
   - **Source code inspection**:  
     The Opera Add-ons reviewers require inspecting your extension's source code.  
     This can be done by doing **one** of the following:
@@ -121,7 +121,7 @@ EXT_ID="ExtensionID"
 `firefox.env`
 
 ```dotenv
-sessionid="SessionID_value"
+sessionid="sessionid_value"
 ZIP="dist/some-zip-v{version}.zip"
 ZIP_SOURCE="dist/some-zip-source-v{version}.zip"
 EXT_ID="ExtensionID"
@@ -138,10 +138,10 @@ EXT_ID="ExtensionID"
 `opera.env`
 
 ```dotenv
-sessionid="SessionID_value"
+sessionid="sessionid_value"
 csrftoken="csrftoken_value"
 ZIP="dist/some-zip-v{version}.zip"
-PACKAGE_ID="ExtensionID"
+PACKAGE_ID="PackageID"
 ```
 
 ### If using CLI
@@ -162,7 +162,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
   For example, in
 
   ```shell
-  web-ext-deploy --zip="zip-v{version}.zip" --chrome-refresh-token="refreshToken" --firefox-sessionid="SessionID_value" --edge-zip="some-zip-v{version}.zip"
+  web-ext-deploy --zip="zip-v{version}.zip" --chrome-refresh-token="refreshToken" --firefox-sessionid="sessionid_value" --edge-zip="some-zip-v{version}.zip"
   ```
 
   the `zip-v{version}.zip` will be used for the Chrome Web Store version _and_ the Firefox Add-ons version.
@@ -170,7 +170,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
 - Chrome Web Store
 
   - `--chrome-ext-id` string  
-    The extension ID from the store URL, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
+    Get it from `https://chrome.google.com/webstore/detail/EXT_ID`, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
   - `--chrome-refresh-token` string  
     The refreshToken you have registered.
   - `--chrome-client-id` string  
@@ -199,10 +199,10 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
     web-ext-deploy --get-cookies=firefox
     ```
   - `--firefox-zip` string  
-    The path to the ZIP from the root.  
+    The relative path to the ZIP from the root.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
   - `--firefox-zip-source` string?  
-    The path to the ZIP that contains the source code of your extension, if applicable.  
+    The relative path to the ZIP that contains the source code of your extension, if applicable.  
     You can use `{version}` as well.
   - `--firefox-changelog` string?  
     The changes made in this version compared to the previous one. The Firefox users will see this.  
@@ -233,7 +233,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
   Example:
 
   ```shell
-  web-ext-deploy --edge-ext-id="ExtensionID" --edge-cookie="cookie_value" --edge-zip="dist/some-zip-v{version}.zip" --edge-dev-changelog="Changelog for reviewers\nWith line breaks"
+  web-ext-deploy --edge-ext-id="ExtensionID" --edge-cookie=".AspNet.Cookies value" --edge-zip="dist/some-zip-v{version}.zip" --edge-dev-changelog="Changelog for reviewers\nWith line breaks"
   ```
 
 - Opera Add-ons
@@ -245,10 +245,10 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
   - `--opera-csrftoken` string  
     The value of the cookie `csrftoken`, which will be used to upload the ZIP.
   - `--opera-zip` string  
-    The path to the ZIP from the root.  
+    The relative path to the ZIP from the root.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
   - `--opera-changelog` string?  
-    The changes made in this version, which will be seen by the Edge Add-ons reviewers.  
+    The changes made in this version, which will be seen by the Opera Add-ons reviewers.  
     You can use `\n` for new lines.
 
   Example:
@@ -258,7 +258,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
   ```
 
   **Notes:**
-  
+
   - Source code inspection:  
     The Opera Add-ons reviewers require inspecting your extension's source code.  
     This can be done by doing **one** of the following:
@@ -287,7 +287,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   Options:
 
   - `extId` string  
-    The extension ID from the store URL, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
+    Get it from `https://chrome.google.com/webstore/detail/EXT_ID`, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
   - `refreshToken` string  
     The refresh token.
   - `clientId` string  
@@ -295,7 +295,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   - `clientSecret` string  
     The client secret.
   - `zip` string  
-    The ZIP file.  
+    The relative path from the root to the ZIP.  
     You can use `{version}` to use the `version` entry from your `package.json`
   - `verbose` boolean?  
     If specified, it will be logged to the console when the uploading has begun.
@@ -307,7 +307,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   Options:
 
   - `extId` string  
-    The extension ID from the store URL, e.g. `https://addons.mozilla.org/addon/EXT_ID`
+    Get it from `https://addons.mozilla.org/addon/EXT_ID`
   - `sessionid` string  
     The value of the cookie `sessionid`, which will be used to log in to the publisher's account.  
     If you have a hard time obtaining it, you can run:
@@ -317,13 +317,13 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   ```
 
   - `zip` string  
-    The path to the ZIP from the root.  
+    The relative path from the root to the ZIP.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
   - `zipSource` string?  
-    The path to the ZIP that contains the source code of your extension, if applicable.  
+    The relative path from the root to the ZIP that contains the source code of your extension, if applicable.  
     You can use `{version}` as well.
   - `changelog` string?  
-    The changes made in this version, compared to the previous one.  
+    The changes made in this version, compared to the previous one, which will be seen by the Firefox users.  
     I recommend providing the changelog via `--firefox-changelog`, so it stays dynamic.
   - `devChangelog` string?  
     The technical changes made in this version, compared to the previous one, which will be visible only to the Firefox Add-ons reviewers.  
@@ -337,7 +337,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   Options:
 
   - `extId` string  
-    The extension ID from the store dashboard URL, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+    Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
   - `cookie` string  
     The value of the cookie `.AspNet.Cookies`, which will be used to log in to the publisher's account.  
     If you have a hard time obtaining it, you can run:
@@ -347,7 +347,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   ```
 
   - `zip` string  
-    The path to the ZIP from the root.  
+    The relative path from the root to the ZIP.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
   - `devChangelog` string?  
     The changes made in this version, compared to the previous one, which will be visible only to the Edge Add-ons reviewers.  
@@ -361,17 +361,17 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   Options:
 
   - `packageId` number  
-    The pacckage ID of the extension from the store dashboard, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
+    The package ID of the extension from the store dashboard, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
   - `sessionid` string  
     The value of the cookie `sessionid`, which will be used to log in to the publisher's account.
   - `csrftoken` string  
     The value of the cookie `csrftoken`, which will be used to upload the ZIP.
   - `zip` string  
-    The path to the ZIP from the root.  
+    The relative path from the root to the ZIP.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
-  - `devChangelog` string?  
-    The technical changes made in this version, compared to the previous one, which will be visible only to the Opera Add-ons reviewers.  
-    I recommend providing the changelog via `--opera-dev-changelog`, so it stays up to date.
+  - `changelog` string?  
+    The changes made in this version, compared to the previous one, which will be seen by the Opera users.  
+    I recommend providing the changelog via `--opera-changelog`, so it stays up to date.
   - `verbose` boolean?  
     If `true`, every step of uploading to the Opera Add-ons will be logged to the console.
 
@@ -429,7 +429,7 @@ deployOpera({
   sessionid: "sessionid_value",
   csrftoken: "csrftoken_value",
   zip: "dist/some-zip-v{version}.zip",
-  zipSource: "dist/zip-source-v{version}.zip",
+  changelog: "Some changes",
   verbose: false
 }).catch(console.error);
 ```
