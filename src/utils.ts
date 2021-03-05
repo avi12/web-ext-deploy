@@ -8,7 +8,7 @@ export function getFullPath(file: string): string {
 }
 
 export function getIsFileExists(file: string): boolean {
-  return fs.existsSync(file);
+  return fs.existsSync(getFullPath(file));
 }
 
 export function isObjectEmpty(object: object) {
