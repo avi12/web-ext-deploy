@@ -190,7 +190,8 @@ async function clickButtonPublishTextIfPossible({
       page.waitForSelector(gSelectors.imgCheckmarkSecondary)
     ]);
 
-    if (typeof result === "boolean") {
+    const isCanPublish = typeof result === "boolean";
+    if (isCanPublish) {
       await page.click(gSelectors.buttonPublishText);
       resolve(true);
       return;
