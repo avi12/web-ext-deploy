@@ -4,7 +4,7 @@ import {
   FirefoxOptions,
   prepareToDeployFirefox
 } from "./stores/firefox/firefox-input";
-import { getJsonStoresFromCli } from "./cli";
+import { getCookies, getJsonStoresFromCli } from "./cli";
 import {
   ChromeOptions,
   prepareToDeployChrome
@@ -18,10 +18,9 @@ const isUseCli = Boolean(
 
 const { argv } = yargs(process.argv.slice(2)).options({
   env: { type: "boolean", default: false },
-  firefoxTwoFactor: { type: "number" },
+  getCookies: { type: "array" },
   firefoxChangelog: { type: "string" },
   firefoxDevChangelog: { type: "string" },
-  operaTwoFactor: { type: "number" },
   verbose: { type: "boolean" }
 });
 
@@ -42,6 +41,12 @@ async function initCli() {
     opera: "Opera Add-ons"
   };
 
+  if (argv.getCookies) {
+    await getCookies(argv.getCookies as string[]);
+    process.exit();
+    return;
+  }
+
   const storeJsons = getJsonStoresFromCli();
   const storeEntries = Object.entries(storeJsons);
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
@@ -52,22 +57,19 @@ async function initCli() {
       console.log(`Successfully updated "${extId}" on ${storeNames[store]}!`);
     });
   } catch (e) {
-    console.error(e);
+    throw new Error(e);
   }
 }
 
 initCli().catch(console.error);
 
 export async function deployChrome(options: ChromeOptions) {
-  return new Promise((resolve, reject) =>
-    prepareToDeployChrome(options).then(resolve).catch(reject)
-  );
+  return prepareToDeployChrome(options);
 }
 
 export async function deployFirefox(
   options: Omit<FirefoxOptions, "twoFactor">
 ): Promise<boolean> {
-  (options as FirefoxOptions).twoFactor = argv.firefoxTwoFactor;
   if (argv.firefoxChangelog) {
     options.changelog = argv.firefoxChangelog;
   }
@@ -84,6 +86,5 @@ export async function deployEdge(options: EdgeOptions) {
 export async function deployOpera(
   options: Omit<OperaOptions, "twoFactor">
 ): Promise<boolean> {
-  (options as OperaOptions).twoFactor = argv.operaTwoFactor;
   return prepareToDeployOpera(options);
 }

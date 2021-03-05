@@ -2,14 +2,8 @@ import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
 import deployToFirefox from "./firefox-deploy";
 
 export class FirefoxOptions {
-  /** The publisher account's email address. */
-  email: string;
-
-  /** The publisher account's password. */
-  password: string;
-
-  /** The two-factor code of the publisher account, if applicable. */
-  twoFactor?: number;
+  /** The `sessionid` cookie value to login to the publisher's account. If you're having a hard time obtaining it, run: `web-ext-deploy --get-cookies=firefox` */
+  sessionid: string;
 
   /** The extension ID. E.g. `https://addons.mozilla.org/en-US/developers/EXT_ID` */
   extId: string;
@@ -28,14 +22,14 @@ export class FirefoxOptions {
 
   /**
    * A description of the changes in this version, compared to the previous one.<br>
-   * It's recommended to use instead `--firefox-changelog` , so it's dynamic.
+   * It's recommended to use instead `--firefox-changelog` , so it stays up to date.
    */
   changelog?: string;
 
   /**
    * A description of the technical changes made in this version, compared to the previous one.<br>
    * This will only be seen by the Firefox Addons reviewers.<br>
-   * It's recommended to use instead `--firefox-dev-changelog` , so it's dynamic.
+   * It's recommended to use instead `--firefox-dev-changelog` , so it stays up to date.
    */
   devChangelog?: string;
 
@@ -44,15 +38,20 @@ export class FirefoxOptions {
 
   constructor(options) {
     if (!options.extId) {
-      throw new Error(getErrorMessage("No extension ID is provided, e.g. https://addons.mozilla.org/en-US/firefox/addon/EXT_ID"));
+      throw new Error(
+        getErrorMessage(
+          "No extension ID is provided, e.g. https://addons.mozilla.org/en-US/firefox/addon/EXT_ID"
+        )
+      );
     }
 
-    if (!options.email) {
-      throw new Error(getErrorMessage("No email is provided"));
-    }
-
-    if (!options.password) {
-      throw new Error(getErrorMessage("No password is provided"));
+    if (!options.sessionid) {
+      throw new Error(
+        getErrorMessage(
+          `No cookie header is provided. If you're having a hard time obtaining it, run:
+web-ext-deploy --get-cookies=firefox`
+        )
+      );
     }
 
     // Zip checking
@@ -100,4 +99,3 @@ export async function prepareToDeployFirefox(
   new FirefoxOptions(options);
   return deployToFirefox(options);
 }
-

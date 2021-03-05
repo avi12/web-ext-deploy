@@ -6,6 +6,7 @@ import { ChromeOptions } from "./stores/chrome/chrome-input";
 import { FirefoxOptions } from "./stores/firefox/firefox-input";
 import { EdgeOptions } from "./stores/edge/edge-input";
 import { OperaOptions } from "./stores/opera/opera-input";
+import { getSignInCookie } from "./get-sign-in-cookie";
 
 const { argv } = yargs(process.argv.slice(2)).options({
   env: { type: "boolean" },
@@ -19,24 +20,21 @@ const { argv } = yargs(process.argv.slice(2)).options({
   chromeClientSecret: { type: "string" },
   chromeZip: { type: "string" },
   // firefox
+  firefoxSessionid: { type: "string" },
   firefoxExtId: { type: "string" },
-  firefoxEmail: { type: "string" },
-  firefoxPassword: { type: "string" },
-  firefoxTwoFactor: { type: "string" },
   firefoxZip: { type: "string" },
   firefoxZipSource: { type: "string" },
   firefoxChangelog: { type: "string" },
   firefoxDevChangelog: { type: "string" },
   // edge
+  edgeCookie: { type: "string" },
   edgeExtId: { type: "string" },
-  edgeEmail: { type: "string" },
-  edgePassword: { type: "string" },
   edgeZip: { type: "string" },
   edgeDevChangelog: { type: "string" },
   // opera
+  operaSessionid: { type: "string" },
+  operaCsrftoken: { type: "string" },
   operaExtId: { type: "string" },
-  operaEmail: { type: "string" },
-  operaPassword: { type: "string" },
   operaZip: { type: "string" },
   operaChangelog: { type: "string" }
 });
@@ -141,4 +139,8 @@ export function getJsonStoresFromCli(): StoreObjects {
   }
 
   return fillMissing(jsonStoresRaw);
+}
+
+export async function getCookies(siteNames: string[]) {
+  return getSignInCookie(siteNames);
 }

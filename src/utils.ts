@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import { Page } from "puppeteer";
-import mitt, { Emitter } from "mitt";
 import inquirer from "inquirer";
 
 export function getFullPath(file: string): string {
@@ -9,7 +8,7 @@ export function getFullPath(file: string): string {
 }
 
 export function getIsFileExists(file: string): boolean {
-  return fs.existsSync(getFullPath(file));
+  return fs.existsSync(file);
 }
 
 export function isObjectEmpty(object: object) {
@@ -44,14 +43,6 @@ export async function getExistingElementSelector(
   return description;
 }
 
-export async function clearInput(page: Page, selector: string) {
-  const elInput = await page.$(selector);
-  await elInput.click();
-  await elInput.focus();
-  await elInput.click({ clickCount: 3 });
-  await elInput.press("Backspace");
-}
-
 export function getVerboseMessage({
   message,
   prefix = "Info",
@@ -61,25 +52,19 @@ export function getVerboseMessage({
   prefix?: string;
   store: string;
 }): string {
-  const msg = `${prefix} ${store}: ${message}`;
+  let msg = `${store}: ${message}`;
+  if (prefix !== "Error") {
+    msg = `${prefix} ${msg}`;
+  }
+  if (!message.startsWith("Enter")) {
+    msg = "\n" + msg + "\n";
+  }
   if (prefix === "") {
-    return msg.trim();
+    msg = msg.trim();
+  } else if (prefix === "Error") {
+    msg = msg.trimLeft();
   }
   return msg;
-}
-
-export async function emitterWait(
-  emitter: Emitter,
-  listenToState: string,
-  site: string
-) {
-  new Promise(resolve => {
-    emitter.on(listenToState, state => {
-      if (state === site) {
-        resolve(true);
-      }
-    });
-  });
 }
 
 export async function prompt(message: string): Promise<string> {

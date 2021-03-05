@@ -2,23 +2,11 @@ import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
 import deployToOpera from "./opera-deploy";
 
 export class OperaOptions {
-  /** The publisher account's email address. */
-  email: string;
+  /** The `sessionid` cookie to login to the publisher's account. If you're having a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
+  sessionid: string;
 
-  /** The publisher account's password. */
-  password: string;
-
-  /** The two-factor code of the publisher account, if applicable. */
-  twoFactor?: number;
-
-  /** The reCaptcha service to attempt to bypass the login screen. */
-  reCaptchaSolver: "2captcha";
-
-  /**
-   * The reCaptcha API key to attempt to bypass the login screen.<br>
-   * [Get your 2Captcha API key here](https://2captcha.com?from=11267395)
-   */
-  reCaptchaApiKey: string;
+  /** The `csrftoken` cookie to login to the publisher's account. If you're having a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
+  csrftoken: string;
 
   /** The extension ID. E.g. `https://addons.opera.com/en/extensions/details/EXT_ID` */
   packageId: number;
@@ -31,7 +19,7 @@ export class OperaOptions {
 
   /**
    * A description of the changes in this version, compared to the previous one.<br>
-   * It's recommended to use instead `--opera-changelog` , so it's dynamic.
+   * It's recommended to use instead `--opera-changelog` , so it stays up to date.
    */
   changelog?: string;
 
@@ -47,27 +35,21 @@ export class OperaOptions {
       );
     }
 
-    if (!options.email) {
-      throw new Error(getErrorMessage("No email is provided"));
-    }
-
-    if (!options.password) {
-      throw new Error(getErrorMessage("No password is provided"));
-    }
-
-    // reCaptcha verification
-    if (!options.reCaptchaSolver) {
-      throw new Error(getErrorMessage("No reCaptcha solver is provided"));
-    }
-
-    const reCaptchaServices = ["2captcha"];
-    if (!reCaptchaServices.includes(options.reCaptchaSolver)) {
-      throw new Error(getErrorMessage("Unsupported reCaptcha solver"));
-    }
-
-    if (!options.reCaptchaApiKey) {
+    if (!options.sessionid) {
       throw new Error(
-        getErrorMessage(`No API key provided for ${options.reCaptchaSolver}`)
+        getErrorMessage(
+          `No "sessionid" is provided. If you're having a hard time obtaining it, run:
+web-ext-deploy --get-cookies=opera`
+        )
+      );
+    }
+
+    if (!options.csrftoken) {
+      throw new Error(
+        getErrorMessage(
+          `No "csrftoken" is provided. If you're having a hard time obtaining it, run:
+web-ext-deploy --get-cookies=opera`
+        )
       );
     }
 

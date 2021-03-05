@@ -1,100 +1,24 @@
-import puppeteer from "puppeteer-extra";
+import puppeteer, { Page } from "puppeteer";
 import { EdgeOptions } from "./edge-input";
-import { getExistingElementSelector, getVerboseMessage } from "../../utils";
-import { Browser, Page } from "puppeteer";
-import duration from "parse-duration";
+import { disableImages, getVerboseMessage } from "../../utils";
 import compareVersions from "compare-versions";
 import zipper from "zip-local";
 
 const store = "Edge";
 
 const gSelectors = {
-  inputEmail: "input[type=email]",
-  inputPhone: "input[type=tel]",
-  inputPassword: "#i0118",
+  extName: ".extension-name",
   inputFile: "input[type=file]",
-  inputTwoFactor: "#idTxtBx_SAOTCC_OTC",
-  errorTwoFactorIncorrect: "#idSpan_SAOTCC_Error_OTC",
-  errorTwoFactorTryResend: "#idSpan_SAOTCS_Error_OTC",
-  instructionVerifyPhone: "#idDiv_SAOTCS_ProofConfirmationDesc",
-  buttonNoThanks: "#iCancel",
-  buttonPublish: ".win-icon-Publish",
-  profileName: ".css-383",
-  buttonSubmit: "input[type=submit]",
-  buttonNext: "#idSIButton9",
-  buttonPackageNext: "[data-i18n-key=Package_Next]",
-  twoFactorChoices: ".tile-img[role=presentation]",
-  containerNumberAuthApp: "#idRemoteNGC_DisplaySign"
+  buttonPublishText: ".win-icon-Publish",
+  buttonPublish: "#publishButton",
+  imgReview: ".win-icon-TaskStateCircleFull",
+  buttonPackageNext: "[data-l10n-key=Package_Next]",
+  buttonSubmissionUpdate: "[data-l10n-key=Common_Text_Update]",
+  buttonSubmissionEdit: "[data-l10n-key=Common_Text_Edit]",
+  inputDevChangelog: "textarea"
 };
 
-async function typeAndSubmit(page: Page, selector: string, value: string) {
-  await page.waitForSelector(selector);
-  await page.type(selector, value);
-  await page.click(gSelectors.buttonSubmit);
-}
-
-async function loginToStore({
-  page,
-  email,
-  password
-}: {
-  page: Page;
-  email: string;
-  password?: string;
-}) {
-  return new Promise(async resolve => {
-    // @ts-ignore
-    await page.maximize();
-    await typeAndSubmit(page, gSelectors.inputEmail, email);
-    await page.waitForNavigation();
-
-    const selectorExisting = await getExistingElementSelector(page, [
-      gSelectors.inputPassword,
-      gSelectors.instructionVerifyPhone,
-      gSelectors.buttonNext,
-      gSelectors.profileName
-    ]);
-
-    if (selectorExisting.includes(gSelectors.profileName)) {
-      resolve(true);
-      return;
-    }
-    if (selectorExisting.includes(gSelectors.inputPassword) && password) {
-      await page.waitForSelector(gSelectors.inputPassword);
-      await page.type(gSelectors.inputPassword, password);
-      await page.click(gSelectors.buttonSubmit);
-    }
-    console.log(
-      getVerboseMessage({
-        store,
-        message:
-          "Launching the Puppeteer instance so you handle the two-factor authentication"
-      })
-    );
-
-    // @ts-ignore
-    await page.maximize();
-
-    const timeToWait = "10m";
-    try {
-      await page.waitForResponse(
-        "https://partner.microsoft.com/en-us/dashboard/microsoftedge/overview",
-        { timeout: duration(timeToWait) }
-      );
-      resolve(true);
-    } catch {
-      console.log(
-        getVerboseMessage({
-          store,
-          message: `The timeout of ${timeToWait} has exceeded. Restart the "web-ext-deploy" instance`
-        })
-      );
-      process.exit(1);
-    }
-  });
-}
-
-function getBaseDashboardUrl(extId) {
+function getBaseDashboardUrl(extId: string) {
   return `https://partner.microsoft.com/en-us/dashboard/microsoftedge/${extId}`;
 }
 
@@ -124,35 +48,18 @@ async function openRelevantExtensionPage({
       );
     });
     try {
-      await page.goto(`${getBaseDashboardUrl(extId)}/overview`);
+      await page.goto(`${getBaseDashboardUrl(extId)}/packages/overview`);
       resolve(true);
       // eslint-disable-next-line no-empty
     } catch {}
   });
 }
 
-async function getCurrentVersion({
-  page,
-  browser
-}: {
-  page: Page;
-  browser: Browser;
-}): Promise<string> {
-  const selectorExtUrl = `a[href*="addons/detail/"]`;
-  await page.waitForSelector(selectorExtUrl);
-  const urlExtension = await page.$eval(
-    selectorExtUrl,
-    (elA: HTMLAnchorElement) => elA.href
+async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
+  await page.waitForSelector(gSelectors.extName);
+  return page.$eval(gSelectors.extName, (elExtName: HTMLDivElement) =>
+    elExtName.lastElementChild.textContent.trim()
   );
-
-  const pageStore = await browser.newPage();
-  await pageStore.goto(urlExtension, { waitUntil: "networkidle0" });
-  const versionCurrent = await pageStore.$eval(
-    "#versionLabel",
-    elVersion => elVersion.textContent.split(" ")[1]
-  );
-  await pageStore.close();
-  return versionCurrent;
 }
 
 function getNewVersion(zip: string) {
@@ -162,21 +69,30 @@ function getNewVersion(zip: string) {
   return version;
 }
 
-async function uploadZip({ page, zip }: { page: Page; zip: string }) {
+async function uploadZip({
+  page,
+  zip,
+  extId
+}: {
+  page: Page;
+  zip: string;
+  extId: string;
+}) {
+  await page.goto(`${getBaseDashboardUrl(extId)}/packages`, {
+    waitUntil: "networkidle0"
+  });
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 }
 
 async function verifyNewVersionIsGreater({
-  browser,
   page,
   zip
 }: {
   page: Page;
-  browser: Browser;
   zip: string;
 }) {
-  const versionCurrent = await getCurrentVersion({ page, browser });
+  const versionCurrent = await getCurrentVersion({ page });
   const versionNew = getNewVersion(zip);
 
   return new Promise(async (resolve, reject) => {
@@ -195,63 +111,121 @@ async function verifyNewVersionIsGreater({
   });
 }
 
+async function addLoginCookie({
+  page,
+  cookie
+}: {
+  page: Page;
+  cookie: string;
+}) {
+  const cookies = [
+    {
+      name: ".AspNet.Cookies",
+      value: cookie,
+      domain: "partner.microsoft.com"
+    }
+  ];
+  await page.setCookie(...cookies);
+}
+
+async function clickButtonNext({ page }: { page: Page }) {
+  await page.$eval(
+    gSelectors.buttonPackageNext,
+    (elPackageNext: HTMLButtonElement) => {
+      return new Promise(resolve => {
+        new MutationObserver(() => resolve(true)).observe(elPackageNext, {
+          attributes: true,
+          attributeFilter: ["disabled"]
+        });
+      });
+    }
+  );
+
+  await page.click(gSelectors.buttonPackageNext);
+}
+async function clickButtonPublishText({ page }: { page: Page }) {
+  await page.waitForSelector(gSelectors.buttonPublishText);
+
+  await page.$eval(
+    gSelectors.buttonPublishText,
+    (elPublish: HTMLButtonElement) => {
+      return new Promise(resolve => {
+        new MutationObserver(() => resolve(true)).observe(
+          elPublish.parentElement,
+          {
+            attributes: true,
+            attributeFilter: ["disabled"]
+          }
+        );
+      });
+    }
+  );
+
+  await page.click(gSelectors.buttonPublishText);
+}
+
+async function addChangelogIfNeeded({
+  page,
+  devChangelog
+}: {
+  devChangelog: string;
+  page: Page;
+}) {
+  await page.waitForSelector(gSelectors.inputDevChangelog);
+  await page.type(gSelectors.inputDevChangelog, devChangelog);
+}
+
+async function clickButtonPublish({ page }: { page: Page }) {
+  await page.waitForSelector(gSelectors.buttonPublish);
+  await page.$eval(gSelectors.buttonPublish, (elPublish: HTMLButtonElement) => {
+    return new Promise(resolve => {
+      new MutationObserver(() => resolve(true)).observe(elPublish, {
+        attributes: true,
+        attributeFilter: ["disabled"]
+      });
+    });
+  });
+
+  await page.click(gSelectors.buttonPublish);
+}
 export async function deployToEdge({
-  email,
-  password,
+  cookie,
   extId,
+  devChangelog = "",
   zip,
   verbose: isVerbose
 }: EdgeOptions) {
   return new Promise(async (resolve, reject) => {
-    puppeteer.use(require("puppeteer-extra-plugin-minmax")());
-
+    const [width, height] = [1280, 720];
     const browser = await puppeteer.launch({
-      // @ts-ignore
-      headless: false,
-      // devtools: true,
-      args: ["--window-size=1280,720", "--window-position=0,0"],
-      defaultViewport: { width: 1280, height: 720 }
+      // headless: false,
+      // args: [`--window-size=${width},${height}`, "--window-position=0,0"],
+      defaultViewport: { width, height }
     });
 
-    // Opening a new page instead of using the first page
-    // because otherwise the minmax plugin won't work
-    const page = await browser.newPage();
+    const [page] = await browser.pages();
 
-    browser.pages().then(([page]) => page.close());
-
-    // @ts-ignore
-    await page.minimize();
-
-    const urlStart =
-      "https://partner.microsoft.com/en-us/dashboard/microsoftedge/overview";
-    await page.goto(urlStart, { waitUntil: "networkidle0" });
+    const urlStart = `${getBaseDashboardUrl(extId)}/overview`;
 
     if (isVerbose) {
       console.log(
         getVerboseMessage({
           store,
-          message: `Launched Puppeteer session in ${urlStart}`
+          message: `Launched a Puppeteer session in ${urlStart}`
         })
       );
 
       console.log(
         getVerboseMessage({
           store,
-          message: "Logging in"
+          message: "Logged in"
         })
       );
     }
 
-    await loginToStore({
-      page,
-      email,
-      password
-    });
-
-    // After logging in, no need to keep the
-    // Puppeteer window visible, so minimizing
-    // @ts-ignore
-    await page.minimize();
+    await disableImages(page);
+    await addLoginCookie({ page, cookie });
+    await page.goto(urlStart);
 
     try {
       await openRelevantExtensionPage({ page, extId });
@@ -271,14 +245,14 @@ export async function deployToEdge({
     }
 
     try {
-      await verifyNewVersionIsGreater({ page, browser, zip });
+      await verifyNewVersionIsGreater({ page, zip });
     } catch (e) {
       await browser.close();
       reject(e);
       return;
     }
 
-    await uploadZip({ page, zip });
+    await uploadZip({ page, zip, extId });
 
     if (isVerbose) {
       console.log(
@@ -289,11 +263,13 @@ export async function deployToEdge({
       );
     }
 
-    await page.click(gSelectors.buttonPublish);
+    await clickButtonNext({ page });
+    await clickButtonPublishText({ page });
+    await addChangelogIfNeeded({ page, devChangelog });
     // TODO: Handle issues that prevent publishing
-
+    await clickButtonPublish({ page });
+    await page.waitForSelector(gSelectors.buttonSubmissionUpdate);
     await browser.close();
-
     resolve(true);
   });
 }

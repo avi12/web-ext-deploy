@@ -32,6 +32,30 @@ export class ChromeOptions {
       );
     }
 
+    if (!options.refreshToken) {
+      throw new Error(
+        getErrorMessage(
+          "No refresh token is provided. To get one: https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md"
+        )
+      );
+    }
+
+    if (!options.clientId) {
+      throw new Error(
+        getErrorMessage(
+          "No client ID is provided. To get one: https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md"
+        )
+      );
+    }
+
+    if (!options.clientSecret) {
+      throw new Error(
+        getErrorMessage(
+          "No client secret is provided. To get one: https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md"
+        )
+      );
+    }
+
     // Zip checking
     if (!options.zip) {
       throw new Error(getErrorMessage("No zip is provided"));

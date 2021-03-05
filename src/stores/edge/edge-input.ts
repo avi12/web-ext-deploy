@@ -2,11 +2,9 @@ import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
 import { deployToEdge } from "./edge-deploy";
 
 export class EdgeOptions {
-  /** The publisher account's email address. */
-  email: string;
-
-  /** The publisher account's password. */
-  password?: string;
+  /** The cookie required to login to the publisher's account, called: `.AspNet.Cookies`<br>
+   * If you're having a hard time obtaining it, run: `--get-cookies=edge` */
+  cookie: string;
 
   /** The extension ID. E.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID` */
   extId: string;
@@ -20,7 +18,7 @@ export class EdgeOptions {
   /**
    * A description of the technical changes made in this version, compared to the previous one.<br>
    * This will only be seen by the Firefox Addons reviewers.<br>
-   * It's recommended to use instead `--edge-dev-changelog` , so it's dynamic.
+   * It's recommended to use instead `--edge-dev-changelog` , so it stays up to date.
    */
   devChangelog?: string;
 
@@ -32,12 +30,9 @@ export class EdgeOptions {
       throw new Error(getErrorMessage("No extension ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID"));
     }
 
-    if (!options.email) {
-      throw new Error(getErrorMessage("No email is provided"));
-    }
-
-    if (options.password && options.password === "") {
-      throw new Error(getErrorMessage("If your account requires a password, provide it properly"));
+    if (!options.cookie) {
+      throw new Error(getErrorMessage(`No cookie is provided. The cookie's name is ".AspNet.Cookies". If you're having a hard time obtaining it, run:
+web-ext-deploy --get-cookies=edge`))
     }
 
     // Zip checking
@@ -55,7 +50,7 @@ export class EdgeOptions {
 }
 
 function getErrorMessage(message: string): string {
-  return `Opera: ${message}`;
+  return `Edge: ${message}`;
 }
 
 export async function prepareToDeployEdge(
