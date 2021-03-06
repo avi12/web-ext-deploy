@@ -1,11 +1,7 @@
 import { OperaOptions } from "./opera-input";
 import puppeteer, { Page } from "puppeteer";
 
-import {
-  getExistingElementSelector,
-  getFullPath,
-  getVerboseMessage
-} from "../../utils";
+import { getFullPath, getVerboseMessage } from "../../utils";
 
 const store = "Opera";
 
@@ -28,10 +24,11 @@ async function getErrorsOrNone({
   packageId: number;
 }): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
-    const description = await getExistingElementSelector(page, [
-      gSelectors.listErrors
+    await Promise.race([
+      page.waitForSelector(gSelectors.listErrors),
+      page.waitForNavigation({ waitUntil: "networkidle0" })
     ]);
-    if (!description.includes(gSelectors.listErrors)) {
+    if (page.url().endsWith("?tab=conversation")) {
       resolve(true);
       return;
     }
