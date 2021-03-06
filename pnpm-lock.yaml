@@ -1,6 +1,5 @@
 dependencies:
   '@vue/reactivity': 3.0.6
-  '@vue/runtime-core': 3.0.6
   camel-case: 4.1.2
   chrome-webstore-upload: 0.4.4
   compare-versions: 3.6.0
@@ -868,13 +867,6 @@ packages:
     dev: false
     resolution:
       integrity: sha512-hX8PnZayNMoljWSYrZW0OclQnRaMoHxvi5eeFVFPDr7+tzBeiftmmozKttxxCLoDxBWX1B4gNc237DIcYU63Lw==
-  /@vue/runtime-core/3.0.6:
-    dependencies:
-      '@vue/reactivity': 3.0.6
-      '@vue/shared': 3.0.6
-    dev: false
-    resolution:
-      integrity: sha512-x6N38P0DeMyrHiAxCE/rACHTyydOzlg8IyUIPkSJ4rrSkuJnAtFKQicK6fm8NuD21dwdPr8KcZ4Cn4xaqL1JJg==
   /@vue/shared/3.0.6:
     dev: false
     resolution:
@@ -5526,7 +5518,6 @@ specifiers:
   '@typescript-eslint/eslint-plugin': ^4.15.2
   '@typescript-eslint/parser': ^4.15.2
   '@vue/reactivity': ^3.0.6
-  '@vue/runtime-core': ^3.0.6
   camel-case: ^4.1.2
   chrome-webstore-upload: ^0.4.4
   compare-versions: ^3.6.0
