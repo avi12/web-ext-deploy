@@ -5,33 +5,40 @@ import { getVerboseMessage } from "../../utils";
 
 const store = "Chrome";
 
-export async function deployToChrome(options: ChromeOptions): Promise<boolean> {
+export async function deployToChrome({
+  extId: extensionId,
+  clientId,
+  clientSecret,
+  refreshToken,
+  verbose,
+  zip
+}: ChromeOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const client = ChromeUpload({
-      extensionId: options.extId,
-      clientId: options.clientId,
-      clientSecret: options.clientSecret,
-      refreshToken: options.refreshToken
+      extensionId,
+      clientId,
+      clientSecret,
+      refreshToken
     });
 
-    if (options.verbose) {
+    if (verbose) {
       console.log(
         getVerboseMessage({
           store,
-          message: `Updating extension with ID ${options.extId}`
+          message: `Updating extension with ID ${extensionId}`
         })
       );
     }
 
     const { uploadState, itemError } = await client.uploadExisting(
-      fs.createReadStream(options.zip)
+      fs.createReadStream(zip)
     );
     if (uploadState === "FAILURE") {
       const errors = itemError.map(({ error_detail }) => error_detail);
       reject(
         getVerboseMessage({
           store,
-          message: `Item "${options.extId}":
+          message: `Item "${extensionId}":
           ${errors.join("\n")}`,
           prefix: "Error"
         })
