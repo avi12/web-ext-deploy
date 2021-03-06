@@ -1,6 +1,6 @@
 {
   "name": "web-ext-deploy",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A tool for deploying WebExtensions to multiple stores.",
   "main": "./dist/index.js",
   "module": "./dist-esm/index.js",
