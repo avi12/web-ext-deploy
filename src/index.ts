@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import yargs from "yargs";
-import {
-  FirefoxOptions,
-  prepareToDeployFirefox
-} from "./stores/firefox/firefox-input";
 import { getCookies, getJsonStoresFromCli } from "./cli";
 import {
   ChromeOptions,
   prepareToDeployChrome
 } from "./stores/chrome/chrome-input";
+import {
+  FirefoxOptions,
+  prepareToDeployFirefox
+} from "./stores/firefox/firefox-input";
 import { EdgeOptions, prepareToDeployEdge } from "./stores/edge/edge-input";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
 import { getExtVersion } from "./utils";
@@ -56,7 +56,9 @@ async function initCli() {
     storeEntries.forEach(([store, details]) => {
       const extId = details?.extId ?? details.packageId;
       const version = getExtVersion(details.zip);
-      console.log(`Successfully updated "${extId}" to version ${version} on ${storeNames[store]}!`);
+      console.log(
+        `Successfully updated "${extId}" to version ${version} on ${storeNames[store]}!`
+      );
     });
   } catch (e) {
     throw new Error(e);
