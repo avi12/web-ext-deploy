@@ -41,6 +41,8 @@ If you have a hard time obtaining the cookie(s), you can run:
 web-ext-deploy --get-cookies=firefox edge opera
 ```
 
+Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API.
+
 ### 2. Decide how to access the info
 
 #### If using `.env`
