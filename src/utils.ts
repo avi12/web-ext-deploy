@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { Page } from "puppeteer";
+import zipper from "zip-local";
 
 export function getFullPath(file: string): string {
   return path.resolve(process.cwd(), file);
@@ -15,8 +16,15 @@ export function isObjectEmpty(object: object) {
 }
 
 export function getCorrectZip(zip: string): string {
-  const { version } = require(path.resolve(process.cwd(), "package.json"));
+  const { version } = JSON.parse(fs.readFileSync("package.json").toString());
   return zip.replace("{version}", version);
+}
+
+export function getExtVersion(zip: string) {
+  const unzippedFs = zipper.sync.unzip(zip).memory();
+  const manifest = unzippedFs.read("manifest.json").toString();
+  const { version } = JSON.parse(manifest);
+  return version;
 }
 
 export async function disableImages(page: Page) {
@@ -42,6 +50,8 @@ export async function getExistingElementSelector(
   return description;
 }
 
+const gStepCounters = {};
+
 export function getVerboseMessage({
   message,
   prefix = "Info",
@@ -51,7 +61,8 @@ export function getVerboseMessage({
   prefix?: string;
   store: string;
 }): string {
-  let msg = `${store}: ${message}`;
+  gStepCounters[store] = 1 + (gStepCounters?.[store] ?? 0);
+  let msg = `${store}: Step ${gStepCounters[store]}) ${message}`;
   if (prefix !== "Error") {
     msg = `${prefix} ${msg}`;
   }

@@ -1,8 +1,7 @@
 import puppeteer, { Page } from "puppeteer";
 import { EdgeOptions } from "./edge-input";
-import { disableImages, getVerboseMessage } from "../../utils";
+import { disableImages, getExtVersion, getVerboseMessage } from "../../utils";
 import compareVersions from "compare-versions";
-import zipper from "zip-local";
 
 const store = "Edge";
 
@@ -63,13 +62,6 @@ async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
   );
 }
 
-function getNewVersion(zip: string) {
-  const unzippedFs = zipper.sync.unzip(zip).memory();
-  const manifest = unzippedFs.read("manifest.json", "buffer").toString();
-  const { version } = JSON.parse(manifest);
-  return version;
-}
-
 async function uploadZip({
   page,
   zip,
@@ -94,7 +86,7 @@ async function verifyNewVersionIsGreater({
   zip: string;
 }) {
   const versionCurrent = await getCurrentVersion({ page });
-  const versionNew = getNewVersion(zip);
+  const versionNew = getExtVersion(zip);
 
   return new Promise(async (resolve, reject) => {
     // @ts-ignore
@@ -197,7 +189,13 @@ async function clickButtonPublishTextIfPossible({
       return;
     }
 
-    await page.goto(getBaseDashboardUrl(extId));
+    await page.goto(`${getBaseDashboardUrl(extId)}/listings`, {
+      waitUntil: "networkidle0"
+    });
+    // if (getIsFileExists("descriptions.json")) {
+    //   await fillInDescriptions({ page, store });
+    //   return;
+    // }
     reject(
       getVerboseMessage({
         store,
@@ -234,6 +232,7 @@ async function clickButtonPublish({ page }: { page: Page }) {
 
   await page.click(gSelectors.buttonPublish);
 }
+
 export async function deployToEdge({
   cookie,
   extId,

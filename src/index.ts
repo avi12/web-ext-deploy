@@ -11,6 +11,7 @@ import {
 } from "./stores/chrome/chrome-input";
 import { EdgeOptions, prepareToDeployEdge } from "./stores/edge/edge-input";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
+import { getExtVersion } from "./utils";
 
 const isUseCli = Boolean(
   process.argv[1].match(/web-ext-deploy[\\/](?:dist|src)[\\/]index\.(?:ts|js)$/)
@@ -54,7 +55,8 @@ async function initCli() {
     await Promise.all(promises);
     storeEntries.forEach(([store, details]) => {
       const extId = details?.extId ?? details.packageId;
-      console.log(`Successfully updated "${extId}" on ${storeNames[store]}!`);
+      const version = getExtVersion(details.zip);
+      console.log(`Successfully updated "${extId}" to version ${version} on ${storeNames[store]}!`);
     });
   } catch (e) {
     throw new Error(e);
