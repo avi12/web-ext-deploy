@@ -5,7 +5,7 @@ import { getVerboseMessage } from "../../utils";
 
 const store = "Chrome";
 
-export async function deployToChrome(options: ChromeOptions) {
+export async function deployToChrome(options: ChromeOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const client = ChromeUpload({
       extensionId: options.extId,
