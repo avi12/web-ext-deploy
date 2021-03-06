@@ -52,11 +52,6 @@
     "lint:fix": "eslint \"{src,test,examples}/**/*.{ts,tsx}\" --fix",
     "test": "jest"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "pnpm run types:check && lint-staged"
-    }
-  },
   "lint-staged": {
     "*.{ts,tsx}": [
       "pnpm run lint:fix",
@@ -65,7 +60,6 @@
     ]
   },
   "devDependencies": {
-    "@types/async-lock": "^1.1.2",
     "@types/puppeteer": "^5.4.3",
     "@types/user-agents": "^1.0.0",
     "@types/yargs": "^16.0.0",
@@ -73,8 +67,6 @@
     "@typescript-eslint/parser": "^4.15.2",
     "eslint": "^7.20.0",
     "eslint-config-prettier": "^8.1.0",
-    "husky": "^5.1.1",
-    "jest": "^26.6.3",
     "nodemon": "^2.0.7",
     "prettier": "^2.2.1",
     "rimraf": "^3.0.2",
@@ -82,12 +74,10 @@
     "typescript": "^4.2.2"
   },
   "dependencies": {
-    "@vue/reactivity": "^3.0.6",
     "camel-case": "^4.1.2",
     "chrome-webstore-upload": "^0.4.4",
     "compare-versions": "^3.6.0",
     "dotenv": "^8.2.0",
-    "parse-duration": "^0.4.4",
     "puppeteer": "^8.0.0",
     "yargs": "^16.2.0",
     "zip-local": "^0.3.4"
