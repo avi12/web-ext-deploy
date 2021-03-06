@@ -91,8 +91,8 @@ web-ext-deploy --env
 - Firefox Add-ons store:
 
   - `EXT_ID` - Get it from `https://addons.mozilla.org/addon/EXT_ID`
-  - `ZIP` - You can use `{version}`, which will be replaced by the `version` entry from your `package.json`
-  - `ZIP_SOURCE` - Same as `ZIP`
+  - `ZIP` - The relative path to the ZIP. You can use `{version}`, which will be replaced by the `version` entry from your `package.json`
+  - `ZIP_SOURCE` - Optional. The relative path to the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) of your extension, if applicable.
 
 - Edge Add-ons store:
 
