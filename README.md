@@ -9,13 +9,13 @@ Supported stores:
 - [Edge Add-ons](https://microsoftedge.microsoft.com/addons)
 - [Opera Add-ons](https://addons.opera.com/en/extensions)
 
-## Core packages used
+# Core packages used
 
 - [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Add-ons / Edge Add-ons
   Add-ons / Opera Add-ons store.
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 
-## Installing
+# Installing
 
 ```shell
 npm i -D web-ext-deploy
@@ -27,9 +27,9 @@ pnpm i -D web-ext-deploy
 
 Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).
 
-## Usage
+# Usage
 
-### 1. Obtain the relevant cookie(s) of the publisher's account:
+## 1. Obtain the relevant cookie(s) of the publisher's account:
 
 - Firefox: `sessionid`
 - Opera: `sessionid`, `csrftoken`
@@ -43,9 +43,13 @@ web-ext-deploy --get-cookies=firefox edge opera
 
 Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API.
 
-### 2. Decide how to access the info
+## 2. Decide how to access the info
 
-#### If using `.env`
+- [`.env` files method](#env-files-method)
+- [CLI arguments method](#cli-arguments-method)
+- [Node.js API method](#nodejs-api-method)
+
+## `.env` files method
 
 Use the `.env` [snippet(s)](#possible-env-files) relevant to your extension.  
 Include each one in your root directory.  
@@ -58,7 +62,7 @@ To use the `.env` files, in the CLI:
 web-ext-deploy --env
 ```
 
-#### Additional arguments for the `.env` mode:
+### Additional arguments for the `.env` mode:
 
 - `--verbose` boolean?  
   If specified, the steps of every store will be logged to the console.
@@ -81,7 +85,7 @@ web-ext-deploy --env
   If specified and `opera.env` exists, it will be used to provide changelog for the Opera users.  
   New lines (`\n`) are supported.
 
-#### Notes:
+### Notes:
 
 - Chrome Web Store:
 
@@ -110,7 +114,7 @@ web-ext-deploy --env
   
 - The keys are case-insensitive, as they will be camel-cased anyway.
 
-#### Possible `.env` files
+### Possible `.env` files
 
 `chrome.env`
 
@@ -148,7 +152,7 @@ ZIP="dist/some-zip-v{version}.zip"
 PACKAGE_ID="PackageID"
 ```
 
-### If using CLI
+## CLI arguments method
 
 Use it only if your extension's code will not be published.
 
@@ -269,16 +273,16 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
-### If using Node.js
+## Node.js API method
 
-#### ESM / TypeScript
+### ESM / TypeScript
 
 <!-- prettier-ignore -->
 ```ts
 import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
 ```
 
-#### CommonJS
+### CommonJS
 
 <!-- prettier-ignore -->
 ```js
