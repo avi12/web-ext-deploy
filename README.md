@@ -31,6 +31,8 @@ Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/ch
 
 ## 1. Obtain the relevant cookie(s) of the publisher's account:
 
+### Disclaimer: I do NOT take any responsibility for leaked cookies.
+
 - Firefox: `sessionid`
 - Opera: `sessionid`, `csrftoken`
 - Edge: `.AspNet.Cookies`
@@ -112,7 +114,7 @@ web-ext-deploy --env
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com)).
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
   
-- The keys are case-insensitive, as they will be camel-cased anyway.
+- The keys are case-insensitive, as they will be [camel-cased](https://www.npmjs.com/package/camel-case) anyway.
 
 ### Possible `.env` files
 
@@ -211,7 +213,8 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
   - `--firefox-zip-source` string?  
     The relative path to the ZIP that contains the source code of your extension, if applicable.  
-    You can use `{version}` as well.
+    You can use `{version}` as well.  
+    Note that if your extension's source code *is* required to be seen by the review team, you **do not** want to store the command with the package.
   - `--firefox-changelog` string?  
     The changes made in this version compared to the previous one. The Firefox users will see this.  
     You can use `\n` for new lines.
@@ -273,6 +276,8 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
+    Note that you **do not** want to store the command with your extension package, as the review team will have access to your precious cookies.
+
 ## Node.js API method
 
 ### ESM / TypeScript
@@ -329,7 +334,8 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
   - `zipSource` string?  
     The relative path from the root to the ZIP that contains the source code of your extension, if applicable.  
-    You can use `{version}` as well.
+    You can use `{version}` as well.  
+    Note that if your extension's source code *is* required to be seen by the review team, you **do not** want to store the deployment script with the package.
   - `changelog` string?  
     The changes made in this version, compared to the previous one, which will be seen by the Firefox users.  
     I recommend providing the changelog via `--firefox-changelog`, so it stays dynamic.
@@ -398,6 +404,9 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
     This can be done by doing **one** of the following:
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
+    
+    Note that you **do not** want to store the deployment script with your extension package, as the review team will have access to your precious cookies.  
+    If you'll open-source the extension on GitHub, you can exclude the deployment script by listing it in `.gitignore`
 
 Examples:
 
