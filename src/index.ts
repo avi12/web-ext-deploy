@@ -22,6 +22,8 @@ const { argv } = yargs(process.argv.slice(2)).options({
   getCookies: { type: "array" },
   firefoxChangelog: { type: "string" },
   firefoxDevChangelog: { type: "string" },
+  edgeDevChangelog: { type: "string" },
+  operaChangelog: { type: "string" },
   verbose: { type: "boolean" }
 });
 
@@ -67,7 +69,7 @@ async function initCli() {
 
 initCli().catch(console.error);
 
-export async function deployChrome(options: ChromeOptions) {
+export async function deployChrome(options: ChromeOptions): Promise<boolean> {
   return prepareToDeployChrome(options);
 }
 
@@ -81,10 +83,16 @@ export async function deployFirefox(options: FirefoxOptions): Promise<boolean> {
   return prepareToDeployFirefox(options);
 }
 
-export async function deployEdge(options: EdgeOptions) {
+export async function deployEdge(options: EdgeOptions): Promise<boolean> {
+  if (argv.edgeDevChangelog) {
+    options.devChangelog = argv.edgeDevChangelog;
+  }
   return prepareToDeployEdge(options);
 }
 
 export async function deployOpera(options: OperaOptions): Promise<boolean> {
+  if (argv.operaChangelog) {
+    options.changelog = argv.operaChangelog;
+  }
   return prepareToDeployOpera(options);
 }
