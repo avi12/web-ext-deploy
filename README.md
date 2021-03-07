@@ -364,7 +364,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
     The relative path from the root to the ZIP.  
     You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
   - `devChangelog` string?  
-    The changes made in this version, compared to the previous one, which will be visible only to the Edge Add-ons reviewers.  
+    The technical changes made in this version, compared to the previous one, which will be visible only to the Edge Add-ons reviewers.  
     I recommend providing the changelog via `--edge-dev-changelog`, so it stays up to date.
   - `verbose` boolean?  
     If `true`, every step of uploading to the Edge Add-ons will be logged to the console.
