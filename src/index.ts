@@ -71,9 +71,7 @@ export async function deployChrome(options: ChromeOptions) {
   return prepareToDeployChrome(options);
 }
 
-export async function deployFirefox(
-  options: Omit<FirefoxOptions, "twoFactor">
-): Promise<boolean> {
+export async function deployFirefox(options: FirefoxOptions): Promise<boolean> {
   if (argv.firefoxChangelog) {
     options.changelog = argv.firefoxChangelog;
   }
@@ -87,8 +85,6 @@ export async function deployEdge(options: EdgeOptions) {
   return prepareToDeployEdge(options);
 }
 
-export async function deployOpera(
-  options: Omit<OperaOptions, "twoFactor">
-): Promise<boolean> {
+export async function deployOpera(options: OperaOptions): Promise<boolean> {
   return prepareToDeployOpera(options);
 }
