@@ -2,6 +2,8 @@
 
 The ultimate automation tool for deploying to multiple extension stores simultaneously!
 
+Made by [avi12](https://avi12.com)
+
 Supported stores:
 
 - [Chrome Web Store](https://chrome.google.com/webstore/category/extensions)
