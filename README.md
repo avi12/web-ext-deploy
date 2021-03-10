@@ -153,7 +153,7 @@ EXT_ID="ExtensionID"
 sessionid="sessionid_value"
 csrftoken="csrftoken_value"
 ZIP="dist/some-zip-v{version}.zip"
-PACKAGE_ID="PackageID"
+PACKAGE_ID=123456
 ```
 
 ## CLI arguments method
@@ -267,7 +267,7 @@ web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="Extension
   Example:
 
   ```shell
-  web-ext-deploy --opera-ext-id="ExtensionID" --opera-sessionid="sessionid_value" --opera-csrftoken="csrftoken_value" --opera-zip="dist/some-zip-v{version}.zip" --opera-changelog="Changelog\nWith line breaks"
+  web-ext-deploy --opera-package-id=123456 --opera-sessionid="sessionid_value" --opera-csrftoken="csrftoken_value" --opera-zip="dist/some-zip-v{version}.zip" --opera-changelog="Changelog\nWith line breaks"
   ```
 
   **Notes:**
