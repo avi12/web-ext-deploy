@@ -33,7 +33,7 @@ Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/ch
 
 ## 1. Obtain the relevant cookie(s) of the publisher's account:
 
-### Disclaimer: I do NOT take any responsibility for leaked cookies.
+### Disclaimer: I do NOT take any responsibility for leaked cookies or credentials.
 
 - Firefox: `sessionid`
 - Opera: `sessionid`, `csrftoken`
