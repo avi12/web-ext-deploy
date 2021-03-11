@@ -324,7 +324,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
 - [Edge Add-ons](#edge-add-ons-api)
 - [Opera Add-ons](#opera-add-ons-api)
 
-- #### Chrome Web Store API
+#### Chrome Web Store API
 
   `deployChrome` object  
    Options:
@@ -346,7 +346,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   To get your `refreshToken`, `clientId`, and `clientSecret`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).  
    Returns `Promise<true>` or throws an exception.
 
-- #### Firefox Add-ons API
+#### Firefox Add-ons API
 
   `deployFirefox` object  
    Options:
@@ -379,7 +379,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
 
   Returns `Promise<true>` or throws an exception.
 
-- #### Edge Add-ons API
+#### Edge Add-ons API
 
   `deployEdge` object  
    Options:
@@ -405,7 +405,7 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
 
   Returns `Promise<true>` or throws an exception.
 
-- #### Opera Add-ons API
+#### Opera Add-ons API
 
   `deployOpera` object  
    Options:
