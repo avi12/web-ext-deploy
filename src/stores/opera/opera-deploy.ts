@@ -1,14 +1,15 @@
 import { OperaOptions } from "./opera-input";
 import puppeteer, { Page } from "puppeteer";
 
-import { getFullPath, getVerboseMessage } from "../../utils";
+import { disableImages, getFullPath, getVerboseMessage } from "../../utils";
 
 const store = "Opera";
 
 const gSelectors = {
   listErrors: ".alert-danger",
-  buttonNext: "button[type=submit]",
+  buttonSubmit: "[ng-click*=submit]",
   buttonUploadNewVersion: `[ng-click*="upload()"]`,
+  buttonCancel: "[ng-click*=cancel]",
   inputFile: "input[type=file]",
   inputCodePublic: `editable-field[field-value="packageVersion\\.source_url"] input`,
   inputCodePrivate: `editable-field[field-value="packageVersion\\.source_for_moderators_url"] input`,
@@ -28,7 +29,7 @@ async function getErrorsOrNone({
       page.waitForSelector(gSelectors.listErrors),
       page.waitForNavigation({ waitUntil: "networkidle0" })
     ]);
-    if (page.url().endsWith("?tab=conversation")) {
+    if (page.url().match(/(\d|\?tab=conversation)$/)) {
       resolve(true);
       return;
     }
@@ -85,11 +86,22 @@ async function openRelevantExtensionPage({
 }) {
   const urlExtension = `${getBaseDashboardUrl(packageId)}?tab=versions`;
   return new Promise(async (resolve, reject) => {
-    page.on("response", response => {
+    const resonseListener = response => {
       if (
         response.url() !==
         `https://addons.opera.com/api/developer/packages/${packageId}/`
       ) {
+        const isCookieInvalid = response.url().startsWith("https://auth.opera.com");
+        if (isCookieInvalid) {
+          reject(
+            getVerboseMessage({
+              store,
+              message:
+                "Invalid/expired authentication cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=opera",
+              prefix: "Error"
+            })
+          );
+        }
         return;
       }
 
@@ -102,26 +114,28 @@ async function openRelevantExtensionPage({
         );
         return;
       }
+      page.off("response", resonseListener);
       resolve(true);
-    });
-    try {
-      await page.goto(urlExtension);
-      // eslint-disable-next-line no-empty
-    } catch {}
+    };
+    page.on("response", resonseListener);
+
+    page.goto(urlExtension).catch(() => {});
   });
 }
 
 async function verifyPublicCodeExistence({ page }: { page: Page }) {
   await page.waitForSelector(gSelectors.inputCodePublic);
 
-  const isSourceInputEmpty = async () => {
-    const elInputPublic = await page.$(gSelectors.inputCodePublic);
-    const elInputPrivate = await page.$(gSelectors.inputCodePrivate);
-    // @ts-ignore
-    return !elInputPublic.value || !elInputPrivate.value;
+  const getInputValue = async selector =>
+    page.$eval(selector, (elInput: HTMLInputElement) => elInput.value);
+
+  const isSourceInputFull = async () => {
+    const inputPublic = await getInputValue(gSelectors.inputCodePublic);
+    const inputPrivate = await getInputValue(gSelectors.inputCodePrivate);
+    return inputPublic || inputPrivate;
   };
 
-  if (!(await isSourceInputEmpty())) {
+  if (await isSourceInputFull()) {
     return;
   }
 
@@ -143,7 +157,7 @@ async function updateExtension({
   page: Page;
   packageId: number;
 }) {
-  await page.click(gSelectors.buttonNext);
+  await page.click(gSelectors.buttonSubmit);
 
   return new Promise(async (resolve, reject) => {
     const errors = await page.$$eval(gSelectors.listErrors, elErrors =>
@@ -188,7 +202,7 @@ async function addChangelogIfNeeded({
   }
 
   const url = page.url().split("?")[0];
-  await page.goto(url);
+  await page.goto(url, { waitUntil: "networkidle0" });
 }
 
 async function addLoginCookie({
@@ -219,6 +233,11 @@ function getBaseDashboardUrl(packageId: number) {
   return `https://addons.opera.com/developer/package/${packageId}`;
 }
 
+async function cancelUpload({ page }: { page: Page }) {
+  await page.goto(page.url().split("?")[0], { waitUntil: "networkidle0" });
+  await page.click(gSelectors.buttonCancel);
+}
+
 export default async function deployToOpera({
   sessionid,
   packageId,
@@ -235,7 +254,7 @@ export default async function deployToOpera({
     });
 
     const [page] = await browser.pages();
-    // await disableImages(page);
+    await disableImages(page);
     await addLoginCookie({ page, sessionid });
     const urlStart = `${getBaseDashboardUrl(packageId)}?tab=versions`;
 
@@ -244,12 +263,6 @@ export default async function deployToOpera({
         getVerboseMessage({
           store,
           message: `Launched Puppeteer session in ${urlStart}`
-        })
-      );
-      console.log(
-        getVerboseMessage({
-          store,
-          message: "Logged into the store"
         })
       );
     }
@@ -298,17 +311,11 @@ export default async function deployToOpera({
     try {
       await updateExtension({ page, packageId });
     } catch (e) {
+      await cancelUpload({ page });
       await browser.close();
       reject(e);
       return;
     }
-
-    console.log(
-      getVerboseMessage({
-        store,
-        message: "Finished uploading"
-      })
-    );
 
     await browser.close();
     resolve(true);
