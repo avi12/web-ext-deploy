@@ -22,7 +22,7 @@ export function getCorrectZip(zip: string): string {
 
 export function getExtVersion(zip: string) {
   const unzippedFs = zipper.sync.unzip(zip).memory();
-  const manifest = unzippedFs.read("manifest.json").toString();
+  const manifest = unzippedFs.read("manifest.json", "text");
   const { version } = JSON.parse(manifest);
   return version;
 }
