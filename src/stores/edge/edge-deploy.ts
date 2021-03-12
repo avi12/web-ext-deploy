@@ -30,13 +30,25 @@ async function openRelevantExtensionPage({
   extId: any;
 }) {
   return new Promise(async (resolve, reject) => {
-    page.on("response", response => {
+    const responseListener = response => {
       if (!response.url().endsWith("lastUploadedPackage")) {
+        const isCookieInvalid = response.url().startsWith("https://login.microsoftonline.com");
+        if (isCookieInvalid) {
+          reject(
+            getVerboseMessage({
+              store,
+              message:
+                "Invalid/expired cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=edge",
+              prefix: "Error"
+            })
+          );
+        }
         return;
       }
       const error = 400;
       const isExtIdValid = response.status() !== error;
       if (isExtIdValid) {
+        page.off("response", responseListener);
         return;
       }
       reject(
@@ -46,12 +58,13 @@ async function openRelevantExtensionPage({
           prefix: "Error"
         })
       );
-    });
-    try {
-      await page.goto(`${getBaseDashboardUrl(extId)}/packages/overview`);
-      resolve(true);
-      // eslint-disable-next-line no-empty
-    } catch {}
+    };
+    page.on("response", responseListener);
+
+    page
+      .goto(`${getBaseDashboardUrl(extId)}/packages/overview`)
+      .then(() => resolve(true))
+      .catch(() => {});
   });
 }
 
@@ -192,10 +205,7 @@ async function clickButtonPublishTextIfPossible({
     await page.goto(`${getBaseDashboardUrl(extId)}/listings`, {
       waitUntil: "networkidle0"
     });
-    // if (getIsFileExists("descriptions.json")) {
-    //   await fillInDescriptions({ page, store });
-    //   return;
-    // }
+
     reject(
       getVerboseMessage({
         store,
@@ -259,13 +269,6 @@ export async function deployToEdge({
           message: `Launched a Puppeteer session in ${urlStart}`
         })
       );
-
-      console.log(
-        getVerboseMessage({
-          store,
-          message: "Logged in"
-        })
-      );
     }
 
     await disableImages(page);
@@ -284,7 +287,7 @@ export async function deployToEdge({
       console.log(
         getVerboseMessage({
           store,
-          message: "Uploading extension to the store"
+          message: "Opened relevant extension page"
         })
       );
     }
