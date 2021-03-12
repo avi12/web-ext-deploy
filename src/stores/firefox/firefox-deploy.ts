@@ -11,7 +11,7 @@ import {
 const store = "Firefox";
 const gSelectors = {
   listErrors: ".errorlist",
-  buttonNext: "button[type=submit]",
+  buttonSubmit: "button[type=submit]",
   inputFile: "input[type=file]",
   inputRadio: "input[type=radio]",
   inputChangelog: "textarea[name*=release_notes]",
@@ -33,8 +33,8 @@ async function openRelevantExtensionPage({
       reject(
         getVerboseMessage({
           store: "Firefox",
-          prefix: "Error",
-          message: `Extension ID does not exist: ${extId}`
+          message: `Extension ID does not exist: ${extId}`,
+          prefix: "Error"
         })
       );
       return;
@@ -55,7 +55,7 @@ async function uploadZip({
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 
-  await page.$eval(gSelectors.buttonNext, elSubmit => {
+  await page.$eval(gSelectors.buttonSubmit, elSubmit => {
     return new Promise(resolve => {
       new MutationObserver(() => {
         // @ts-ignore
@@ -116,7 +116,7 @@ async function uploadZipSourceIfNeeded({
   if (isUpload) {
     const elFileInput = await page.$(gSelectors.inputFile);
     await elFileInput.uploadFile(zipSource);
-    await page.click(gSelectors.buttonNext);
+    await page.click(gSelectors.buttonSubmit);
   }
 }
 
@@ -180,6 +180,23 @@ async function addLoginCookie({
   await page.setCookie(...cookies);
 }
 
+async function verifyValidCookies({ page }: { page: Page }) {
+  return new Promise(async (resolve, reject) => {
+    if (page.url().startsWith(getBaseDashboardUrl())) {
+      resolve(true);
+      return;
+    }
+    reject(
+      getVerboseMessage({
+        store,
+        message:
+          "Invalid/expired cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=firefox",
+        prefix: "Error"
+      })
+    );
+  });
+}
+
 export default async function deployToFirefox({
   extId,
   zip,
@@ -199,7 +216,7 @@ export default async function deployToFirefox({
 
     const [page] = await browser.pages();
 
-    const urlStart = getBaseDashboardUrl();
+    const urlStart = getBaseDashboardUrl(extId);
 
     if (isVerbose) {
       console.log(
@@ -214,11 +231,19 @@ export default async function deployToFirefox({
     await addLoginCookie({ page, sessionid });
     await page.goto(urlStart, { waitUntil: "networkidle0" });
 
+    try {
+      await verifyValidCookies({ page });
+    } catch (e) {
+      await browser.close();
+      reject(e);
+      return;
+    }
+
     if (isVerbose) {
       console.log(
         getVerboseMessage({
           store,
-          message: "Logged into the store"
+          message: "Opened relevant extension page"
         })
       );
     }
@@ -283,7 +308,7 @@ export default async function deployToFirefox({
       isVerbose
     });
 
-    await page.click(gSelectors.buttonNext);
+    await page.click(gSelectors.buttonSubmit);
     console.log(
       getVerboseMessage({
         store,
