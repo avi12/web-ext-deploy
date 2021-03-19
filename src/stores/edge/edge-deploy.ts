@@ -32,7 +32,9 @@ async function openRelevantExtensionPage({
   return new Promise(async (resolve, reject) => {
     const responseListener = response => {
       if (!response.url().endsWith("lastUploadedPackage")) {
-        const isCookieInvalid = response.url().startsWith("https://login.microsoftonline.com");
+        const isCookieInvalid = response
+          .url()
+          .startsWith("https://login.microsoftonline.com");
         if (isCookieInvalid) {
           reject(
             getVerboseMessage({
@@ -220,13 +222,26 @@ async function clickButtonPublishTextIfPossible({
 
 async function addChangelogIfNeeded({
   page,
-  devChangelog
+  devChangelog,
+  isVerbose
 }: {
   devChangelog: string;
   page: Page;
+  isVerbose: boolean;
 }) {
-  await page.waitForSelector(gSelectors.inputDevChangelog);
-  await page.type(gSelectors.inputDevChangelog, devChangelog);
+  if (devChangelog) {
+    await page.waitForSelector(gSelectors.inputDevChangelog);
+    await page.type(gSelectors.inputDevChangelog, devChangelog);
+
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: `Added changelog for reviewers: ${devChangelog}`
+        })
+      );
+    }
+  }
 }
 
 async function clickButtonPublish({ page }: { page: Page }) {
@@ -252,14 +267,19 @@ export async function deployToEdge({
 }: EdgeOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
-    const browser = await puppeteer.launch({
-      // headless: false,
-      // args: [`--window-size=${width},${height}`, "--window-position=0,0"],
-      defaultViewport: { width, height }
-    });
+    const puppeteerArgs =
+      process.env.NODE_ENV === "development"
+        ? {
+            headless: false,
+            defaultViewport: { width, height },
+            args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+          }
+        : {};
+    const browser = await puppeteer.launch(puppeteerArgs);
 
     const [page] = await browser.pages();
-
+    await disableImages(page);
+    await addLoginCookie({ page, cookie });
     const urlStart = `${getBaseDashboardUrl(extId)}/overview`;
 
     if (isVerbose) {
@@ -271,8 +291,6 @@ export async function deployToEdge({
       );
     }
 
-    await disableImages(page);
-    await addLoginCookie({ page, cookie });
     await page.goto(urlStart);
 
     try {
@@ -321,9 +339,12 @@ export async function deployToEdge({
       return;
     }
 
-    await addChangelogIfNeeded({ page, devChangelog });
+    await addChangelogIfNeeded({ page, devChangelog, isVerbose });
+
     await clickButtonPublish({ page });
+
     await page.waitForSelector(gSelectors.buttonSubmissionUpdate);
+
     await browser.close();
     resolve(true);
   });
