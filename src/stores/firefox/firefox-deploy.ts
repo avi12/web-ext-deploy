@@ -55,10 +55,9 @@ async function uploadZip({
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 
-  await page.$eval(gSelectors.buttonSubmit, elSubmit => {
+  await page.$eval(gSelectors.buttonSubmit, (elSubmit: HTMLButtonElement) => {
     return new Promise(resolve => {
       new MutationObserver(() => {
-        // @ts-ignore
         elSubmit.click();
         resolve(true);
       }).observe(elSubmit, {
@@ -116,8 +115,8 @@ async function uploadZipSourceIfNeeded({
   if (isUpload) {
     const elFileInput = await page.$(gSelectors.inputFile);
     await elFileInput.uploadFile(zipSource);
-    await page.click(gSelectors.buttonSubmit);
   }
+  await page.click(gSelectors.buttonSubmit);
 }
 
 async function addChangelogsIfNeeded({
@@ -131,26 +130,28 @@ async function addChangelogsIfNeeded({
   devChangelog: string;
   isVerbose: boolean;
 }) {
-  await page.type(gSelectors.inputChangelog, changelog);
-
-  if (isVerbose && changelog) {
-    console.log(
-      getVerboseMessage({
-        store: "Firefox",
-        message: `Added changelog: ${changelog}`
-      })
-    );
+  if (changelog) {
+    await page.type(gSelectors.inputChangelog, changelog);
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store: "Firefox",
+          message: `Added changelog: ${changelog}`
+        })
+      );
+    }
   }
 
-  await page.type(gSelectors.inputDevChangelog, devChangelog);
-
-  if (isVerbose && devChangelog) {
-    console.log(
-      getVerboseMessage({
-        store: "Firefox",
-        message: `Added changelog for reviewers: ${devChangelog}`
-      })
-    );
+  if (devChangelog) {
+    await page.type(gSelectors.inputDevChangelog, devChangelog);
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store: "Firefox",
+          message: `Added changelog for reviewers: ${devChangelog}`
+        })
+      );
+    }
   }
 }
 
@@ -197,25 +198,35 @@ async function verifyValidCookies({ page }: { page: Page }) {
   });
 }
 
+async function updateExtension({ page }: { page: Page }) {
+  await page.waitForSelector(gSelectors.buttonSubmit);
+  await page.click(gSelectors.buttonSubmit);
+}
+
 export default async function deployToFirefox({
   extId,
   zip,
   sessionid,
-  zipSource,
-  changelog,
-  devChangelog,
+  zipSource = "",
+  changelog = "",
+  devChangelog = "",
   verbose: isVerbose
 }: FirefoxOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
-    const browser = await puppeteer.launch({
-      // headless: false,
-      // args: [`--window-size=${width},${height}`], //, "--window-position=0,0"],
-      defaultViewport: { width, height }
-    });
+    const puppeteerArgs =
+      process.env.NODE_ENV === "development"
+        ? {
+            headless: false,
+            defaultViewport: { width, height },
+            args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+          }
+        : {};
+    const browser = await puppeteer.launch(puppeteerArgs);
 
     const [page] = await browser.pages();
-
+    await disableImages(page);
+    await addLoginCookie({ page, sessionid });
     const urlStart = getBaseDashboardUrl(extId);
 
     if (isVerbose) {
@@ -227,8 +238,6 @@ export default async function deployToFirefox({
       );
     }
 
-    await disableImages(page);
-    await addLoginCookie({ page, sessionid });
     await page.goto(urlStart, { waitUntil: "networkidle0" });
 
     try {
@@ -308,13 +317,7 @@ export default async function deployToFirefox({
       isVerbose
     });
 
-    await page.click(gSelectors.buttonSubmit);
-    console.log(
-      getVerboseMessage({
-        store,
-        message: "Finished uploading"
-      })
-    );
+    await updateExtension({ page });
 
     await browser.close();
     resolve(true);
