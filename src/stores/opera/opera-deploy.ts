@@ -11,9 +11,9 @@ const gSelectors = {
   buttonUploadNewVersion: `[ng-click*="upload()"]`,
   buttonCancel: "[ng-click*=cancel]",
   inputFile: "input[type=file]",
-  inputCodePublic: `editable-field[field-value="packageVersion\\.source_url"] input`,
-  inputCodePrivate: `editable-field[field-value="packageVersion\\.source_for_moderators_url"] input`,
-  inputChangelog: `editable-field[field-value="translation\\.changelog"] textarea`,
+  inputCodePublic: `editable-field[field-value="packageVersion.source_url"] input`,
+  inputCodePrivate: `editable-field[field-value="packageVersion.source_for_moderators_url"] input`,
+  inputChangelog: `editable-field[field-value="translation.changelog"] textarea`,
   buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
 };
 
@@ -91,7 +91,9 @@ async function openRelevantExtensionPage({
         response.url() !==
         `https://addons.opera.com/api/developer/packages/${packageId}/`
       ) {
-        const isCookieInvalid = response.url().startsWith("https://auth.opera.com");
+        const isCookieInvalid = response
+          .url()
+          .startsWith("https://auth.opera.com");
         if (isCookieInvalid) {
           reject(
             getVerboseMessage({
@@ -176,7 +178,8 @@ async function updateExtension({
         store,
         message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
-      `
+      `,
+        prefix: "Error"
       })
     );
   });
@@ -184,10 +187,12 @@ async function updateExtension({
 
 async function addChangelogIfNeeded({
   page,
-  changelog
+  changelog,
+  isVerbose
 }: {
   page: Page;
   changelog?: string;
+  isVerbose: boolean;
 }) {
   // If the extension is available in English,
   // the changelog will be filled into the English textarea
@@ -199,6 +204,15 @@ async function addChangelogIfNeeded({
   if (changelog) {
     await page.type(gSelectors.inputChangelog, changelog);
     await page.click(gSelectors.buttonSubmitChangelog);
+
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store: "Firefox",
+          message: `Added changelog: ${changelog}`
+        })
+      );
+    }
   }
 
   const url = page.url().split("?")[0];
@@ -242,16 +256,20 @@ export default async function deployToOpera({
   sessionid,
   packageId,
   zip,
-  changelog,
+  changelog = "",
   verbose: isVerbose
 }: OperaOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
-    const browser = await puppeteer.launch({
-      // headless: false,
-      // args: [`--window-size=${width},${height}`, "--window-position=0,0"],
-      defaultViewport: { width, height }
-    });
+    const puppeteerArgs =
+      process.env.NODE_ENV === "development"
+        ? {
+            headless: false,
+            defaultViewport: { width, height },
+            args: [`--window-size=${width},${height}`] //, "--window-position=0,0"],
+          }
+        : {};
+    const browser = await puppeteer.launch(puppeteerArgs);
 
     const [page] = await browser.pages();
     await disableImages(page);
@@ -307,7 +325,7 @@ export default async function deployToOpera({
 
     await verifyPublicCodeExistence({ page });
 
-    await addChangelogIfNeeded({ page, changelog });
+    await addChangelogIfNeeded({ page, changelog, isVerbose });
     try {
       await updateExtension({ page, packageId });
     } catch (e) {
