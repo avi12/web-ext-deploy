@@ -20,6 +20,7 @@
   },
   "rules": {
     "prefer-const": "warn",
+    "quotes": ["warn", "double", { "allowTemplateLiterals": true }],
     "@typescript-eslint/camelcase": 0,
     "no-unused-vars": "warn",
     "@typescript-eslint/explicit-function-return-type": "off",
