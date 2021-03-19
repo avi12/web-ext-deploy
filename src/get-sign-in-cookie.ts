@@ -242,8 +242,7 @@ export async function getSignInCookie(siteNames: string[]) {
     }
 
     const pagesCurrent = await browser.pages();
-    const isSingleTabLeft = i > 1 || i === siteNames.length - 1;
-    if (isSingleTabLeft) {
+    if (pagesCurrent.length > 1) {
       await pagesCurrent[0].close();
     }
     const headersTotal = await siteFuncs[siteName](page);
