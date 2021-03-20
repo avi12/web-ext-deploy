@@ -290,7 +290,7 @@ export default async function deployToFirefox({
       console.log(
         getVerboseMessage({
           store,
-          message: `Uploaded ZIP: ${zip}`
+          message: `Uploading ZIP: ${zip}`
         })
       );
     }
@@ -305,7 +305,7 @@ export default async function deployToFirefox({
       console.log(
         getVerboseMessage({
           store,
-          message: `Uploaded source ZIP: ${zip}`
+          message: `Uploading source ZIP: ${zip}`
         })
       );
     }
@@ -316,6 +316,17 @@ export default async function deployToFirefox({
       devChangelog,
       isVerbose
     });
+
+    if (isVerbose && zipSource) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: (
+            "Uploaded ZIP " + (zipSource ? "and source ZIP" : "")
+          ).trim()
+        })
+      );
+    }
 
     await updateExtension({ page });
 
