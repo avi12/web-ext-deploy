@@ -5,7 +5,7 @@ import {
   disableImages,
   getExistingElementSelector,
   getFullPath,
-  getVerboseMessage
+  getVerboseMessage, logSuccessfullyPublished
 } from "../../utils";
 
 const store = "Firefox";
@@ -332,6 +332,8 @@ export default async function deployToFirefox({
     }
 
     await updateExtension({ page });
+
+    logSuccessfullyPublished({ extId, store, zip });
 
     await browser.close();
     resolve(true);

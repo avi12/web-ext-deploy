@@ -1,7 +1,7 @@
 import ChromeUpload from "chrome-webstore-upload";
 import { ChromeOptions } from "./chrome-input";
 import * as fs from "fs";
-import { getVerboseMessage } from "../../utils";
+import { getVerboseMessage, logSuccessfullyPublished } from "../../utils";
 
 const store = "Chrome";
 
@@ -45,6 +45,8 @@ export async function deployToChrome({
       );
       return;
     }
+
+    logSuccessfullyPublished({ extId: extensionId, store, zip });
 
     resolve(true);
   });

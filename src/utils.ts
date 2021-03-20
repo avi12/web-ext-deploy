@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { Page } from "puppeteer";
+import { ElementHandle, Page } from "puppeteer";
 import zipper from "zip-local";
 
 export function getFullPath(file: string): string {
@@ -27,6 +27,26 @@ export function getExtVersion(zip: string) {
   return version;
 }
 
+export function logSuccessfullyPublished({
+  extId,
+  store,
+  zip
+}: {
+  extId: string | number;
+  store: string;
+  zip: string;
+}) {
+  const storeNames = {
+    chrome: "Chrome Web Store",
+    edge: "Edge Add-ons",
+    firefox: "Firefox Add-ons",
+    opera: "Opera Add-ons"
+  };
+  console.log(
+    `Successfully updated "${extId}" to version ${(getExtVersion(zip))} on ${storeNames[store] || store}!`
+  );
+}
+
 export async function disableImages(page: Page) {
   await page.setRequestInterception(true);
   page.on("request", request => {
@@ -48,6 +68,17 @@ export async function getExistingElementSelector(
     _remoteObject: { description }
   } = await Promise.race(promises);
   return description;
+}
+
+export async function getPropertyValue({
+                                         element,
+                                         propertyName
+                                       }: {
+  element: ElementHandle;
+  propertyName: string;
+}) {
+  const property = await element.getProperty(propertyName);
+  return property._remoteObject.value;
 }
 
 const gStepCounters = {};

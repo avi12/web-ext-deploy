@@ -1,7 +1,12 @@
 import { OperaOptions } from "./opera-input";
 import puppeteer, { Page } from "puppeteer";
 
-import { disableImages, getFullPath, getVerboseMessage } from "../../utils";
+import {
+  disableImages,
+  getFullPath,
+  getVerboseMessage,
+  logSuccessfullyPublished
+} from "../../utils";
 
 const store = "Opera";
 
@@ -345,6 +350,8 @@ export default async function deployToOpera({
       reject(e);
       return;
     }
+
+    logSuccessfullyPublished({ extId: packageId, store, zip });
 
     await browser.close();
     resolve(true);

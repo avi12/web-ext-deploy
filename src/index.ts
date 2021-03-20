@@ -11,7 +11,6 @@ import {
 } from "./stores/firefox/firefox-input";
 import { EdgeOptions, prepareToDeployEdge } from "./stores/edge/edge-input";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
-import { getExtVersion } from "./utils";
 
 const isUseCli = Boolean(
   process.argv[1].match(/web-ext-deploy[\\/](?:dist|src)[\\/]index\.(?:ts|js)$/)
@@ -31,18 +30,6 @@ async function initCli() {
   if (!isUseCli) {
     return;
   }
-  const storeFuncs = {
-    chrome: deployChrome,
-    firefox: deployFirefox,
-    edge: deployEdge,
-    opera: deployOpera
-  };
-  const storeNames = {
-    chrome: "Chrome Web Store",
-    edge: "Edge Add-ons",
-    firefox: "Firefox Add-ons",
-    opera: "Opera Add-ons"
-  };
 
   if (argv.getCookies) {
     await getCookies(argv.getCookies as string[]);
@@ -50,18 +37,18 @@ async function initCli() {
     return;
   }
 
+  const storeFuncs = {
+    chrome: deployChrome,
+    firefox: deployFirefox,
+    edge: deployEdge,
+    opera: deployOpera
+  };
+
   const storeJsons = getJsonStoresFromCli();
   const storeEntries = Object.entries(storeJsons);
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
   try {
     await Promise.all(promises);
-    storeEntries.forEach(([store, details]) => {
-      const extId = details?.extId ?? details.packageId;
-      const version = getExtVersion(details.zip);
-      console.log(
-        `Successfully updated "${extId}" to version ${version} on ${storeNames[store]}!`
-      );
-    });
   } catch (e) {
     throw new Error(e);
   }
