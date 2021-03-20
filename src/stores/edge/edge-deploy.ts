@@ -168,7 +168,7 @@ async function getLanguages({ page }: { page: Page }) {
   );
 }
 
-async function clickButtonPublishTextIfPossible({
+async function verifyNoListingIssues({
   page,
   extId
 }: {
@@ -176,44 +176,24 @@ async function clickButtonPublishTextIfPossible({
   extId: string;
 }) {
   return new Promise(async (resolve, reject) => {
-    await page.waitForSelector(gSelectors.buttonPublishText);
-
-    const waitForEnable = page.$eval(
-      gSelectors.buttonPublishText,
-      (elPublish: HTMLButtonElement) => {
-        return new Promise(resolve => {
-          new MutationObserver(() => resolve(true)).observe(
-            elPublish.parentElement,
-            {
-              attributes: true,
-              attributeFilter: ["disabled"]
-            }
-          );
-        });
-      }
-    );
-    const result = await Promise.race([
-      waitForEnable,
-      page.waitForSelector(gSelectors.imgCheckmarkSecondary)
-    ]);
-
-    const isCanPublish = typeof result === "boolean";
-    if (isCanPublish) {
-      await page.click(gSelectors.buttonPublishText);
-      resolve(true);
-      return;
-    }
+    page.once("dialog", dialog => {
+      dialog.accept();
+    });
 
     await page.goto(`${getBaseDashboardUrl(extId)}/listings`, {
       waitUntil: "networkidle0"
     });
 
+    const languagesMissing = await getLanguages({ page });
+    if (languagesMissing.length === 0) {
+      resolve(true);
+      return;
+    }
+
     reject(
       getVerboseMessage({
         store,
-        message: `The following languages lack their translated descriptions and/or logos: ${await getLanguages(
-          { page }
-        )}`,
+        message: `The following languages lack their translated descriptions and/or logos: ${languagesMissing}`,
         prefix: "Error"
       })
     );
@@ -324,20 +304,31 @@ export async function deployToEdge({
       console.log(
         getVerboseMessage({
           store,
-          message: `Uploaded ZIP: ${zip}`
+          message: `Uploading ZIP: ${zip}`
         })
       );
     }
 
     await clickButtonNext({ page });
 
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: "Uploaded ZIP"
+        })
+      );
+    }
+
     try {
-      await clickButtonPublishTextIfPossible({ page, extId });
+      await verifyNoListingIssues({ page, extId });
     } catch (e) {
       await browser.close();
       reject(e);
       return;
     }
+
+    await page.click(gSelectors.buttonPublishText);
 
     await addChangelogIfNeeded({ page, devChangelog, isVerbose });
 
