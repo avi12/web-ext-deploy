@@ -3,6 +3,7 @@ dependencies:
   chrome-webstore-upload: 0.4.4
   compare-versions: 3.6.0
   dotenv: 8.2.0
+  parse-duration: 1.0.0
   puppeteer: 8.0.0
   yargs: 16.2.0
   zip-local: 0.3.4
@@ -1610,6 +1611,10 @@ packages:
       node: '>=6'
     resolution:
       integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==
+  /parse-duration/1.0.0:
+    dev: false
+    resolution:
+      integrity: sha512-X4kUkCTHU1N/kEbwK9FpUJ0UZQa90VzeczfS704frR30gljxDG0pSziws06XlK+CGRSo/1wtG1mFIdBFQTMQNw==
   /pascal-case/3.1.2:
     dependencies:
       no-case: 3.0.4
@@ -2322,6 +2327,7 @@ specifiers:
   eslint: ^7.20.0
   eslint-config-prettier: ^8.1.0
   nodemon: ^2.0.7
+  parse-duration: ^1.0.0
   prettier: ^2.2.1
   puppeteer: ^8.0.0
   rimraf: ^3.0.2
