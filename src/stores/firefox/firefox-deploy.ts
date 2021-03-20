@@ -130,8 +130,10 @@ async function addChangelogsIfNeeded({
   devChangelog: string;
   isVerbose: boolean;
 }) {
-  if (changelog) {
+  if (changelog || devChangelog) {
     await page.waitForSelector(gSelectors.inputChangelog);
+  }
+  if (changelog) {
     await page.type(gSelectors.inputChangelog, changelog);
     if (isVerbose) {
       console.log(
