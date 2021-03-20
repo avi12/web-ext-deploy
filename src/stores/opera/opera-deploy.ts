@@ -202,6 +202,7 @@ async function addChangelogIfNeeded({
   // that IS supported, and its textarea will be filled instead
   await page.goto(`${page.url()}?tab=translations&language=en`);
   if (changelog) {
+    await page.waitForSelector(gSelectors.inputChangelog);
     await page.type(gSelectors.inputChangelog, changelog);
     await page.click(gSelectors.buttonSubmitChangelog);
 
