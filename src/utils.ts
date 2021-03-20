@@ -54,7 +54,7 @@ const gStepCounters = {};
 
 export function getVerboseMessage({
   message,
-  prefix = "Info",
+  prefix,
   store
 }: {
   message: string;
@@ -64,12 +64,10 @@ export function getVerboseMessage({
   gStepCounters[store] = 1 + (gStepCounters?.[store] ?? 0);
   let msg = `${store}: Step ${gStepCounters[store]}) ${message}`;
   if (prefix !== "Error") {
+    prefix = prefix || "Info";
     msg = `${prefix} ${msg}`;
   }
-  if (!message.startsWith("Enter")) {
-    msg = "\n" + msg + "\n";
-  }
-  if (prefix === "") {
+  if (prefix === "Info") {
     msg = msg.trim();
   } else if (prefix === "Error") {
     msg = msg.trimLeft();
