@@ -1,6 +1,13 @@
 import puppeteer, { Page } from "puppeteer";
+import duration from "parse-duration";
 import { EdgeOptions } from "./edge-input";
-import { disableImages, getExtVersion, getVerboseMessage } from "../../utils";
+import {
+  disableImages,
+  getExtVersion,
+  getPropertyValue,
+  getVerboseMessage,
+  logSuccessfullyPublished
+} from "../../utils";
 import compareVersions from "compare-versions";
 
 const store = "Edge";
@@ -9,12 +16,14 @@ const gSelectors = {
   extName: ".extension-name",
   inputFile: "input[type=file]",
   buttonPublishText: ".win-icon-Publish",
+  textUnpublish: ".win-icon-RemoveContent",
   buttonPublish: "#publishButton",
-  imgCheckmarkSecondary: ".win-color-fg-secondary",
   errorIncompleteTranslations: `[data-l10n-key="Common_Incomplete"]`,
   buttonPackageNext: "[data-l10n-key=Package_Next]",
+  textCancelSubmission: "command-bar-button .win-icon-Cancel",
+  buttonCancelSubmissionConfirm:
+    "button[data-l10n-key=Overview_Extension_Cancel_Submission]",
   buttonSubmissionUpdate: "[data-l10n-key=Common_Text_Update]",
-  buttonSubmissionEdit: "[data-l10n-key=Common_Text_Edit]",
   inputDevChangelog: "textarea"
 };
 
@@ -64,7 +73,7 @@ async function openRelevantExtensionPage({
     page.on("response", responseListener);
 
     page
-      .goto(`${getBaseDashboardUrl(extId)}/packages/overview`)
+      .goto(`${getBaseDashboardUrl(extId)}/overview`)
       .then(() => resolve(true))
       .catch(() => {});
   });
@@ -238,6 +247,61 @@ async function clickButtonPublish({ page }: { page: Page }) {
   await page.click(gSelectors.buttonPublish);
 }
 
+async function clickButtonPublishText(page: Page, extId: string) {
+  await page.goto(`${getBaseDashboardUrl(extId)}/availability`, {
+    waitUntil: "networkidle0"
+  });
+  await page.waitForSelector(gSelectors.buttonPublishText);
+  await page.click(gSelectors.buttonPublishText);
+}
+
+async function cancelReviewInProgressIfPossible({
+  page,
+  extId
+}: {
+  page: Page;
+  extId: string;
+}) {
+  await page.waitForSelector(gSelectors.textUnpublish);
+  const elTextUnpublish = await page.$(gSelectors.textUnpublish);
+  const [elButtonUnpublishText] = await elTextUnpublish.$x("..");
+  const isUnpublishDisabled = await getPropertyValue({
+    element: elButtonUnpublishText,
+    propertyName: "disabled"
+  });
+  const gotoPackageOverview = () =>
+    page.goto(`${getBaseDashboardUrl(extId)}/packages/overview`, {
+      waitUntil: "networkidle0"
+    });
+  if (!isUnpublishDisabled) {
+    await gotoPackageOverview();
+    return;
+  }
+
+  const clickCancelSubmission = async () => {
+    await page.waitForSelector(gSelectors.textCancelSubmission);
+    await page.$eval(
+      gSelectors.textCancelSubmission,
+      (elTextCancelSubmission: HTMLSpanElement) =>
+        elTextCancelSubmission.click()
+    );
+  };
+
+  const clickConfirm = async () => {
+    await page.waitForSelector(gSelectors.buttonCancelSubmissionConfirm);
+    await page.$eval(
+      gSelectors.buttonCancelSubmissionConfirm,
+      (elButtonCancelConfirm: HTMLButtonElement) =>
+        elButtonCancelConfirm.click()
+    );
+  };
+
+  await clickCancelSubmission();
+  await clickConfirm();
+
+  await gotoPackageOverview();
+}
+
 export async function deployToEdge({
   cookie,
   extId,
@@ -260,7 +324,7 @@ export async function deployToEdge({
     const [page] = await browser.pages();
     await disableImages(page);
     await addLoginCookie({ page, cookie });
-    const urlStart = `${getBaseDashboardUrl(extId)}/overview`;
+    const urlStart = `${getBaseDashboardUrl(extId)}/packages/overview`;
 
     if (isVerbose) {
       console.log(
@@ -289,6 +353,8 @@ export async function deployToEdge({
         })
       );
     }
+
+    await cancelReviewInProgressIfPossible({ page, extId });
 
     try {
       await verifyNewVersionIsGreater({ page, zip });
@@ -328,15 +394,17 @@ export async function deployToEdge({
       return;
     }
 
-    await page.click(gSelectors.buttonPublishText);
-
+    await clickButtonPublishText(page, extId);
     await addChangelogIfNeeded({ page, devChangelog, isVerbose });
-
     await clickButtonPublish({ page });
 
-    await page.waitForSelector(gSelectors.buttonSubmissionUpdate);
+    await page.waitForSelector(gSelectors.buttonSubmissionUpdate, {
+      timeout: duration("10m")
+    });
+    logSuccessfullyPublished({ extId, store, zip });
 
     await browser.close();
+
     resolve(true);
   });
 }
