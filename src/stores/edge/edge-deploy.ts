@@ -18,6 +18,8 @@ const gSelectors = {
   buttonPublishText: ".win-icon-Publish",
   textUnpublish: ".win-icon-RemoveContent",
   buttonPublish: "#publishButton",
+  buttonPublishOverview: "button[data-l10n-key=Common_Publish]",
+  statusInReview: "[data-l10n-key=Overview_Extension_Status_InReview]",
   errorIncompleteTranslations: `[data-l10n-key="Common_Incomplete"]`,
   buttonPackageNext: "[data-l10n-key=Package_Next]",
   textCancelSubmission: "command-bar-button .win-icon-Cancel",
@@ -302,6 +304,19 @@ async function cancelReviewInProgressIfPossible({
   await gotoPackageOverview();
 }
 
+async function clickPublisInOverview({
+  page,
+  extId
+}: {
+  page: Page;
+  extId: string;
+}) {
+  const urlOverview = `${getBaseDashboardUrl(extId)}/packages/overview`;
+  await page.goto(urlOverview, { waitUntil: "networkidle0" });
+  await page.waitForSelector(gSelectors.buttonPublishOverview);
+  await page.click(gSelectors.buttonPublishOverview);
+}
+
 export async function deployToEdge({
   cookie,
   extId,
@@ -398,9 +413,18 @@ export async function deployToEdge({
     await addChangelogIfNeeded({ page, devChangelog, isVerbose });
     await clickButtonPublish({ page });
 
-    await page.waitForSelector(gSelectors.buttonSubmissionUpdate, {
-      timeout: duration("10m")
-    });
+    const minutesToWait = 10;
+    const timeout = duration(`${minutesToWait}m`);
+    try {
+      await page.waitForSelector(gSelectors.buttonSubmissionUpdate, {
+        timeout
+      });
+    } catch {
+      await clickPublisInOverview({ page, extId });
+      await page.waitForSelector(gSelectors.statusInReview, {
+        timeout
+      });
+    }
     logSuccessfullyPublished({ extId, store, zip });
 
     await browser.close();
