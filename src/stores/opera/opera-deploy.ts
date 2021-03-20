@@ -318,7 +318,7 @@ export default async function deployToOpera({
       console.log(
         getVerboseMessage({
           store,
-          message: `Uploaded ZIP: ${zip}`
+          message: `Uploading ZIP: ${zip}`
         })
       );
     }
@@ -326,6 +326,16 @@ export default async function deployToOpera({
     await verifyPublicCodeExistence({ page });
 
     await addChangelogIfNeeded({ page, changelog, isVerbose });
+
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: "Uploaded ZIP"
+        })
+      );
+    }
+
     try {
       await updateExtension({ page, packageId });
     } catch (e) {
