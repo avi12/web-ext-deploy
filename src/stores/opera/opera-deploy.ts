@@ -18,7 +18,7 @@ const gSelectors = {
   inputFile: "input[type=file]",
   inputCodePublic: `editable-field[field-value="packageVersion.source_url"] input`,
   inputCodePrivate: `editable-field[field-value="packageVersion.source_for_moderators_url"] input`,
-  inputChangelog: `editable-field[field-value="translation.changelog"] textarea`,
+  inputChangelog: `history-tab[param=en] editable-field[field-value="translation.changelog"] textarea`,
   buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
 };
 
