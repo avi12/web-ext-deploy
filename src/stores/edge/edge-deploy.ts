@@ -3,8 +3,7 @@ import duration from "parse-duration";
 import { EdgeOptions } from "./edge-input";
 import {
   disableImages,
-  getExtVersion,
-  getPropertyValue,
+  getExtInfo,
   getVerboseMessage,
   logSuccessfullyPublished
 } from "../../utils";
@@ -13,7 +12,7 @@ import compareVersions from "compare-versions";
 const store = "Edge";
 
 const gSelectors = {
-  extName: ".extension-name",
+  extVersion: ".app-picker-type",
   inputFile: "input[type=file]",
   buttonPublishText: ".win-icon-Publish",
   textUnpublish: ".win-icon-RemoveContent",
@@ -82,9 +81,9 @@ async function openRelevantExtensionPage({
 }
 
 async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
-  await page.waitForSelector(gSelectors.extName);
-  return page.$eval(gSelectors.extName, (elExtName: HTMLDivElement) =>
-    elExtName.lastElementChild.textContent.trim()
+  await page.waitForSelector(gSelectors.extVersion);
+  return page.$eval(gSelectors.extVersion, (elExtName: HTMLDivElement) =>
+    elExtName.textContent.trim()
   );
 }
 
@@ -112,7 +111,7 @@ async function verifyNewVersionIsGreater({
   zip: string;
 }) {
   const versionCurrent = await getCurrentVersion({ page });
-  const versionNew = getExtVersion(zip);
+  const versionNew = getExtInfo(zip, "version");
 
   return new Promise(async (resolve, reject) => {
     // @ts-ignore
@@ -123,7 +122,7 @@ async function verifyNewVersionIsGreater({
     reject(
       getVerboseMessage({
         store,
-        message: `The new version (${versionNew}) must be greater than the current version (${versionCurrent})`,
+        message: `${getExtInfo(zip, "name")}'s new version (${versionNew}) must be greater than the current version (${versionCurrent})`,
         prefix: "Error"
       })
     );
@@ -257,53 +256,6 @@ async function clickButtonPublishText(page: Page, extId: string) {
   await page.click(gSelectors.buttonPublishText);
 }
 
-async function cancelReviewInProgressIfPossible({
-  page,
-  extId
-}: {
-  page: Page;
-  extId: string;
-}) {
-  await page.waitForSelector(gSelectors.textUnpublish);
-  const elTextUnpublish = await page.$(gSelectors.textUnpublish);
-  const [elButtonUnpublishText] = await elTextUnpublish.$x("..");
-  const isUnpublishDisabled = await getPropertyValue({
-    element: elButtonUnpublishText,
-    propertyName: "disabled"
-  });
-  const gotoPackageOverview = () =>
-    page.goto(`${getBaseDashboardUrl(extId)}/packages/overview`, {
-      waitUntil: "networkidle0"
-    });
-  if (!isUnpublishDisabled) {
-    await gotoPackageOverview();
-    return;
-  }
-
-  const clickCancelSubmission = async () => {
-    await page.waitForSelector(gSelectors.textCancelSubmission);
-    await page.$eval(
-      gSelectors.textCancelSubmission,
-      (elTextCancelSubmission: HTMLSpanElement) =>
-        elTextCancelSubmission.click()
-    );
-  };
-
-  const clickConfirm = async () => {
-    await page.waitForSelector(gSelectors.buttonCancelSubmissionConfirm);
-    await page.$eval(
-      gSelectors.buttonCancelSubmissionConfirm,
-      (elButtonCancelConfirm: HTMLButtonElement) =>
-        elButtonCancelConfirm.click()
-    );
-  };
-
-  await clickCancelSubmission();
-  await clickConfirm();
-
-  await gotoPackageOverview();
-}
-
 async function clickPublisInOverview({
   page,
   extId
@@ -368,8 +320,6 @@ export async function deployToEdge({
         })
       );
     }
-
-    await cancelReviewInProgressIfPossible({ page, extId });
 
     try {
       await verifyNewVersionIsGreater({ page, zip });
