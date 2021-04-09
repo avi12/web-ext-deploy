@@ -20,11 +20,14 @@ export function getCorrectZip(zip: string): string {
   return zip.replace("{version}", version);
 }
 
-export function getExtVersion(zip: string) {
+function getExtJson(zip: string) {
   const unzippedFs = zipper.sync.unzip(zip).memory();
   const manifest = unzippedFs.read("manifest.json", "text");
-  const { version } = JSON.parse(manifest);
-  return version;
+  return JSON.parse(manifest);
+}
+
+export function getExtInfo(zip: string, info: string) {
+  return getExtJson(zip)[info];
 }
 
 export function logSuccessfullyPublished({
@@ -42,8 +45,11 @@ export function logSuccessfullyPublished({
     firefox: "Firefox Add-ons",
     opera: "Opera Add-ons"
   };
+  const extName = getExtInfo(zip, "name");
+  const extVersion = getExtInfo(zip, "version");
+  const storeName = storeNames[store] || store;
   console.log(
-    `Successfully updated "${extId}" to version ${(getExtVersion(zip))} on ${storeNames[store] || store}!`
+    `Successfully updated "${extId}" (${extName}) to version ${extVersion} on ${storeName}!`
   );
 }
 
@@ -71,9 +77,9 @@ export async function getExistingElementSelector(
 }
 
 export async function getPropertyValue({
-                                         element,
-                                         propertyName
-                                       }: {
+  element,
+  propertyName
+}: {
   element: ElementHandle;
   propertyName: string;
 }) {
