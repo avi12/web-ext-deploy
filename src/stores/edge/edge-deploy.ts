@@ -12,7 +12,7 @@ import compareVersions from "compare-versions";
 const store = "Edge";
 
 const gSelectors = {
-  extVersion: ".app-picker-type",
+  extName: ".extension-name",
   inputFile: "input[type=file]",
   buttonPublishText: ".win-icon-Publish",
   textUnpublish: ".win-icon-RemoveContent",
@@ -74,16 +74,18 @@ async function openRelevantExtensionPage({
     page.on("response", responseListener);
 
     page
-      .goto(`${getBaseDashboardUrl(extId)}/overview`)
+      .goto(`${getBaseDashboardUrl(extId)}/packages/overview`)
       .then(() => resolve(true))
       .catch(() => {});
   });
 }
 
 async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
-  await page.waitForSelector(gSelectors.extVersion);
-  return page.$eval(gSelectors.extVersion, (elExtName: HTMLDivElement) =>
-    elExtName.textContent.trim()
+  await page.waitForSelector(gSelectors.extName);
+  const elNameVersionContainer = await page.$(gSelectors.extName);
+  const [elVersion] = await elNameVersionContainer.$x("span[3]");
+  return elVersion.evaluate((elVersion: HTMLSpanElement) =>
+    elVersion.textContent.trim()
   );
 }
 
@@ -122,7 +124,10 @@ async function verifyNewVersionIsGreater({
     reject(
       getVerboseMessage({
         store,
-        message: `${getExtInfo(zip, "name")}'s new version (${versionNew}) must be greater than the current version (${versionCurrent})`,
+        message: `${getExtInfo(
+          zip,
+          "name"
+        )}'s new version (${versionNew}) must be greater than the current version (${versionCurrent})`,
         prefix: "Error"
       })
     );
