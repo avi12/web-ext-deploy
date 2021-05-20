@@ -39,6 +39,16 @@ yarn add -D web-ext-deploy
 pnpm i -D web-ext-deploy
 ```
 
+or install globally
+
+```shell
+npm i -g web-ext-deploy
+# or
+yarn add -g web-ext-deploy
+# or
+pnpm i -g web-ext-deploy
+```
+
 Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).
 
 # Usage
@@ -326,124 +336,124 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
 
 #### Chrome Web Store API
 
-  `deployChrome` object  
-   Options:
+`deployChrome` object  
+ Options:
 
-  - `extId` string  
-    Get it from `https://chrome.google.com/webstore/detail/EXT_ID`, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
-  - `refreshToken` string  
-    The refresh token.
-  - `clientId` string  
-    The client ID.
-  - `clientSecret` string  
-    The client secret.
-  - `zip` string  
-    The relative path from the root to the ZIP.  
-    You can use `{version}` to use the `version` entry from your `package.json`
-  - `verbose` boolean?  
-    If `true`, it will be logged to the console when the uploading has begun.
+- `extId` string  
+  Get it from `https://chrome.google.com/webstore/detail/EXT_ID`, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
+- `refreshToken` string  
+  The refresh token.
+- `clientId` string  
+  The client ID.
+- `clientSecret` string  
+  The client secret.
+- `zip` string  
+  The relative path from the root to the ZIP.  
+  You can use `{version}` to use the `version` entry from your `package.json`
+- `verbose` boolean?  
+  If `true`, it will be logged to the console when the uploading has begun.
 
-  To get your `refreshToken`, `clientId`, and `clientSecret`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).  
-   Returns `Promise<true>` or throws an exception.
+To get your `refreshToken`, `clientId`, and `clientSecret`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).  
+ Returns `Promise<true>` or throws an exception.
 
 #### Firefox Add-ons API
 
-  `deployFirefox` object  
-   Options:
+`deployFirefox` object  
+ Options:
 
-  - `extId` string  
-    Get it from `https://addons.mozilla.org/addon/EXT_ID`
-  - `sessionid` string  
-    The value of the cookie `sessionid`, which will be used to log in to the publisher's account.  
-    If you have a hard time obtaining it, you can run:
+- `extId` string  
+  Get it from `https://addons.mozilla.org/addon/EXT_ID`
+- `sessionid` string  
+  The value of the cookie `sessionid`, which will be used to log in to the publisher's account.  
+  If you have a hard time obtaining it, you can run:
 
-  ```shell
-  web-ext-deploy --get-cookies=firefox
-  ```
+```shell
+web-ext-deploy --get-cookies=firefox
+```
 
-  - `zip` string  
-    The relative path from the root to the ZIP.  
-    You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
-  - `zipSource` string?  
-    The relative path from the root to the ZIP that contains the source code of your extension, if applicable.  
-    You can use `{version}` as well.  
-    Note that if your extension's source code _is_ required to be seen by the review team, you **do not** want to store the deployment script with the package.
-  - `changelog` string?  
-    The changes made in this version, compared to the previous one, which will be seen by the Firefox users.  
-    I recommend providing the changelog via `--firefox-changelog`, so it stays dynamic.
-  - `devChangelog` string?  
-    The technical changes made in this version, compared to the previous one, which will be visible only to the Firefox Add-ons reviewers.  
-    I recommend providing the changelog via `--firefox-dev-changelog`, so it stays up to date.
-  - `verbose` boolean?  
-    If `true`, every step of uploading to the Firefox Add-ons will be logged to the console.
+- `zip` string  
+  The relative path from the root to the ZIP.  
+  You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
+- `zipSource` string?  
+  The relative path from the root to the ZIP that contains the source code of your extension, if applicable.  
+  You can use `{version}` as well.  
+  Note that if your extension's source code _is_ required to be seen by the review team, you **do not** want to store the deployment script with the package.
+- `changelog` string?  
+  The changes made in this version, compared to the previous one, which will be seen by the Firefox users.  
+  I recommend providing the changelog via `--firefox-changelog`, so it stays dynamic.
+- `devChangelog` string?  
+  The technical changes made in this version, compared to the previous one, which will be visible only to the Firefox Add-ons reviewers.  
+  I recommend providing the changelog via `--firefox-dev-changelog`, so it stays up to date.
+- `verbose` boolean?  
+  If `true`, every step of uploading to the Firefox Add-ons will be logged to the console.
 
-  Returns `Promise<true>` or throws an exception.
+Returns `Promise<true>` or throws an exception.
 
 #### Edge Add-ons API
 
-  `deployEdge` object  
-   Options:
+`deployEdge` object  
+ Options:
 
-  - `extId` string  
-    Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
-  - `cookie` string  
-    The value of the cookie `.AspNet.Cookies`, which will be used to log in to the publisher's account.  
-    If you have a hard time obtaining it, you can run:
+- `extId` string  
+  Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+- `cookie` string  
+  The value of the cookie `.AspNet.Cookies`, which will be used to log in to the publisher's account.  
+  If you have a hard time obtaining it, you can run:
 
-  ```shell
-  web-ext-deploy --get-cookies=edge
-  ```
+```shell
+web-ext-deploy --get-cookies=edge
+```
 
-  - `zip` string  
-    The relative path from the root to the ZIP.  
-    You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
-  - `devChangelog` string?  
-    The technical changes made in this version, compared to the previous one, which will be visible only to the Edge Add-ons reviewers.  
-    I recommend providing the changelog via `--edge-dev-changelog`, so it stays up to date.
-  - `verbose` boolean?  
-    If `true`, every step of uploading to the Edge Add-ons will be logged to the console.
+- `zip` string  
+  The relative path from the root to the ZIP.  
+  You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
+- `devChangelog` string?  
+  The technical changes made in this version, compared to the previous one, which will be visible only to the Edge Add-ons reviewers.  
+  I recommend providing the changelog via `--edge-dev-changelog`, so it stays up to date.
+- `verbose` boolean?  
+  If `true`, every step of uploading to the Edge Add-ons will be logged to the console.
 
-  Returns `Promise<true>` or throws an exception.
+Returns `Promise<true>` or throws an exception.
 
 #### Opera Add-ons API
 
-  `deployOpera` object  
-   Options:
+`deployOpera` object  
+ Options:
 
-  - `packageId` number  
-    The package ID of the extension from the store dashboard, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
-  - `sessionid` string  
-    The value of the cookie `sessionid`, which will be used to log in to the publisher's account.
-  - `csrftoken` string  
-    The value of the cookie `csrftoken`, which will be used to upload the ZIP.
-  - `zip` string  
-    The relative path from the root to the ZIP.  
-    You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
-  - `changelog` string?  
-    The changes made in this version, compared to the previous one, which will be seen by the Opera users.  
-    I recommend providing the changelog via `--opera-changelog`, so it stays up to date.
-  - `verbose` boolean?  
-    If `true`, every step of uploading to the Opera Add-ons will be logged to the console.
+- `packageId` number  
+  The package ID of the extension from the store dashboard, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
+- `sessionid` string  
+  The value of the cookie `sessionid`, which will be used to log in to the publisher's account.
+- `csrftoken` string  
+  The value of the cookie `csrftoken`, which will be used to upload the ZIP.
+- `zip` string  
+  The relative path from the root to the ZIP.  
+  You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
+- `changelog` string?  
+  The changes made in this version, compared to the previous one, which will be seen by the Opera users.  
+  I recommend providing the changelog via `--opera-changelog`, so it stays up to date.
+- `verbose` boolean?  
+  If `true`, every step of uploading to the Opera Add-ons will be logged to the console.
 
-  If you have a hard time obtaining the values of the cookies `sessionid` and `csrftoken`, you can run:
+If you have a hard time obtaining the values of the cookies `sessionid` and `csrftoken`, you can run:
 
-  ```shell
-  web-ext-deploy --get-cookies=opera
-  ```
+```shell
+web-ext-deploy --get-cookies=opera
+```
 
-  Returns `Promise<true>` or throws an exception.
+Returns `Promise<true>` or throws an exception.
 
-  **Notes:**
+**Notes:**
 
-  - Source code inspection:  
-    The Opera Add-ons reviewers require inspecting your extension's source code.  
-    This can be done by doing **one** of the following:
+- Source code inspection:  
+  The Opera Add-ons reviewers require inspecting your extension's source code.  
+  This can be done by doing **one** of the following:
 
-    - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
-    - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
+  - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
+  - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
-    Note that you **do not** want to store the deployment script with your extension package, as the review team will have access to your precious cookies.  
-    If you'll open-source the extension on GitHub, you can exclude the deployment script by listing it in `.gitignore`
+  Note that you **do not** want to store the deployment script with your extension package, as the review team will have access to your precious cookies.  
+  If you'll open-source the extension on GitHub, you can exclude the deployment script by listing it in `.gitignore`
 
 Examples:
 
