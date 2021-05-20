@@ -12,6 +12,7 @@ const store = "Opera";
 
 const gSelectors = {
   listErrors: ".alert-danger",
+  tabs: `[ng-click="select($event)"]`,
   buttonSubmit: "[ng-click*=submit]",
   buttonUploadNewVersion: `[ng-click*="upload()"]`,
   buttonCancel: "[ng-click*=cancel]",
@@ -74,10 +75,7 @@ async function uploadZip({
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 
-  await page.$eval(
-    gSelectors.buttonUploadNewVersion,
-    (elSubmit: HTMLButtonElement) => elSubmit.click()
-  );
+  await page.click(gSelectors.buttonUploadNewVersion);
 
   return getErrorsOrNone({ page, packageId });
 }
@@ -89,9 +87,16 @@ async function openRelevantExtensionPage({
   page: Page;
   packageId: number;
 }) {
-  const urlExtension = `${getBaseDashboardUrl(packageId)}?tab=versions`;
+  const switchToTabVersions = async () => {
+    await page.waitForSelector(gSelectors.tabs);
+    const elTabs = await page.$$(gSelectors.tabs);
+    const elTabVersions = elTabs[1];
+    await elTabVersions.click();
+  };
+
+  const urlExtension = getBaseDashboardUrl(packageId);
   return new Promise(async (resolve, reject) => {
-    const resonseListener = response => {
+    const responseListener = response => {
       if (
         response.url() !==
         `https://addons.opera.com/api/developer/packages/${packageId}/`
@@ -121,10 +126,10 @@ async function openRelevantExtensionPage({
         );
         return;
       }
-      page.off("response", resonseListener);
-      resolve(true);
+      page.off("response", responseListener);
+      switchToTabVersions().then(() => resolve(true));
     };
-    page.on("response", resonseListener);
+    page.on("response", responseListener);
 
     page.goto(urlExtension).catch(() => {});
   });
