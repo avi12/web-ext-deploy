@@ -3,6 +3,7 @@ import puppeteer, { Page } from "puppeteer";
 
 import {
   disableImages,
+  getExtInfo,
   getFullPath,
   getVerboseMessage,
   logSuccessfullyPublished
@@ -12,6 +13,7 @@ const store = "Opera";
 
 const gSelectors = {
   listErrors: ".alert-danger",
+  listPackages: "[ng-repeat*=packageVersion]",
   tabs: `[ng-click="select($event)"]`,
   buttonSubmit: "[ng-click*=submit]",
   buttonUploadNewVersion: `[ng-click*="upload()"]`,
@@ -29,19 +31,16 @@ async function getErrorsOrNone({
 }: {
   page: Page;
   packageId: number;
-}): Promise<boolean> {
+}): Promise<boolean | number> {
   return new Promise(async (resolve, reject) => {
     await Promise.race([
       page.waitForSelector(gSelectors.listErrors),
       page.waitForNavigation({ waitUntil: "networkidle0" })
     ]);
-    if (page.url().match(/(\d|\?tab=conversation)$/)) {
-      resolve(true);
-      return;
-    }
+
     const errors = await page.$$eval(gSelectors.listErrors, elErrors =>
       [...elErrors]
-        .map(elError => elError.querySelector(".ng-scope").textContent.trim())
+        .map(elError => elError.children[1].textContent.trim())
         .map(error => {
           if (error.includes("already uploaded")) {
             return error.split(". ")[0];
@@ -49,6 +48,16 @@ async function getErrorsOrNone({
           return error;
         })
     );
+    if (page.url().match(/(\d|\?tab=conversation)$/) || errors.length === 0) {
+      resolve(true);
+      return;
+    }
+    if (
+      errors.length > 0 &&
+      errors[errors.length - 1].match(/500|not a valid/)
+    ) {
+      resolve(500);
+    }
     const prefixError = errors.length === 1 ? "Error" : "Errors";
     reject(
       getVerboseMessage({
@@ -70,14 +79,49 @@ async function uploadZip({
   page: Page;
   zip: string;
   packageId: number;
-}): Promise<boolean> {
-  await page.waitForSelector(gSelectors.inputFile);
-  const elInputFile = await page.$(gSelectors.inputFile);
-  await elInputFile.uploadFile(zip);
+}): Promise<boolean | number> {
+  return new Promise(async (resolve, reject) => {
+    const clickUploadWhenPossible = async () =>
+      page.evaluate((selUpload: string) => {
+        new Promise(resolve => {
+          new MutationObserver(() => {
+            const elUpload = document.querySelector(selUpload) as HTMLElement;
+            if (elUpload) {
+              elUpload.click();
+              resolve(true);
+            }
+          }).observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+        });
+      }, gSelectors.buttonUploadNewVersion);
 
-  await page.click(gSelectors.buttonUploadNewVersion);
+    clickUploadWhenPossible()
+      .then(() => getErrorsOrNone({ page, packageId }))
+      .then(errors => {
+        const isUploadSuccessful = typeof errors === "boolean";
+        if (isUploadSuccessful) {
+          resolve(true);
+          return;
+        }
 
-  return getErrorsOrNone({ page, packageId });
+        // @ts-ignore
+        resolve(uploadZip({ page, zip, packageId }));
+      })
+      .catch(reject);
+
+    await page.waitForSelector(gSelectors.inputFile);
+    const elInputFile = await page.$(gSelectors.inputFile);
+    await elInputFile.uploadFile(zip);
+  });
+}
+
+async function switchToTabVersions({ page }: { page: Page }) {
+  await page.waitForSelector(gSelectors.tabs);
+  const elTabs = await page.$$(gSelectors.tabs);
+  const elTabVersions = elTabs[1];
+  await elTabVersions.click();
 }
 
 async function openRelevantExtensionPage({
@@ -87,13 +131,6 @@ async function openRelevantExtensionPage({
   page: Page;
   packageId: number;
 }) {
-  const switchToTabVersions = async () => {
-    await page.waitForSelector(gSelectors.tabs);
-    const elTabs = await page.$$(gSelectors.tabs);
-    const elTabVersions = elTabs[1];
-    await elTabVersions.click();
-  };
-
   const urlExtension = getBaseDashboardUrl(packageId);
   return new Promise(async (resolve, reject) => {
     const responseListener = response => {
@@ -127,7 +164,7 @@ async function openRelevantExtensionPage({
         return;
       }
       page.off("response", responseListener);
-      switchToTabVersions().then(() => resolve(true));
+      switchToTabVersions({ page }).then(() => resolve(true));
     };
     page.on("response", responseListener);
 
@@ -263,6 +300,54 @@ async function cancelUpload({ page }: { page: Page }) {
   await page.click(gSelectors.buttonCancel);
 }
 
+async function deleteCurrentVersionIfAlreadyExists({
+  page,
+  packageId,
+  zip,
+  isVerbose
+}: {
+  page: Page;
+  packageId: number;
+  zip: string;
+  isVerbose: boolean;
+}) {
+  const deletePackage = async () => {
+    await page.waitForSelector(gSelectors.buttonCancel);
+    await page.click(gSelectors.buttonCancel);
+
+    if (isVerbose) {
+      console.log(
+        getVerboseMessage({
+          store,
+          message: `Deleted existing package version ${version}`
+        })
+      );
+    }
+  };
+
+  const version = getExtInfo(zip, "version");
+
+  const selVersions = "[ng-model=selectedVersion]";
+  await page.waitForSelector(selVersions);
+  const isExists = await page.$eval(
+    selVersions,
+    (elVersions: HTMLSelectElement, version) =>
+      // @ts-ignore
+      [...elVersions.options].some(
+        elOption => elOption.textContent === version
+      ),
+    version
+  );
+
+  if (isExists) {
+    await page.goto(`${getBaseDashboardUrl(packageId)}/version/${version}`);
+    await deletePackage();
+    return true;
+  }
+
+  return false;
+}
+
 export default async function deployToOpera({
   sessionid,
   packageId,
@@ -311,6 +396,16 @@ export default async function deployToOpera({
           message: "Opened relevant extension page"
         })
       );
+    }
+
+    const isDeleted = await deleteCurrentVersionIfAlreadyExists({
+      page,
+      packageId,
+      zip,
+      isVerbose
+    });
+    if (isDeleted) {
+      await switchToTabVersions({ page });
     }
 
     try {
