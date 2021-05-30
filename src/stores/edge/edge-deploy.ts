@@ -3,6 +3,7 @@ import duration from "parse-duration";
 import { EdgeOptions } from "./edge-input";
 import {
   disableImages,
+  getExistingElementSelector,
   getExtInfo,
   getVerboseMessage,
   logSuccessfullyPublished
@@ -15,16 +16,16 @@ const gSelectors = {
   extName: ".extension-name",
   inputFile: "input[type=file]",
   buttonPublishText: ".win-icon-Publish",
-  textUnpublish: ".win-icon-RemoveContent",
   buttonPublish: "#publishButton",
   buttonPublishOverview: "button[data-l10n-key=Common_Publish]",
+  buttonEditOverview: "button[data-l10n-key=Common_Text_Edit]",
+  buttonUpdateOverview: "button[data-l10n-key=Common_Text_Update]",
   statusInReview: "[data-l10n-key=Overview_Extension_Status_InReview]",
   errorIncompleteTranslations: `[data-l10n-key="Common_Incomplete"]`,
   buttonPackageNext: "[data-l10n-key=Package_Next]",
-  textCancelSubmission: "command-bar-button .win-icon-Cancel",
-  buttonCancelSubmissionConfirm:
-    "button[data-l10n-key=Overview_Extension_Cancel_Submission]",
   buttonSubmissionUpdate: "[data-l10n-key=Common_Text_Update]",
+  buttonCancelOverview: "[data-l10n-key=Common_Text_Cancel]",
+  buttonConfirm: "[data-l10n-key=Common_Text_Confirm]",
   inputDevChangelog: "textarea"
 };
 
@@ -82,7 +83,11 @@ async function openRelevantExtensionPage({
 
 async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
   await page.waitForSelector(gSelectors.extName);
-  const elNameVersionContainer = await page.$(gSelectors.extName);
+  const elNameVersionContainer = await page.$$eval(
+    gSelectors.extName,
+    elNames => elNames[elNames.length - 1]
+  );
+
   const [elVersion] = await elNameVersionContainer.$x("span[3]");
   return elVersion.evaluate((elVersion: HTMLSpanElement) =>
     elVersion.textContent.trim()
@@ -261,7 +266,7 @@ async function clickButtonPublishText(page: Page, extId: string) {
   await page.click(gSelectors.buttonPublishText);
 }
 
-async function clickPublisInOverview({
+async function clickPublishInOverview({
   page,
   extId
 }: {
@@ -272,6 +277,100 @@ async function clickPublisInOverview({
   await page.goto(urlOverview, { waitUntil: "networkidle0" });
   await page.waitForSelector(gSelectors.buttonPublishOverview);
   await page.click(gSelectors.buttonPublishOverview);
+}
+
+async function clickCancelWhenPossible({ page }: { page: Page }) {
+  const timeToWait = duration("65s");
+  // noinspection UnnecessaryLocalVariableJS
+  const isCanceled = await page.$eval(
+    gSelectors.buttonCancelOverview,
+    (elButtonCancel: HTMLButtonElement, timeToWait: number) =>
+      new Promise(resolve => {
+        // If the extension had been reviewed
+        // and then its review process was canceled,
+        // the Cancel button will become clickable
+        // after a minute
+
+        setTimeout(() => resolve(false), timeToWait);
+
+        // Otherwise, if it hasn't just been canceled,
+        // the button will start as disabled and become
+        // enabled after a moment
+        new MutationObserver(() => {
+          elButtonCancel.click();
+          resolve(true);
+        }).observe(elButtonCancel, {
+          attributes: true,
+          attributeFilter: ["disabled"]
+        });
+      }),
+    timeToWait
+  );
+
+  return isCanceled;
+}
+
+async function confirmCancelWhenPossible({ page }: { page: Page }) {
+  await page.waitForSelector(gSelectors.buttonConfirm);
+  await page.$eval(gSelectors.buttonConfirm, (elConfirm: HTMLButtonElement) =>
+    elConfirm.click()
+  );
+}
+
+async function cancelVersionInReviewIfNeeded({
+  page,
+  isVerbose,
+  zip
+}: {
+  page: Page;
+  isVerbose: boolean;
+  zip: string;
+}) {
+  // Scenario 1: It's live in the store (Update & Unpublish are available)
+  // Scenario 2: It's in draft form (Edit, Publish & Unpublish are available)
+  // Scenario 3: It's being reviewed (Update, Cancel & Unpublish are available)
+  // Scenario 4: The review was canceled, but it's not yet a draft (Update, Cancel (disabled) & Unpublish are available)
+
+  const selectorExisting = await getExistingElementSelector(page, [
+    gSelectors.buttonEditOverview,
+    gSelectors.buttonUpdateOverview
+  ]);
+
+  const isInStore = !(await page.$(gSelectors.buttonCancelOverview));
+  const isDraft = selectorExisting.includes(gSelectors.buttonEditOverview);
+  if (isInStore || isDraft) {
+    return;
+  }
+
+  const isScenario4 = !(await clickCancelWhenPossible({ page }));
+  if (isScenario4) {
+    return;
+  }
+  await confirmCancelWhenPossible({ page });
+
+  if (isVerbose) {
+    const extName = getExtInfo(zip, "name");
+    console.log(
+      getVerboseMessage({
+        store,
+        message: `Canceling current being-reviewed version. It will take about a minute until the new version of ${extName} can be uploaded`
+      })
+    );
+  }
+
+  await new Promise(resolve =>
+    setTimeout(() => resolve(true), duration("65s"))
+  );
+}
+
+async function getIsInStore({ page }: { page: Page }) {
+  // In-store: Update & Unpublish are available
+  // In-draft: Edit, Publish & Unpublish are available
+  // In-review: Update, Cancel (initially disabled) & Unpublish are available
+  return (
+    (await page.$(gSelectors.buttonUpdateOverview)) &&
+    !(await page.$(gSelectors.buttonCancelOverview))
+  );
 }
 
 export async function deployToEdge({
@@ -326,8 +425,12 @@ export async function deployToEdge({
       );
     }
 
+    await cancelVersionInReviewIfNeeded({ page, isVerbose, zip });
+
     try {
-      await verifyNewVersionIsGreater({ page, zip });
+      if (await getIsInStore({ page })) {
+        await verifyNewVersionIsGreater({ page, zip });
+      }
     } catch (e) {
       await browser.close();
       reject(e);
@@ -375,7 +478,7 @@ export async function deployToEdge({
         timeout
       });
     } catch {
-      await clickPublisInOverview({ page, extId });
+      await clickPublishInOverview({ page, extId });
       await page.waitForSelector(gSelectors.statusInReview, {
         timeout
       });
