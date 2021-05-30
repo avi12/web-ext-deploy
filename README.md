@@ -128,6 +128,8 @@ web-ext-deploy --env
 
   - `EXT_ID` - Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
   - `ZIP` - You can use `{version}`
+  - Due to the way the Edge dashboard works, when an extension is being reviewed or its review has just been canceled, it will take about a minute until a cancellation will cause its state to change from "In review" to "In draft", after which the new version can be submitted.  
+    Therefore, expect for longer wait times if you run the tool on an extension you had just published/canceled.
 
 - Opera Add-ons store:
   - `PACKAGE_ID` - Get it from `https://addons.opera.com/developer/package/PACKAGE_ID`
@@ -279,6 +281,10 @@ Example:
 web-ext-deploy --edge-ext-id="ExtensionID" --edge-cookie=".AspNet.Cookies value" --edge-zip="dist/some-zip-v{version}.zip" --edge-dev-changelog="Changelog for reviewers\nWith line breaks"
 ```
 
+**Note:**  
+Due to the way the Edge dashboard works, when an extension is being reviewed or its review has just been canceled, it will take about a minute until a cancellation will cause its state to change from "In review" to "In draft", after which the new version can be submitted.  
+Therefore, expect for longer wait times if you run the tool on an extension you had just published/canceled.
+
 #### Opera Add-ons CLI
 
 - `--opera-package-id` number  
@@ -414,6 +420,10 @@ web-ext-deploy --get-cookies=edge
   If `true`, every step of uploading to the Edge Add-ons will be logged to the console.
 
 Returns `Promise<true>` or throws an exception.
+
+**Note:**  
+Due to the way the Edge dashboard works, when an extension is being reviewed or its review has just been canceled, it will take about a minute until a cancellation will cause its state to change from "In review" to "In draft", after which the new version can be submitted.  
+Therefore, expect for longer wait times if you run the tool on an extension you had just published/canceled.
 
 #### Opera Add-ons API
 
