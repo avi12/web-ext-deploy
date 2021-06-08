@@ -83,10 +83,9 @@ async function openRelevantExtensionPage({
 
 async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
   await page.waitForSelector(gSelectors.extName);
-  const elNameVersionContainer = await page.$$eval(
-    gSelectors.extName,
-    elNames => elNames[elNames.length - 1]
-  );
+  const elNameVersionContainers = await page.$$(gSelectors.extName);
+  const elNameVersionContainer =
+    elNameVersionContainers[elNameVersionContainers.length - 1];
 
   const [elVersion] = await elNameVersionContainer.$x("span[3]");
   return elVersion.evaluate((elVersion: HTMLSpanElement) =>
