@@ -14,7 +14,8 @@ const store = "Opera";
 const gSelectors = {
   listErrors: ".alert-danger",
   listPackages: "[ng-repeat*=packageVersion]",
-  tabs: `[ng-click="select($event)"]`,
+  tabs: `.nav-tabs [ng-bind-html="tab.name"]`,
+  tabsLanguages: `.nav-stacked [ng-bind-html="tab.name"]`,
   buttonSubmit: "[ng-click*=submit]",
   buttonUploadNewVersion: `[ng-click*="upload()"]`,
   buttonCancel: "[ng-click*=cancel]",
@@ -81,21 +82,10 @@ async function uploadZip({
   packageId: number;
 }): Promise<boolean | number> {
   return new Promise(async (resolve, reject) => {
-    const clickUploadWhenPossible = async () =>
-      page.evaluate((selUpload: string) => {
-        new Promise(resolve => {
-          new MutationObserver(() => {
-            const elUpload = document.querySelector(selUpload) as HTMLElement;
-            if (elUpload) {
-              elUpload.click();
-              resolve(true);
-            }
-          }).observe(document.body, {
-            childList: true,
-            subtree: true
-          });
-        });
-      }, gSelectors.buttonUploadNewVersion);
+    const clickUploadWhenPossible = async () => {
+      await page.waitForSelector(gSelectors.buttonUploadNewVersion);
+      return page.click(gSelectors.buttonUploadNewVersion);
+    };
 
     clickUploadWhenPossible()
       .then(() => getErrorsOrNone({ page, packageId }))
@@ -106,7 +96,6 @@ async function uploadZip({
           return;
         }
 
-        // @ts-ignore
         resolve(uploadZip({ page, zip, packageId }));
       })
       .catch(reject);
@@ -235,21 +224,40 @@ async function updateExtension({
 async function addChangelogIfNeeded({
   page,
   changelog,
-  isVerbose
+  isVerbose,
+  zip
 }: {
   page: Page;
   changelog?: string;
   isVerbose: boolean;
+  zip: string;
 }) {
-  // If the extension is available in English,
-  // the changelog will be filled into the English textarea
+  const switchToTabTranslations = async () => {
+    const tabs = await page.$$(gSelectors.tabs);
+    await tabs[2].click();
+  };
 
-  // If the extension is NOT available in English, the
-  // extension dashboard will fall back to the first language
-  // that IS supported, and its textarea will be filled instead
-  await page.goto(`${page.url()}?tab=translations&language=en`);
+  const switchToEnglishMetadata = async () => {
+    await page.$$eval(
+      gSelectors.tabsLanguages,
+      (elLanguages: HTMLSpanElement[], default_locale: string) => {
+        const elTabEnglish = elLanguages.find(elLanguage =>
+          elLanguage.textContent.includes(`(${default_locale})`)
+        ) as HTMLSpanElement;
+        elTabEnglish.click();
+      },
+      getExtInfo(zip, "default_locale") || "en"
+    );
+  };
+
   if (changelog) {
+    await switchToTabTranslations();
+    await switchToEnglishMetadata();
+
     await page.waitForSelector(gSelectors.inputChangelog);
+    await page.$eval(gSelectors.inputChangelog, (elInput: HTMLInputElement) => {
+      elInput.value = "";
+    });
     await page.type(gSelectors.inputChangelog, changelog);
     await page.click(gSelectors.buttonSubmitChangelog);
 
@@ -269,10 +277,12 @@ async function addChangelogIfNeeded({
 
 async function addLoginCookie({
   page,
-  sessionid
+  sessionid,
+  csrftoken
 }: {
   page: Page;
   sessionid: string;
+  csrftoken: string;
 }) {
   const domain = "addons.opera.com";
   const cookies = [
@@ -283,7 +293,7 @@ async function addLoginCookie({
     },
     {
       name: "csrftoken",
-      value: "8H2vyjMA91ozfeDXEIrTy3rG4VXt3ErfuaftZrLp4ssXqzY7cI9vAuSW110VYVl7",
+      value: csrftoken,
       domain
     }
   ];
@@ -350,6 +360,7 @@ async function deleteCurrentVersionIfAlreadyExists({
 
 export default async function deployToOpera({
   sessionid,
+  csrftoken,
   packageId,
   zip,
   changelog = "",
@@ -369,7 +380,7 @@ export default async function deployToOpera({
 
     const [page] = await browser.pages();
     await disableImages(page);
-    await addLoginCookie({ page, sessionid });
+    await addLoginCookie({ page, sessionid, csrftoken });
     const urlStart = `${getBaseDashboardUrl(packageId)}?tab=versions`;
 
     if (isVerbose) {
@@ -405,8 +416,11 @@ export default async function deployToOpera({
       isVerbose
     });
     if (isDeleted) {
-      await switchToTabVersions({ page });
+      await page.reload();
+      await page.goto(urlStart);
     }
+
+    await switchToTabVersions({ page });
 
     try {
       await uploadZip({
@@ -424,23 +438,13 @@ export default async function deployToOpera({
       console.log(
         getVerboseMessage({
           store,
-          message: `Uploading ZIP: ${zip}`
+          message: `Uploaded ZIP: ${zip}`
         })
       );
     }
 
     await verifyPublicCodeExistence({ page });
-
-    await addChangelogIfNeeded({ page, changelog, isVerbose });
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store,
-          message: "Uploaded ZIP"
-        })
-      );
-    }
+    await addChangelogIfNeeded({ page, changelog, isVerbose, zip });
 
     try {
       await updateExtension({ page, packageId });
