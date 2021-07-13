@@ -25,6 +25,7 @@
     "no-unused-vars": "warn",
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/interface-name-prefix": "off",
-    "no-async-promise-executor": "off"
+    "no-async-promise-executor": "off",
+    "semi": "warn"
   }
 }
