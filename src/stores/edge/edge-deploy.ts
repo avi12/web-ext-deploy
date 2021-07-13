@@ -26,7 +26,7 @@ const gSelectors = {
   buttonSubmissionUpdate: "[data-l10n-key=Common_Text_Update]",
   buttonCancelOverview: "[data-l10n-key=Common_Text_Cancel]",
   buttonConfirm: "[data-l10n-key=Common_Text_Confirm]",
-  inputDevChangelog: "textarea"
+  inputDevChangelog: `textarea[name="certificationNotes"]`
 };
 
 function getBaseDashboardUrl(extId: string) {
@@ -228,18 +228,18 @@ async function addChangelogIfNeeded({
   page: Page;
   isVerbose: boolean;
 }) {
-  if (devChangelog) {
-    await page.waitForSelector(gSelectors.inputDevChangelog);
-    await page.type(gSelectors.inputDevChangelog, devChangelog);
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store,
-          message: `Added changelog for reviewers: ${devChangelog}`
-        })
-      );
-    }
+  if (!devChangelog) {
+    return;
+  }
+  await page.waitForSelector(gSelectors.inputDevChangelog);
+  await page.type(gSelectors.inputDevChangelog, devChangelog);
+  if (isVerbose) {
+    console.log(
+      getVerboseMessage({
+        store,
+        message: `Added changelog for reviewers: ${devChangelog}`
+      })
+    );
   }
 }
 
