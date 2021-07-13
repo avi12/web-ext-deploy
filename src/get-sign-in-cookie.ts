@@ -104,13 +104,12 @@ async function saveFirefoxHeaders(page: Page): Promise<string> {
 async function saveOperaHeaders(page: Page): Promise<string> {
   return new Promise(async resolve => {
     const url = "https://addons.opera.com/developer/";
-    const isUrlMatch = url => url.endsWith("/developer/");
-    const regexCookies = /sessionid|csrftoken/;
-    const extractCookies = cookies =>
-      cookies
+    const cookiesToLogin = ["sessionid", "csrftoken"];
+    const extractCookies = cookiesInput =>
+      cookiesInput
         .split("; ")
         .filter(cookie =>
-          cookie.match(new RegExp("^(" + regexCookies.source + ")"))
+          cookie.match(new RegExp("^(" + cookiesToLogin.join("|") + ")"))
         )
         .join("\n");
     const devtools = await page.target().createCDPSession();
@@ -124,11 +123,12 @@ async function saveOperaHeaders(page: Page): Promise<string> {
     });
 
     devtools.on("Fetch.requestPaused", async ({ requestId, request }) => {
-      const isRequiredCookiesExist = request.headers?.Cookie?.match(
-        regexCookies
+      const isRequiredCookiesExist = cookiesToLogin.every(cookie =>
+        request.headers?.Cookie?.match(new RegExp(` ${cookie}=`))
       );
 
-      if (isRequiredCookiesExist && isUrlMatch(request.url)) {
+      console.log(request.headers.Cookie);
+      if (isRequiredCookiesExist) {
         resolve(extractCookies(request.headers.Cookie));
       }
 
