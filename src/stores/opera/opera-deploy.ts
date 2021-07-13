@@ -387,7 +387,7 @@ export default async function deployToOpera({
       console.log(
         getVerboseMessage({
           store,
-          message: `Launched Puppeteer session in ${urlStart}`
+          message: `Launched a Puppeteer session in ${urlStart}`
         })
       );
     }
