@@ -127,7 +127,6 @@ async function saveOperaHeaders(page: Page): Promise<string> {
         request.headers?.Cookie?.match(new RegExp(` ${cookie}=`))
       );
 
-      console.log(request.headers.Cookie);
       if (isRequiredCookiesExist) {
         resolve(extractCookies(request.headers.Cookie));
       }
