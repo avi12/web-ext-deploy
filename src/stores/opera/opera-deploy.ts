@@ -264,7 +264,7 @@ async function addChangelogIfNeeded({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store: "Firefox",
+          store,
           message: `Added changelog: ${changelog}`
         })
       );
