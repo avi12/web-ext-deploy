@@ -8,7 +8,7 @@ export class OperaOptions {
   /** The `csrftoken` cookie to upload the ZIP. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
   csrftoken: string;
 
-  /** The extension ID. E.g. `https://addons.opera.com/en/extensions/details/EXT_ID` */
+  /** The extension ID. E.g. `https://addons.opera.com/developer/package/PACKAGE_ID` */
   packageId: number;
 
   /**
