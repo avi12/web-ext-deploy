@@ -76,7 +76,7 @@ export async function prepareToDeployOpera(
   options.zip = getCorrectZip(options.zip);
 
   if (options.changelog) {
-    options.changelog = options.changelog.split("\\\n").join("\n");
+    options.changelog = options.changelog.replace(/\/\/n/g, "\n");
   }
 
   // Validate the options

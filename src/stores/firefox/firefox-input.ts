@@ -88,11 +88,11 @@ export async function prepareToDeployFirefox(
   }
 
   if (options.changelog) {
-    options.changelog = options.changelog.split("\\\n").join("\n");
+    options.changelog = options.changelog.replace(/\/\/n/g, "\n");
   }
 
   if (options.devChangelog) {
-    options.devChangelog = options.devChangelog.split("\\\n").join("\n");
+    options.devChangelog = options.devChangelog.replace(/\/\/n/g, "\n");
   }
 
   // Validate the options

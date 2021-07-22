@@ -32,7 +32,7 @@ export class EdgeOptions {
 
     if (!options.cookie) {
       throw new Error(getErrorMessage(`No cookie is provided. The cookie's name is ".AspNet.Cookies". If you have a hard time obtaining it, run:
-web-ext-deploy --get-cookies=edge`))
+web-ext-deploy --get-cookies=edge`));
     }
 
     // Zip checking
@@ -59,7 +59,7 @@ export async function prepareToDeployEdge(
   options.zip = getCorrectZip(options.zip);
 
   if (options.devChangelog) {
-    options.devChangelog = options.devChangelog.split("\\\n").join("\n");
+    options.devChangelog = options.devChangelog.replace(/\/\/n/g, "\n");
   }
 
   // Validate the options
