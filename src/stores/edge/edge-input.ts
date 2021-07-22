@@ -17,7 +17,7 @@ export class EdgeOptions {
 
   /**
    * A description of the technical changes made in this version, compared to the previous one.<br>
-   * This will only be seen by the Firefox Addons reviewers.<br>
+   * This will only be seen by the Edge Extensions reviewers.<br>
    * It's recommended to use instead `--edge-dev-changelog` , so it stays up to date.
    */
   devChangelog?: string;
