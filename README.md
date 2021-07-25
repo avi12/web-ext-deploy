@@ -34,9 +34,9 @@ Supported stores:
 ```shell
 npm i -D web-ext-deploy
 # or
-yarn add -D web-ext-deploy
-# or
 pnpm i -D web-ext-deploy
+# or
+yarn add -D web-ext-deploy
 ```
 
 or install globally
@@ -44,9 +44,9 @@ or install globally
 ```shell
 npm i -g web-ext-deploy
 # or
-yarn add -g web-ext-deploy
-# or
 pnpm i -g web-ext-deploy
+# or
+yarn global add web-ext-deploy
 ```
 
 Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).
