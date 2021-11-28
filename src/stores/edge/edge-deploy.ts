@@ -75,7 +75,7 @@ async function openRelevantExtensionPage({
     page.on("response", responseListener);
 
     page
-      .goto(`${getBaseDashboardUrl(extId)}/packages/overview`)
+      .goto(`${getBaseDashboardUrl(extId)}/packages/dashboard`)
       .then(() => resolve(true))
       .catch(() => {});
   });
@@ -272,7 +272,7 @@ async function clickPublishInOverview({
   page: Page;
   extId: string;
 }) {
-  const urlOverview = `${getBaseDashboardUrl(extId)}/packages/overview`;
+  const urlOverview = `${getBaseDashboardUrl(extId)}/packages/dashboard`;
   await page.goto(urlOverview, { waitUntil: "networkidle0" });
   await page.waitForSelector(gSelectors.buttonPublishOverview);
   await page.click(gSelectors.buttonPublishOverview);
@@ -394,7 +394,7 @@ export async function deployToEdge({
     const [page] = await browser.pages();
     await disableImages(page);
     await addLoginCookie({ page, cookie });
-    const urlStart = `${getBaseDashboardUrl(extId)}/packages/overview`;
+    const urlStart = `${getBaseDashboardUrl(extId)}/packages/dashboard`;
 
     if (isVerbose) {
       console.log(
