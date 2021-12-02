@@ -26,7 +26,8 @@ const gSelectors = {
   buttonSubmissionUpdate: "[data-l10n-key=Common_Text_Update]",
   buttonCancelOverview: "[data-l10n-key=Common_Text_Cancel]",
   buttonConfirm: "[data-l10n-key=Common_Text_Confirm]",
-  inputDevChangelog: `textarea[name="certificationNotes"]`
+  inputDevChangelog: `textarea[name="certificationNotes"]`,
+  alertDanger: "#genericErrorMessage"
 };
 
 function getBaseDashboardUrl(extId: string) {
