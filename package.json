@@ -79,7 +79,7 @@
     "compare-versions": "^3.6.0",
     "dotenv": "^14.1.0",
     "parse-duration": "^1.0.0",
-    "puppeteer": "^8.0.0",
+    "puppeteer": "^13.4.0",
     "yargs": "^16.2.0",
     "zip-local": "^0.3.4"
   }
