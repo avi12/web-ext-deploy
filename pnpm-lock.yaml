@@ -10,7 +10,7 @@ specifiers:
   compare-versions: ^3.6.0
   dotenv: ^16.0.0
   eslint: ^8.10.0
-  eslint-config-prettier: ^8.1.0
+  eslint-config-prettier: ^8.5.0
   nodemon: ^2.0.15
   parse-duration: ^1.0.2
   prettier: ^2.5.1
@@ -37,7 +37,7 @@ devDependencies:
   '@typescript-eslint/eslint-plugin': 4.15.2_885681abff32a7dd4e8cc206487cf3f6
   '@typescript-eslint/parser': 4.15.2_eslint@8.10.0+typescript@4.6.2
   eslint: 8.10.0
-  eslint-config-prettier: 8.1.0_eslint@8.10.0
+  eslint-config-prettier: 8.5.0_eslint@8.10.0
   nodemon: 2.0.15
   prettier: 2.5.1
   rimraf: 3.0.2
@@ -739,8 +739,8 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  /eslint-config-prettier/8.1.0_eslint@8.10.0:
-    resolution: {integrity: sha512-oKMhGv3ihGbCIimCAjqkdzx2Q+jthoqnXSP+d86M9tptwugycmTFdVR4IpLgq2c4SHifbwO90z2fQ8/Aio73yw==}
+  /eslint-config-prettier/8.5.0_eslint@8.10.0:
+    resolution: {integrity: sha512-obmWKLUNCnhtQRKc+tmnYuQl0pFU1ibYJQ5BGhTVB08bHe9wC8qUeG7c08dj9XX+AuPj1YSGSQIHl1pnDHZR0Q==}
     hasBin: true
     peerDependencies:
       eslint: '>=7.0.0'
