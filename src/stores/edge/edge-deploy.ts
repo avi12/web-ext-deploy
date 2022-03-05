@@ -8,24 +8,24 @@ import {
   getVerboseMessage,
   logSuccessfullyPublished
 } from "../../utils";
-import compareVersions from "compare-versions";
+import { compare } from "compare-versions";
 
 const store = "Edge";
 
 const gSelectors = {
   extName: ".extension-name",
   inputFile: "input[type=file]",
-  buttonPublishText: ".win-icon-Publish",
+  buttonPublishText: "#publish-button",
   buttonPublish: "#publishButton",
-  buttonPublishOverview: "button[data-l10n-key=Common_Publish]",
-  buttonEditOverview: "button[data-l10n-key=Common_Text_Edit]",
-  buttonUpdateOverview: "button[data-l10n-key=Common_Text_Update]",
+  buttonPublishOverview: "[data-l10n-key=Common_Publish]",
+  buttonEditOverview: "[data-l10n-key=Common_Text_Edit]",
+  buttonUpdateOverview: "[data-l10n-key=Common_Text_Update]",
   statusInReview: "[data-l10n-key=Overview_Extension_Status_InReview]",
   errorIncompleteTranslations: `[data-l10n-key="Common_Incomplete"]`,
-  buttonPackageNext: "[data-l10n-key=Package_Next]",
+  buttonContinue: "#nextbtn",
   buttonSubmissionUpdate: "[data-l10n-key=Common_Text_Update]",
   buttonCancelOverview: "[data-l10n-key=Common_Text_Cancel]",
-  buttonConfirm: "[data-l10n-key=Common_Text_Confirm]",
+  buttonConfirm: "[matdialogclose]",
   inputDevChangelog: `textarea[name="certificationNotes"]`,
   alertDanger: "#genericErrorMessage"
 };
@@ -76,7 +76,7 @@ async function openRelevantExtensionPage({
     page.on("response", responseListener);
 
     page
-      .goto(`${getBaseDashboardUrl(extId)}/packages/dashboard`)
+      .goto(`${getBaseDashboardUrl(extId)}/package/dashboard`)
       .then(() => resolve(true))
       .catch(() => {});
   });
@@ -103,7 +103,7 @@ async function uploadZip({
   zip: string;
   extId: string;
 }) {
-  await page.goto(`${getBaseDashboardUrl(extId)}/packages`, {
+  await page.goto(`${getBaseDashboardUrl(extId)}/package`, {
     waitUntil: "networkidle0"
   });
   const elInputFile = await page.$(gSelectors.inputFile);
@@ -121,8 +121,7 @@ async function verifyNewVersionIsGreater({
   const versionNew = getExtInfo(zip, "version");
 
   return new Promise(async (resolve, reject) => {
-    // @ts-ignore
-    if (compareVersions(versionNew, versionCurrent, ">")) {
+    if (compare(versionNew, versionCurrent, ">")) {
       resolve(true);
       return;
     }
@@ -157,9 +156,9 @@ async function addLoginCookie({
   await page.setCookie(...cookies);
 }
 
-async function clickButtonNext({ page }: { page: Page }) {
+async function clickButtonContinue({ page }: { page: Page }) {
   await page.$eval(
-    gSelectors.buttonPackageNext,
+    gSelectors.buttonContinue,
     (elPackageNext: HTMLButtonElement) => {
       return new Promise(resolve => {
         new MutationObserver(() => resolve(true)).observe(elPackageNext, {
@@ -170,7 +169,7 @@ async function clickButtonNext({ page }: { page: Page }) {
     }
   );
 
-  await page.click(gSelectors.buttonPackageNext);
+  await page.click(gSelectors.buttonContinue);
 }
 
 async function getLanguages({ page }: { page: Page }) {
@@ -200,7 +199,7 @@ async function verifyNoListingIssues({
       dialog.accept();
     });
 
-    await page.goto(`${getBaseDashboardUrl(extId)}/listings`, {
+    await page.goto(`${getBaseDashboardUrl(extId)}/availability`, {
       waitUntil: "networkidle0"
     });
 
@@ -246,15 +245,6 @@ async function addChangelogIfNeeded({
 
 async function clickButtonPublish({ page }: { page: Page }) {
   await page.waitForSelector(gSelectors.buttonPublish);
-  await page.$eval(gSelectors.buttonPublish, (elPublish: HTMLButtonElement) => {
-    return new Promise(resolve => {
-      new MutationObserver(() => resolve(true)).observe(elPublish, {
-        attributes: true,
-        attributeFilter: ["disabled"]
-      });
-    });
-  });
-
   await page.click(gSelectors.buttonPublish);
 }
 
@@ -273,7 +263,7 @@ async function clickPublishInOverview({
   page: Page;
   extId: string;
 }) {
-  const urlOverview = `${getBaseDashboardUrl(extId)}/packages/dashboard`;
+  const urlOverview = `${getBaseDashboardUrl(extId)}/package/dashboard`;
   await page.goto(urlOverview, { waitUntil: "networkidle0" });
   await page.waitForSelector(gSelectors.buttonPublishOverview);
   await page.click(gSelectors.buttonPublishOverview);
@@ -395,7 +385,7 @@ export async function deployToEdge({
     const [page] = await browser.pages();
     await disableImages(page);
     await addLoginCookie({ page, cookie });
-    const urlStart = `${getBaseDashboardUrl(extId)}/packages/dashboard`;
+    const urlStart = `${getBaseDashboardUrl(extId)}/package/dashboard`;
 
     if (isVerbose) {
       console.log(
@@ -448,7 +438,7 @@ export async function deployToEdge({
       );
     }
 
-    await clickButtonNext({ page });
+    await clickButtonContinue({ page });
 
     if (isVerbose) {
       console.log(
