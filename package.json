@@ -61,10 +61,10 @@
     ]
   },
   "devDependencies": {
-    "@types/puppeteer": "^5.4.3",
+    "@types/puppeteer": "^5.4.5",
     "@types/yargs": "^16.0.0",
-    "@typescript-eslint/eslint-plugin": "^4.15.2",
-    "@typescript-eslint/parser": "^4.15.2",
+    "@typescript-eslint/eslint-plugin": "^5.13.0",
+    "@typescript-eslint/parser": "^5.13.0",
     "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.5.0",
     "nodemon": "^2.0.15",
