@@ -65,7 +65,7 @@
     "@types/yargs": "^16.0.0",
     "@typescript-eslint/eslint-plugin": "^4.15.2",
     "@typescript-eslint/parser": "^4.15.2",
-    "eslint": "^7.20.0",
+    "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.1.0",
     "nodemon": "^2.0.15",
     "prettier": "^2.5.1",
