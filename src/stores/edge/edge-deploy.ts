@@ -8,7 +8,7 @@ import {
   getVerboseMessage,
   logSuccessfullyPublished
 } from "../../utils";
-import compareVersions from "compare-versions";
+import { compare } from "compare-versions";
 
 const store = "Edge";
 
@@ -121,8 +121,7 @@ async function verifyNewVersionIsGreater({
   const versionNew = getExtInfo(zip, "version");
 
   return new Promise(async (resolve, reject) => {
-    // @ts-ignore
-    if (compareVersions(versionNew, versionCurrent, ">")) {
+    if (compare(versionNew, versionCurrent, ">")) {
       resolve(true);
       return;
     }
