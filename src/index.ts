@@ -31,7 +31,9 @@ async function initCli() {
     return;
   }
 
+  // @ts-ignore
   if (argv.getCookies) {
+    // @ts-ignore
     await getCookies(argv.getCookies as string[]);
     process.exit();
     return;
@@ -61,24 +63,32 @@ export async function deployChrome(options: ChromeOptions): Promise<boolean> {
 }
 
 export async function deployFirefox(options: FirefoxOptions): Promise<boolean> {
+  // @ts-ignore
   if (argv.firefoxChangelog) {
+    // @ts-ignore
     options.changelog = argv.firefoxChangelog;
   }
+  // @ts-ignore
   if (argv.firefoxDevChangelog) {
+    // @ts-ignore
     options.devChangelog = argv.firefoxDevChangelog;
   }
   return prepareToDeployFirefox(options);
 }
 
 export async function deployEdge(options: EdgeOptions): Promise<boolean> {
+  // @ts-ignore
   if (argv.edgeDevChangelog) {
+    // @ts-ignore
     options.devChangelog = argv.edgeDevChangelog;
   }
   return prepareToDeployEdge(options);
 }
 
 export async function deployOpera(options: OperaOptions): Promise<boolean> {
+  // @ts-ignore
   if (argv.operaChangelog) {
+    // @ts-ignore
     options.changelog = argv.operaChangelog;
   }
   return prepareToDeployOpera(options);

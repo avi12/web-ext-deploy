@@ -131,6 +131,7 @@ function fillMissing(jsonStoresRaw: StoreObjects): StoreObjects {
 const gStores = ["chrome", "firefox", "edge", "opera"];
 
 export function getJsonStoresFromCli(): StoreObjects {
+  // @ts-ignore
   const jsonStoresRaw = jsonCamelCased(getJsons(argv.env));
   if (isObjectEmpty(jsonStoresRaw)) {
     throw new Error(
