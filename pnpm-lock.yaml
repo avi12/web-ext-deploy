@@ -8,7 +8,7 @@ specifiers:
   camel-case: ^4.1.2
   chrome-webstore-upload: ^0.4.4
   compare-versions: ^3.6.0
-  dotenv: ^8.2.0
+  dotenv: ^16.0.0
   eslint: ^7.20.0
   eslint-config-prettier: ^8.1.0
   nodemon: ^2.0.7
@@ -25,7 +25,7 @@ dependencies:
   camel-case: 4.1.2
   chrome-webstore-upload: 0.4.4
   compare-versions: 3.6.0
-  dotenv: 8.2.0
+  dotenv: 16.0.0
   parse-duration: 1.0.2
   puppeteer: 8.0.0
   yargs: 16.2.0
@@ -739,9 +739,9 @@ packages:
       is-obj: 2.0.0
     dev: true
 
-  /dotenv/8.2.0:
-    resolution: {integrity: sha512-8sJ78ElpbDJBHNeBzUbUVLsqKdccaa/BXF1uPTw3GrvQTBgrQrtObr2mUrE38vzYd8cEv+m/JBfDLioYcfXoaw==}
-    engines: {node: '>=8'}
+  /dotenv/16.0.0:
+    resolution: {integrity: sha512-qD9WU0MPM4SWLPJy/r2Be+2WgQj8plChsyrCNQzW/0WjvcJQiKQJ9mH3ZgB3fxbUUxgc/11ZJ0Fi5KiimWGz2Q==}
+    engines: {node: '>=12'}
     dev: false
 
   /duplexer3/0.1.4:
