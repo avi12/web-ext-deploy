@@ -1,4 +1,4 @@
-import yargs, { Arguments } from "yargs";
+import yargs from "yargs";
 import { isObjectEmpty } from "./utils";
 import dotenv from "dotenv";
 import { camelCase } from "camel-case";
@@ -59,7 +59,7 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
   }
 
   const getFlagsArguments = (
-    argv: Arguments,
+    argv: any,
     store: string
   ): { [s: string]: unknown } => {
     const entries = Object.entries(argv)
