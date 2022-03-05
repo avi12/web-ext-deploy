@@ -15,9 +15,13 @@ export function isObjectEmpty(object: object) {
   return Object.keys(object).length === 0;
 }
 
-export function getCorrectZip(zip: string): string {
-  const { version } = JSON.parse(fs.readFileSync("package.json").toString());
-  return zip.replace("{version}", version);
+export function getCorrectZip(zipName: string): string {
+  if (!getIsFileExists("package.json")) {
+    return zipName;
+  }
+
+  const { version = "" } = JSON.parse(fs.readFileSync("package.json").toString());
+  return zipName.replace("{version}", version);
 }
 
 function getExtJson(zip: string) {
