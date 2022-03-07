@@ -8,4 +8,7 @@ updates:
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    ignore:
+      - dependency-name: "chrome-webstore-upload"
+        versions: ["0.6.2", "1.0.0"]
