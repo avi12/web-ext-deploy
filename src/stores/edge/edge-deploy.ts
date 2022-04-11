@@ -11,6 +11,7 @@ import {
 import { compare } from "compare-versions";
 
 const store = "Edge";
+const gPathDashboard = "packages/dashboard";
 
 const gSelectors = {
   extName: ".extension-name",
@@ -76,7 +77,7 @@ async function openRelevantExtensionPage({
     page.on("response", responseListener);
 
     page
-      .goto(`${getBaseDashboardUrl(extId)}/package/dashboard`)
+      .goto(`${getBaseDashboardUrl(extId)}/${gPathDashboard}`)
       .then(() => resolve(true))
       .catch(() => {});
   });
@@ -103,7 +104,7 @@ async function uploadZip({
   zip: string;
   extId: string;
 }) {
-  await page.goto(`${getBaseDashboardUrl(extId)}/package`, {
+  await page.goto(`${getBaseDashboardUrl(extId)}/packages`, {
     waitUntil: "networkidle0"
   });
   const elInputFile = await page.$(gSelectors.inputFile);
@@ -263,7 +264,7 @@ async function clickPublishInOverview({
   page: Page;
   extId: string;
 }) {
-  const urlOverview = `${getBaseDashboardUrl(extId)}/package/dashboard`;
+  const urlOverview = `${getBaseDashboardUrl(extId)}/${gPathDashboard}`;
   await page.goto(urlOverview, { waitUntil: "networkidle0" });
   await page.waitForSelector(gSelectors.buttonPublishOverview);
   await page.click(gSelectors.buttonPublishOverview);
@@ -385,7 +386,7 @@ export async function deployToEdge({
     const [page] = await browser.pages();
     await disableImages(page);
     await addLoginCookie({ page, cookie });
-    const urlStart = `${getBaseDashboardUrl(extId)}/package/dashboard`;
+    const urlStart = `${getBaseDashboardUrl(extId)}/${gPathDashboard}`;
 
     if (isVerbose) {
       console.log(
