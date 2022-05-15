@@ -2,62 +2,6 @@ import puppeteer, { Page } from "puppeteer";
 import fs from "fs";
 import dotenv from "dotenv";
 
-export class SitesLogin {
-  /** The site to retrieve the publisher account's login cookie. */
-  siteName: "firefox" | "edge" | "opera";
-
-  private urls = {
-    firefox: "https://addons.mozilla.org/en-US/developers/",
-    edge:
-      "https://partner.microsoft.com/en-us/dashboard/microsoftedge/overview",
-    opera: "https://addons.opera.com/developer"
-  };
-
-  private selectors = {
-    firefox: "a.Button"
-  };
-
-  private urlWatchers = {
-    firefox: "/developers/"
-  };
-
-  private headers = {
-    firefox: ["Sec-Fetch-Site", "Cookie"]
-  };
-
-  constructor(siteName: string) {
-    // @ts-ignore
-    this.siteName = siteName;
-
-    if (!this.url) {
-      const stores = Object.keys(this.urls);
-      throw new Error(`Supported sites: ${stores.join(", ")}`);
-    }
-  }
-
-  get url() {
-    return this.urls[this.siteName];
-  }
-
-  get selectorToWait() {
-    return this.selectors[this.siteName];
-  }
-
-  get urlWatch() {
-    return this.urlWatchers[this.siteName];
-  }
-
-  get getHeaders() {
-    return this.headers[this.siteName];
-  }
-
-  extractHeaders(headers) {
-    return Object.entries(headers)
-      .filter(([header]) => this.getHeaders.includes(header))
-      .reduce((obj, [header, value]) => ({ ...obj, [header]: value }));
-  }
-}
-
 function getFilename(site) {
   return `./${site}.env`;
 }
