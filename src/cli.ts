@@ -8,7 +8,7 @@ import { EdgeOptions } from "./stores/edge/edge-input";
 import { OperaOptions } from "./stores/opera/opera-input";
 import { getSignInCookie } from "./get-sign-in-cookie";
 
-const { argv } = yargs(process.argv.slice(2)).options({
+const argv = yargs(process.argv.slice(2)).options({
   env: { type: "boolean" },
   extId: { type: "string" },
   zip: { type: "string" },
@@ -37,7 +37,7 @@ const { argv } = yargs(process.argv.slice(2)).options({
   operaExtId: { type: "string" },
   operaZip: { type: "string" },
   operaChangelog: { type: "string" }
-});
+}).parseSync();
 
 function getJsons(isUseEnv?: boolean): { [p: string]: any } {
   if (isUseEnv) {
@@ -46,12 +46,9 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
       if (!isObjectEmpty(parsed)) {
         const yargsStoreArgs = getJsons(false);
         let additionalParams = {};
-        // @ts-ignore
         if (yargsStoreArgs[store]) {
-          // @ts-ignore
           additionalParams = yargsStoreArgs[store];
         }
-        // @ts-ignore
         stores[store] = { ...parsed, ...additionalParams };
       }
       return stores;
@@ -107,7 +104,6 @@ interface StoreObjects {
 
 /**
  * Used for fallbacks, e.g. `--zip="some-ext.zip" --chrome-zip="chrome-ext.zip" --firefox-ext-id="EXT_ID" --edge-ext-id="EXT_ID"`<br>So the ZIP of Firefox and Edge will be `some-ext.zip`
- * @param jsonStoresRaw
  */
 function fillMissing(jsonStoresRaw: StoreObjects): StoreObjects {
   const jsonStores = { ...jsonStoresRaw };
@@ -120,7 +116,6 @@ function fillMissing(jsonStoresRaw: StoreObjects): StoreObjects {
     }
     entries.forEach(([store, values]) => {
       values[argument] = values[argument] || argv[argument];
-      // @ts-ignore
       jsonStores[store] = values;
     });
   });
@@ -131,7 +126,6 @@ function fillMissing(jsonStoresRaw: StoreObjects): StoreObjects {
 const gStores = ["chrome", "firefox", "edge", "opera"];
 
 export function getJsonStoresFromCli(): StoreObjects {
-  // @ts-ignore
   const jsonStoresRaw = jsonCamelCased(getJsons(argv.env));
   if (isObjectEmpty(jsonStoresRaw)) {
     throw new Error(
