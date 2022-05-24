@@ -30,9 +30,7 @@ export async function deployToChrome({
       );
     }
 
-    const { uploadState, itemError } = await client.uploadExisting(
-      fs.createReadStream(zip)
-    );
+    const { uploadState, itemError } = await client.uploadExisting(fs.createReadStream(zip));
 
     if (uploadState === "FAILURE") {
       const errors = itemError.map(({ error_detail }) => error_detail);

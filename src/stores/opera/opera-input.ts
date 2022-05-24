@@ -29,9 +29,7 @@ export class OperaOptions {
   constructor(options) {
     if (!options.packageId) {
       throw new Error(
-        getErrorMessage(
-          "No package ID is provided, e.g. https://addons.opera.com/developer/package/PACKAGE_ID"
-        )
+        getErrorMessage("No package ID is provided, e.g. https://addons.opera.com/developer/package/PACKAGE_ID")
       );
     }
 
@@ -59,9 +57,7 @@ web-ext-deploy --get-cookies=opera`
     }
 
     if (!getIsFileExists(options.zip)) {
-      throw new Error(
-        getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`)
-      );
+      throw new Error(getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`));
     }
   }
 }
@@ -70,9 +66,7 @@ function getErrorMessage(message: string): string {
   return `Opera: ${message}`;
 }
 
-export async function prepareToDeployOpera(
-  options: OperaOptions
-): Promise<boolean> {
+export async function prepareToDeployOpera(options: OperaOptions): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
 
   if (options.changelog) {

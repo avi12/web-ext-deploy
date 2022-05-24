@@ -35,19 +35,11 @@ function getBaseDashboardUrl(extId: string) {
   return `https://partner.microsoft.com/en-us/dashboard/microsoftedge/${extId}`;
 }
 
-async function openRelevantExtensionPage({
-  page,
-  extId
-}: {
-  page: Page;
-  extId: any;
-}) {
+async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: any }) {
   return new Promise(async (resolve, reject) => {
     const responseListener = response => {
       if (!response.url().endsWith("lastUploadedPackage")) {
-        const isCookieInvalid = response
-          .url()
-          .startsWith("https://login.microsoftonline.com");
+        const isCookieInvalid = response.url().startsWith("https://login.microsoftonline.com");
         if (isCookieInvalid) {
           reject(
             getVerboseMessage({
@@ -86,24 +78,13 @@ async function openRelevantExtensionPage({
 async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
   await page.waitForSelector(gSelectors.extName);
   const elNameVersionContainers = await page.$$(gSelectors.extName);
-  const elNameVersionContainer =
-    elNameVersionContainers[elNameVersionContainers.length - 1];
+  const elNameVersionContainer = elNameVersionContainers[elNameVersionContainers.length - 1];
 
   const [elVersion] = await elNameVersionContainer.$x("span[3]");
-  return elVersion.evaluate((elVersion: HTMLSpanElement) =>
-    elVersion.textContent.trim()
-  );
+  return elVersion.evaluate((elVersion: HTMLSpanElement) => elVersion.textContent.trim());
 }
 
-async function uploadZip({
-  page,
-  zip,
-  extId
-}: {
-  page: Page;
-  zip: string;
-  extId: string;
-}) {
+async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId: string }) {
   await page.goto(`${getBaseDashboardUrl(extId)}/packages`, {
     waitUntil: "networkidle0"
   });
@@ -111,13 +92,7 @@ async function uploadZip({
   await elInputFile.uploadFile(zip);
 }
 
-async function verifyNewVersionIsGreater({
-  page,
-  zip
-}: {
-  page: Page;
-  zip: string;
-}) {
+async function verifyNewVersionIsGreater({ page, zip }: { page: Page; zip: string }) {
   const versionCurrent = await getCurrentVersion({ page });
   const versionNew = getExtInfo(zip, "version");
 
@@ -139,13 +114,7 @@ async function verifyNewVersionIsGreater({
   });
 }
 
-async function addLoginCookie({
-  page,
-  cookie
-}: {
-  page: Page;
-  cookie: string;
-}) {
+async function addLoginCookie({ page, cookie }: { page: Page; cookie: string }) {
   const domain = "partner.microsoft.com";
   const cookies = [
     {
@@ -158,43 +127,27 @@ async function addLoginCookie({
 }
 
 async function clickButtonContinue({ page }: { page: Page }) {
-  await page.$eval(
-    gSelectors.buttonContinue,
-    (elPackageNext: HTMLButtonElement) => {
-      return new Promise(resolve => {
-        new MutationObserver(() => resolve(true)).observe(elPackageNext, {
-          attributes: true,
-          attributeFilter: ["disabled"]
-        });
+  await page.$eval(gSelectors.buttonContinue, (elPackageNext: HTMLButtonElement) => {
+    return new Promise(resolve => {
+      new MutationObserver(() => resolve(true)).observe(elPackageNext, {
+        attributes: true,
+        attributeFilter: ["disabled"]
       });
-    }
-  );
+    });
+  });
 
   await page.click(gSelectors.buttonContinue);
 }
 
 async function getLanguages({ page }: { page: Page }) {
-  return page.$$eval(
-    gSelectors.errorIncompleteTranslations,
-    (elIncompletes: HTMLDivElement[]) =>
-      elIncompletes
-        .map(elIncomplete =>
-          elIncomplete
-            .closest("tr")
-            .querySelector(".action-link")
-            .childNodes[0].textContent.trim()
-        )
-        .join(", ")
+  return page.$$eval(gSelectors.errorIncompleteTranslations, (elIncompletes: HTMLDivElement[]) =>
+    elIncompletes
+      .map(elIncomplete => elIncomplete.closest("tr").querySelector(".action-link").childNodes[0].textContent.trim())
+      .join(", ")
   );
 }
 
-async function verifyNoListingIssues({
-  page,
-  extId
-}: {
-  page: Page;
-  extId: string;
-}) {
+async function verifyNoListingIssues({ page, extId }: { page: Page; extId: string }) {
   return new Promise(async (resolve, reject) => {
     page.once("dialog", dialog => {
       dialog.accept();
@@ -257,13 +210,7 @@ async function clickButtonPublishText(page: Page, extId: string) {
   await page.click(gSelectors.buttonPublishText);
 }
 
-async function clickPublishInOverview({
-  page,
-  extId
-}: {
-  page: Page;
-  extId: string;
-}) {
+async function clickPublishInOverview({ page, extId }: { page: Page; extId: string }) {
   const urlOverview = `${getBaseDashboardUrl(extId)}/${gPathDashboard}`;
   await page.goto(urlOverview, { waitUntil: "networkidle0" });
   await page.waitForSelector(gSelectors.buttonPublishOverview);
@@ -303,9 +250,7 @@ async function clickCancelWhenPossible({ page }: { page: Page }) {
 
 async function confirmCancelWhenPossible({ page }: { page: Page }) {
   await page.waitForSelector(gSelectors.buttonConfirm);
-  await page.$eval(gSelectors.buttonConfirm, (elConfirm: HTMLButtonElement) =>
-    elConfirm.click()
-  );
+  await page.$eval(gSelectors.buttonConfirm, (elConfirm: HTMLButtonElement) => elConfirm.click());
 }
 
 async function cancelVersionInReviewIfNeeded({
@@ -349,19 +294,14 @@ async function cancelVersionInReviewIfNeeded({
     );
   }
 
-  await new Promise(resolve =>
-    setTimeout(() => resolve(true), duration("65s"))
-  );
+  await new Promise(resolve => setTimeout(() => resolve(true), duration("65s")));
 }
 
 async function getIsInStore({ page }: { page: Page }) {
   // In-store: Update & Unpublish are available
   // In-draft: Edit, Publish & Unpublish are available
   // In-review: Update, Cancel (initially disabled) & Unpublish are available
-  return (
-    (await page.$(gSelectors.buttonUpdateOverview)) &&
-    !(await page.$(gSelectors.buttonCancelOverview))
-  );
+  return (await page.$(gSelectors.buttonUpdateOverview)) && !(await page.$(gSelectors.buttonCancelOverview));
 }
 
 export async function deployToEdge({

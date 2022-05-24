@@ -1,29 +1,15 @@
 #!/usr/bin/env node
 import yargs from "yargs/yargs";
 import { getCookies, getJsonStoresFromCli } from "./cli";
-import {
-  ChromeOptions,
-  prepareToDeployChrome
-} from "./stores/chrome/chrome-input";
-import {
-  FirefoxOptions,
-  prepareToDeployFirefox
-} from "./stores/firefox/firefox-input";
-import {
-  EdgeOptions,
-  prepareToDeployEdge
-} from "./stores/edge/old/edge-input-old";
+import { ChromeOptions, prepareToDeployChrome } from "./stores/chrome/chrome-input";
+import { FirefoxOptions, prepareToDeployFirefox } from "./stores/firefox/firefox-input";
+import { EdgeOptions, prepareToDeployEdge } from "./stores/edge/old/edge-input-old";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
 import { getEdgePublishApiAccessToken } from "./get-edge-publish-api-access-token";
-import {
-  EdgeOptionsPublishApi,
-  prepareToDeployEdgePublishApi
-} from "./stores/edge/new/edge-input";
+import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/edge/new/edge-input";
 import { Stores } from "./types";
 
-const isUseCli = Boolean(
-  process.argv[1].match(/web-ext-deploy[\\/](?:dist|src)[\\/]index\.(?:ts|js)$/)
-);
+const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy[\\/](?:dist|src)[\\/]index\.(?:ts|js)$/));
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -47,9 +33,7 @@ function getIsIntendingToCreateEdgeCredentials() {
 
 function checkIfIntendingToCreateEdgeCredentials(): boolean {
   if (getIsIntendingToCreateEdgeCredentials()) {
-    const isRetrievable = Boolean(
-      argv.edgeClientId && argv.edgeClientSecret && argv.edgeAccessTokenUrl
-    );
+    const isRetrievable = Boolean(argv.edgeClientId && argv.edgeClientSecret && argv.edgeAccessTokenUrl);
     if (!isRetrievable) {
       throw new Error(
         `It appears you're trying to create an Edge Publish API access token, but you are missing some arguments.
@@ -92,9 +76,7 @@ async function initCli(): Promise<void> {
   } = {
     chrome: deployChrome,
     firefox: deployFirefox,
-    edge: (<EdgeOptionsPublishApi>storeJsons.edge).accessToken
-      ? deployEdgePublishApi
-      : deployEdge,
+    edge: (<EdgeOptionsPublishApi>storeJsons.edge).accessToken ? deployEdgePublishApi : deployEdge,
     opera: deployOpera
   };
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
@@ -131,9 +113,7 @@ export async function deployEdge(options: EdgeOptions): Promise<boolean> {
   return prepareToDeployEdge(options);
 }
 
-export async function deployEdgePublishApi(
-  options: EdgeOptionsPublishApi
-): Promise<boolean> {
+export async function deployEdgePublishApi(options: EdgeOptionsPublishApi): Promise<boolean> {
   if (argv.edgeDevChangelog) {
     options.devChangelog = argv.edgeDevChangelog;
   }

@@ -5,7 +5,8 @@ import {
   disableImages,
   getExistingElementSelector,
   getFullPath,
-  getVerboseMessage, logSuccessfullyPublished
+  getVerboseMessage,
+  logSuccessfullyPublished
 } from "../../utils";
 
 const store = "Firefox";
@@ -18,13 +19,7 @@ const gSelectors = {
   inputDevChangelog: "textarea[name=approval_notes]"
 };
 
-async function openRelevantExtensionPage({
-  page,
-  extId
-}: {
-  page: Page;
-  extId: string;
-}): Promise<boolean> {
+async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: string }): Promise<boolean> {
   const urlSubmission = `${getBaseDashboardUrl(extId)}/versions/submit/`;
 
   const response = await page.goto(urlSubmission);
@@ -43,15 +38,7 @@ async function openRelevantExtensionPage({
   });
 }
 
-async function uploadZip({
-  page,
-  zip,
-  extId
-}: {
-  page: Page;
-  zip: string;
-  extId: string;
-}): Promise<boolean> {
+async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId: string }): Promise<boolean> {
   const elInputFile = await page.$(gSelectors.inputFile);
   await elInputFile.uploadFile(zip);
 
@@ -67,10 +54,7 @@ async function uploadZip({
     });
   });
 
-  const selectorExisting = await getExistingElementSelector(page, [
-    gSelectors.listErrors,
-    gSelectors.inputRadio
-  ]);
+  const selectorExisting = await getExistingElementSelector(page, [gSelectors.listErrors, gSelectors.inputRadio]);
   return new Promise(async (resolve, reject) => {
     if (!selectorExisting.includes(gSelectors.listErrors)) {
       resolve(true);
@@ -166,13 +150,7 @@ function getBaseDashboardUrl(extId?: string) {
   return urlBase;
 }
 
-async function addLoginCookie({
-  page,
-  sessionid
-}: {
-  page: Page;
-  sessionid: string;
-}) {
+async function addLoginCookie({ page, sessionid }: { page: Page; sessionid: string }) {
   const domain = "addons.mozilla.org";
   const cookies = [
     {
@@ -193,8 +171,7 @@ async function verifyValidCookies({ page }: { page: Page }) {
     reject(
       getVerboseMessage({
         store,
-        message:
-          "Invalid/expired cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=firefox",
+        message: "Invalid/expired cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=firefox",
         prefix: "Error"
       })
     );
@@ -324,9 +301,7 @@ export default async function deployToFirefox({
       console.log(
         getVerboseMessage({
           store,
-          message: (
-            "Uploaded ZIP " + (zipSource ? "and source ZIP" : "")
-          ).trim()
+          message: ("Uploaded ZIP " + (zipSource ? "and source ZIP" : "")).trim()
         })
       );
     }

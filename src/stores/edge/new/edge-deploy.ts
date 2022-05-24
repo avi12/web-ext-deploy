@@ -1,11 +1,7 @@
 import { EdgeOptionsPublishApi } from "./edge-input";
 import axios, { AxiosResponse } from "axios";
 import fs from "fs";
-import {
-  getExtInfo,
-  getVerboseMessage,
-  logSuccessfullyPublished
-} from "../../../utils";
+import { getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../../utils";
 import { getEdgePublishApiAccessToken } from "../../../get-edge-publish-api-access-token";
 
 const store = "Edge";
@@ -29,12 +25,9 @@ async function getUploadStatus({
   productID: string;
   operationID: string;
 }): Promise<AxiosResponse> {
-  return axios(
-    `${baseUrl}/products/${productID}/submissions/draft/package/operations/${operationID}`,
-    {
-      headers: getBaseHeaders({ accessToken })
-    }
-  );
+  return axios(`${baseUrl}/products/${productID}/submissions/draft/package/operations/${operationID}`, {
+    headers: getBaseHeaders({ accessToken })
+  });
 }
 
 function getErrorMessage({
@@ -63,16 +56,12 @@ async function upload({
   productId: string;
 }): Promise<{ location?: string; error?: string }> {
   return axios
-    .post(
-      `${baseUrl}/products/${productId}/submissions/draft/package`,
-      fs.readFileSync(zip),
-      {
-        headers: {
-          ...getBaseHeaders({ accessToken }),
-          "Content-Type": "application/zip"
-        }
+    .post(`${baseUrl}/products/${productId}/submissions/draft/package`, fs.readFileSync(zip), {
+      headers: {
+        ...getBaseHeaders({ accessToken }),
+        "Content-Type": "application/zip"
       }
-    )
+    })
     .then(({ headers }) => ({ location: headers.location }))
     .catch(e => ({
       error: getErrorMessage({
@@ -141,10 +130,7 @@ async function publish({
       }
     )
     .then(({ status, data, headers: { location } }) => ({
-      error:
-        status !== STATUS_ACCEPTED
-          ? getErrorMessage({ zip, error: data.status, actionName: "publish" })
-          : "",
+      error: status !== STATUS_ACCEPTED ? getErrorMessage({ zip, error: data.status, actionName: "publish" }) : "",
       operationId: location
     }))
     .catch(e => ({
@@ -168,23 +154,18 @@ async function checkPublishStatus({
   operationId: string;
   zip: string;
 }): Promise<{ error: string }> {
-  return axios
-    .get(
-      `${baseUrl}/products/${productId}/submissions/operations/${operationId}`,
-      {
-        headers: getBaseHeaders({ accessToken })
-      }
-    )
-    .then(({ data }) => ({
-      error:
-        data.status === "Failed"
-          ? getErrorMessage({
-              zip,
-              error: data.message,
-              actionName: "publish"
-            })
-          : ""
-    }));
+  return axios(`${baseUrl}/products/${productId}/submissions/operations/${operationId}`, {
+    headers: getBaseHeaders({ accessToken })
+  }).then(({ data }) => ({
+    error:
+      data.status === "Failed"
+        ? getErrorMessage({
+            zip,
+            error: data.message,
+            actionName: "publish"
+          })
+        : ""
+  }));
 }
 
 export async function deployToEdgePublishApi({
@@ -202,10 +183,7 @@ export async function deployToEdgePublishApi({
       console.log(
         getVerboseMessage({
           store,
-          message: `Updating ${getExtInfo(
-            zip,
-            "name"
-          )} with product ID ${productId} `
+          message: `Updating ${getExtInfo(zip, "name")} with product ID ${productId} `
         })
       );
     }
@@ -253,10 +231,7 @@ export async function deployToEdgePublishApi({
       console.log(
         getVerboseMessage({
           store,
-          message: `Publishing ${getExtInfo(zip, "name")} version ${getExtInfo(
-            zip,
-            "version"
-          )}`
+          message: `Publishing ${getExtInfo(zip, "name")} version ${getExtInfo(zip, "version")}`
         })
       );
     }
@@ -269,9 +244,7 @@ export async function deployToEdgePublishApi({
     });
 
     if (errorPublish) {
-      reject(
-        getErrorMessage({ zip, error: errorPublish, actionName: "publish" })
-      );
+      reject(getErrorMessage({ zip, error: errorPublish, actionName: "publish" }));
       return;
     }
 

@@ -50,9 +50,7 @@ web-ext-deploy --get-cookies=edge`)
     }
 
     if (!getIsFileExists(options.zip)) {
-      throw new Error(
-        getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`)
-      );
+      throw new Error(getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`));
     }
   }
 }
@@ -61,9 +59,7 @@ function getErrorMessage(message: string): string {
   return `Edge: ${message}`;
 }
 
-export async function prepareToDeployEdge(
-  options: EdgeOptions
-): Promise<boolean> {
+export async function prepareToDeployEdge(options: EdgeOptions): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
 
   if (options.devChangelog) {

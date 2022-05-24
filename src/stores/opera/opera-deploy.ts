@@ -1,13 +1,7 @@
 import { OperaOptions } from "./opera-input";
 import puppeteer, { Page } from "puppeteer";
 
-import {
-  disableImages,
-  getExtInfo,
-  getFullPath,
-  getVerboseMessage,
-  logSuccessfullyPublished
-} from "../../utils";
+import { disableImages, getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils";
 
 const store = "Opera";
 
@@ -26,13 +20,7 @@ const gSelectors = {
   buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
 };
 
-async function getErrorsOrNone({
-  page,
-  packageId
-}: {
-  page: Page;
-  packageId: number;
-}): Promise<boolean | number> {
+async function getErrorsOrNone({ page, packageId }: { page: Page; packageId: number }): Promise<boolean | number> {
   return new Promise(async (resolve, reject) => {
     await Promise.race([
       page.waitForSelector(gSelectors.listErrors),
@@ -53,10 +41,7 @@ async function getErrorsOrNone({
       resolve(true);
       return;
     }
-    if (
-      errors.length > 0 &&
-      errors[errors.length - 1].match(/500|not a valid/)
-    ) {
+    if (errors.length > 0 && errors[errors.length - 1].match(/500|not a valid/)) {
       resolve(500);
     }
     const prefixError = errors.length === 1 ? "Error" : "Errors";
@@ -113,23 +98,12 @@ async function switchToTabVersions({ page }: { page: Page }) {
   await elTabVersions.click();
 }
 
-async function openRelevantExtensionPage({
-  page,
-  packageId
-}: {
-  page: Page;
-  packageId: number;
-}) {
+async function openRelevantExtensionPage({ page, packageId }: { page: Page; packageId: number }) {
   const urlExtension = getBaseDashboardUrl(packageId);
   return new Promise(async (resolve, reject) => {
     const responseListener = response => {
-      if (
-        response.url() !==
-        `https://addons.opera.com/api/developer/packages/${packageId}/`
-      ) {
-        const isCookieInvalid = response
-          .url()
-          .startsWith("https://auth.opera.com");
+      if (response.url() !== `https://addons.opera.com/api/developer/packages/${packageId}/`) {
+        const isCookieInvalid = response.url().startsWith("https://auth.opera.com");
         if (isCookieInvalid) {
           reject(
             getVerboseMessage({
@@ -164,8 +138,7 @@ async function openRelevantExtensionPage({
 async function verifyPublicCodeExistence({ page }: { page: Page }) {
   await page.waitForSelector(gSelectors.inputCodePublic);
 
-  const getInputValue = async selector =>
-    page.$eval(selector, (elInput: HTMLInputElement) => elInput.value);
+  const getInputValue = async selector => page.$eval(selector, (elInput: HTMLInputElement) => elInput.value);
 
   const isSourceInputFull = async () => {
     const inputPublic = await getInputValue(gSelectors.inputCodePublic);
@@ -188,20 +161,12 @@ async function verifyPublicCodeExistence({ page }: { page: Page }) {
   );
 }
 
-async function updateExtension({
-  page,
-  packageId
-}: {
-  page: Page;
-  packageId: number;
-}) {
+async function updateExtension({ page, packageId }: { page: Page; packageId: number }) {
   await page.click(gSelectors.buttonSubmit);
 
   return new Promise(async (resolve, reject) => {
     const errors = await page.$$eval(gSelectors.listErrors, elErrors =>
-      [...elErrors].map(elError =>
-        elError.querySelector(".ng-scope").textContent.trim()
-      )
+      [...elErrors].map(elError => elError.querySelector(".ng-scope").textContent.trim())
     );
     if (errors.length === 0) {
       resolve(true);
@@ -275,15 +240,7 @@ async function addChangelogIfNeeded({
   await page.goto(url, { waitUntil: "networkidle0" });
 }
 
-async function addLoginCookie({
-  page,
-  sessionid,
-  csrftoken
-}: {
-  page: Page;
-  sessionid: string;
-  csrftoken: string;
-}) {
+async function addLoginCookie({ page, sessionid, csrftoken }: { page: Page; sessionid: string; csrftoken: string }) {
   const domain = "addons.opera.com";
   const cookies = [
     {
@@ -343,9 +300,7 @@ async function deleteCurrentVersionIfAlreadyExists({
     selVersions,
     (elVersions: HTMLSelectElement, version) =>
       // @ts-ignore
-      [...elVersions.options].some(
-        elOption => elOption.textContent === version
-      ),
+      [...elVersions.options].some(elOption => elOption.textContent === version),
     version
   );
 

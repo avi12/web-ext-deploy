@@ -27,9 +27,7 @@ export class ChromeOptions {
   constructor(options) {
     if (!options.extId) {
       throw new Error(
-        getErrorMessage(
-          "No extension ID is provided, e.g. https://chrome.google.com/webstore/detail/EXT_ID"
-        )
+        getErrorMessage("No extension ID is provided, e.g. https://chrome.google.com/webstore/detail/EXT_ID")
       );
     }
 
@@ -63,9 +61,7 @@ export class ChromeOptions {
     }
 
     if (!getIsFileExists(options.zip)) {
-      throw new Error(
-        getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`)
-      );
+      throw new Error(getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`));
     }
   }
 }
@@ -74,9 +70,7 @@ function getErrorMessage(message: string): string {
   return `Chrome: ${message}`;
 }
 
-export async function prepareToDeployChrome(
-  options: ChromeOptions
-): Promise<boolean> {
+export async function prepareToDeployChrome(options: ChromeOptions): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
 
   // Validate the options

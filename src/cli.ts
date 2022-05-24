@@ -66,10 +66,7 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
     }, {});
   }
 
-  const getFlagsArguments = (
-    argv: any,
-    store: string
-  ): { [s: string]: unknown } => {
+  const getFlagsArguments = (argv: any, store: string): { [s: string]: unknown } => {
     const entries = Object.entries(argv)
       .filter(([key]) => key.startsWith(`${store}-`))
       .map(([key, value]) => [key.replace(`${store}-`, ""), value]);
@@ -92,10 +89,7 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }) {
 
   const entriesWithCamelCasedKeys = entriesStores.map(([store, values]) => {
     const entriesKeyValues = Object.entries(values);
-    const entriesMapped = entriesKeyValues.map(([key, value]) => [
-      camelCase(key),
-      value
-    ]);
+    const entriesMapped = entriesKeyValues.map(([key, value]) => [camelCase(key), value]);
     return [store, Object.fromEntries(entriesMapped)];
   });
 
@@ -105,9 +99,7 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }) {
 const StoreObjects = {
   chrome: {} as ChromeOptions,
   firefox: {} as FirefoxOptions,
-  edge: argv.edgeAccessToken
-    ? ({} as EdgeOptionsPublishApi)
-    : ({} as EdgeOptions),
+  edge: argv.edgeAccessToken ? ({} as EdgeOptionsPublishApi) : ({} as EdgeOptions),
   opera: {} as OperaOptions
 } as const;
 
@@ -135,9 +127,7 @@ function fillMissing(jsonStoresRaw: typeof StoreObjects): typeof StoreObjects {
 export function getJsonStoresFromCli(): typeof StoreObjects {
   const jsonStoresRaw = jsonCamelCased(getJsons(argv.env));
   if (isObjectEmpty(jsonStoresRaw)) {
-    throw new Error(
-      "Please supply details of at least one store. See https://github.com/avi12/web-ext-deploy#usage"
-    );
+    throw new Error("Please supply details of at least one store. See https://github.com/avi12/web-ext-deploy#usage");
   }
 
   return fillMissing(jsonStoresRaw);

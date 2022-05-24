@@ -54,31 +54,22 @@ export class EdgeOptionsPublishApi {
       );
     }
 
-    const messageObtain =
-      "To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md";
+    const messageObtain = "To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md";
 
     if (!options.clientId) {
-      throw new Error(
-        getErrorMessage(`No client ID is provided. ${messageObtain}`)
-      );
+      throw new Error(getErrorMessage(`No client ID is provided. ${messageObtain}`));
     }
 
     if (!options.clientSecret) {
-      throw new Error(
-        getErrorMessage(`No client secret is provided. ${messageObtain}`)
-      );
+      throw new Error(getErrorMessage(`No client secret is provided. ${messageObtain}`));
     }
 
     if (!options.accessTokenUrl) {
-      throw new Error(
-        getErrorMessage(`No access token URL is provided. ${messageObtain}`)
-      );
+      throw new Error(getErrorMessage(`No access token URL is provided. ${messageObtain}`));
     }
 
     if (!options.accessToken) {
-      throw new Error(
-        getErrorMessage(`No access token is provided. ${messageObtain}`)
-      );
+      throw new Error(getErrorMessage(`No access token is provided. ${messageObtain}`));
     }
 
     // Zip checking
@@ -87,9 +78,7 @@ export class EdgeOptionsPublishApi {
     }
 
     if (!getIsFileExists(options.zip)) {
-      throw new Error(
-        getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`)
-      );
+      throw new Error(getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`));
     }
   }
 }
@@ -98,9 +87,7 @@ function getErrorMessage(message: string): string {
   return `Edge: ${message}`;
 }
 
-export async function prepareToDeployEdgePublishApi(
-  options: EdgeOptionsPublishApi
-): Promise<boolean> {
+export async function prepareToDeployEdgePublishApi(options: EdgeOptionsPublishApi): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
 
   if (options.devChangelog) {

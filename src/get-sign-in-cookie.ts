@@ -53,9 +53,7 @@ async function saveOperaHeaders(page: Page): Promise<string> {
     const extractCookies = cookiesInput =>
       cookiesInput
         .split("; ")
-        .filter(cookie =>
-          cookie.match(new RegExp("^(" + cookiesToLogin.join("|") + ")"))
-        )
+        .filter(cookie => cookie.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
         .join("\n");
     const devtools = await page.target().createCDPSession();
 
@@ -84,8 +82,7 @@ async function saveOperaHeaders(page: Page): Promise<string> {
 }
 async function saveEdgeHeaders(page: Page): Promise<string> {
   return new Promise(async resolve => {
-    const url =
-      "https://partner.microsoft.com/dashboard/microsoftedge/overview";
+    const url = "https://partner.microsoft.com/dashboard/microsoftedge/overview";
     const isUrlMatch = url => url.endsWith("/overview");
     const nameCookie = ".AspNet.Cookies";
     const extractCookies = cookies => {
@@ -107,9 +104,7 @@ async function saveEdgeHeaders(page: Page): Promise<string> {
     });
 
     devtools.on("Fetch.requestPaused", async ({ requestId, request }) => {
-      const isRequiredCookiesExist = request.headers?.Cookie?.includes(
-        nameCookie
-      );
+      const isRequiredCookiesExist = request.headers?.Cookie?.includes(nameCookie);
 
       if (isRequiredCookiesExist && isUrlMatch(request.url)) {
         resolve(extractCookies(request.headers.Cookie));

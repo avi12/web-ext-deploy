@@ -20,9 +20,7 @@ export function getCorrectZip(zipName: string): string {
     return zipName;
   }
 
-  const { version = "" } = JSON.parse(
-    fs.readFileSync("package.json").toString()
-  );
+  const { version = "" } = JSON.parse(fs.readFileSync("package.json").toString());
   return zipName.replace("{version}", version);
 }
 
@@ -54,9 +52,7 @@ export function logSuccessfullyPublished({
   const extName = getExtInfo(zip, "name");
   const extVersion = getExtInfo(zip, "version");
   const storeName = storeNames[store] || store;
-  console.log(
-    `Successfully updated "${extId}" (${extName}) to version ${extVersion} on ${storeName}!`
-  );
+  console.log(`Successfully updated "${extId}" (${extName}) to version ${extVersion} on ${storeName}!`);
 }
 
 export async function disableImages(page: Page): Promise<void> {
@@ -70,10 +66,7 @@ export async function disableImages(page: Page): Promise<void> {
   });
 }
 
-export async function getExistingElementSelector(
-  page: Page,
-  selectors: string[]
-): Promise<string> {
+export async function getExistingElementSelector(page: Page, selectors: string[]): Promise<string> {
   const promises = selectors.map(selector => page.waitForSelector(selector));
   const {
     // @ts-ignore

@@ -13,11 +13,7 @@ function getUrlSearchParams(credentials: object): string {
   return new URLSearchParams(Object.entries(credentials)).toString();
 }
 
-async function getData({
-  clientId,
-  clientSecret,
-  accessTokenUrl
-}: EdgePublishApi): Promise<{
+async function getData({ clientId, clientSecret, accessTokenUrl }: EdgePublishApi): Promise<{
   access_token?: string;
   expires_in?: number;
   error_description?: string;
@@ -41,8 +37,7 @@ async function getData({
     .catch(
       e =>
         e.response.data || {
-          error_description:
-            "The client ID, client secret and/or the access token URL are in an invalid format"
+          error_description: "The client ID, client secret and/or the access token URL are in an invalid format"
         }
     );
 }
@@ -60,14 +55,13 @@ export async function getEdgePublishApiAccessToken({
   clientId,
   clientSecret,
   accessTokenUrl
-}: EdgePublishApi): Promise<{ accessToken: string; }> {
+}: EdgePublishApi): Promise<{ accessToken: string }> {
   return new Promise(async (resolve, reject) => {
-    const { access_token, expires_in, error_description } =
-      await getData({
-        clientId,
-        clientSecret,
-        accessTokenUrl
-      });
+    const { access_token, expires_in, error_description } = await getData({
+      clientId,
+      clientSecret,
+      accessTokenUrl
+    });
 
     if (expires_in <= 20) {
       reject(

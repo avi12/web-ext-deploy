@@ -38,11 +38,7 @@ export class FirefoxOptions {
 
   constructor(options) {
     if (!options.extId) {
-      throw new Error(
-        getErrorMessage(
-          "No extension ID is provided, e.g. https://addons.mozilla.org/addon/EXT_ID"
-        )
-      );
+      throw new Error(getErrorMessage("No extension ID is provided, e.g. https://addons.mozilla.org/addon/EXT_ID"));
     }
 
     if (!options.sessionid) {
@@ -60,17 +56,11 @@ web-ext-deploy --get-cookies=firefox`
     }
 
     if (!getIsFileExists(options.zip)) {
-      throw new Error(
-        getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`)
-      );
+      throw new Error(getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`));
     }
 
     if (options.zipSource && !getIsFileExists(options.zipSource)) {
-      throw new Error(
-        getErrorMessage(
-          `Zip source doesn't exist: ${getFullPath(options.zipSource)}`
-        )
-      );
+      throw new Error(getErrorMessage(`Zip source doesn't exist: ${getFullPath(options.zipSource)}`));
     }
   }
 }
@@ -79,9 +69,7 @@ function getErrorMessage(message: string): string {
   return `Firefox: ${message}`;
 }
 
-export async function prepareToDeployFirefox(
-  options: FirefoxOptions
-): Promise<boolean> {
+export async function prepareToDeployFirefox(options: FirefoxOptions): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
   if (options.zipSource) {
     options.zipSource = getCorrectZip(options.zipSource);
