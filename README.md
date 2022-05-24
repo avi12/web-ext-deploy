@@ -129,7 +129,7 @@ web-ext-deploy --env
 
 - Edge Add-ons store:
 
-  - `CLIENT_ID`, `CLIENT_SECRET`, `ACCESS_TOKEN_URL`, `ACCESS_TOKEN`, `TOKEN_TYPE` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)
+  - `CLIENT_ID`, `CLIENT_SECRET`, `ACCESS_TOKEN_URL`, `ACCESS_TOKEN` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)
   - `PRODUCT_ID` - Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID`
   - `ZIP` - You can use `{version}`
 
@@ -171,7 +171,6 @@ CLIENT_ID="ClientID"
 CLIENT_SECRET="ClientSecret"
 ACCESS_TOKEN_URL="AccessTokenURL"
 ACCESS_TOKEN="AccessToken"
-TOKEN_TYPE="TokenType"
 ZIP="dist/some-zip-v{version}.zip"
 PRODUCT_ID="ProductID"
 ```
@@ -438,7 +437,7 @@ Returns `Promise<true>` or throws an exception.
 - `verbose` boolean?  
   If `true`, every step of uploading to the Edge Add-ons will be logged to the console.
 
-To get your `accessToken` and `tokenType`, follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).  
+To get your `accessToken`, `clientId`, `clientSecret`, and `accessTokenUrl`, follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).  
 Returns `Promise<true>` or throws an exception.
 
 **Note:**  
