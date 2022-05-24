@@ -1,6 +1,7 @@
 import puppeteer, { Page } from "puppeteer";
 import fs from "fs";
 import dotenv from "dotenv";
+import { createGitIgnoreIfNeeded, headersToEnv } from "./utils";
 
 function getFilename(site) {
   return `./${site}.env`;
@@ -127,12 +128,6 @@ const siteFuncs = {
   edge: saveEdgeHeaders
 };
 
-function headersToEnv(headersTotal: object) {
-  return Object.entries(headersTotal)
-    .map(([header, value]) => `${header}="${value}"`)
-    .join("\n");
-}
-
 function appendToEnv(filename: string, headers: string) {
   const { parsed: envCurrent = {} } = dotenv.config({ path: filename });
   const envHeaders = dotenv.parse(headers);
@@ -142,26 +137,6 @@ function appendToEnv(filename: string, headers: string) {
 
 function getInvalidSIte(siteNames: string[]) {
   return siteNames.find(site => !siteFuncs[site]);
-}
-
-function createGitIgnoreIfNeeded(stores: string[]) {
-  const filename = ".gitignore";
-  if (!fs.existsSync(filename)) {
-    fs.writeFileSync(filename, "*.env");
-    return;
-  }
-
-  const gitIgnoreCurrent = fs.readFileSync(filename).toString();
-  if (gitIgnoreCurrent.includes(".env")) {
-    if (gitIgnoreCurrent.includes("*.env")) {
-      return;
-    }
-
-    fs.appendFileSync(filename, stores.map(store => `${store}.env`).join("\n"));
-    return;
-  }
-
-  fs.appendFileSync(filename, "*.env");
 }
 
 export async function getSignInCookie(siteNames: string[]) {

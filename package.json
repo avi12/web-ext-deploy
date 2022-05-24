@@ -1,6 +1,6 @@
 {
   "name": "web-ext-deploy",
-  "version": "0.7.16",
+  "version": "0.8.0",
   "description": "A tool for deploying WebExtensions to multiple stores.",
   "main": "./dist/index.js",
   "module": "./dist-esm/index.js",
@@ -74,6 +74,7 @@
     "typescript": "^4.6.2"
   },
   "dependencies": {
+    "axios": "^0.27.2",
     "camel-case": "^4.1.2",
     "chrome-webstore-upload": "0.4.4",
     "compare-versions": "^4.1.3",

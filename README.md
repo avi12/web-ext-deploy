@@ -25,9 +25,10 @@ Supported stores:
 
 # Core packages used
 
-- [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Add-ons / Edge Add-ons
+- [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Add-ons
   Add-ons / Opera Add-ons store.
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
+- [Microsoft Edge Publish API](https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api)
 
 # Installing
 
@@ -49,7 +50,8 @@ pnpm i -g web-ext-deploy
 yarn global add web-ext-deploy
 ```
 
-Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).
+Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).  
+Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).
 
 # Usage
 
@@ -59,17 +61,17 @@ Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/ch
 
 - Firefox: `sessionid`
 - Opera: `sessionid`, `csrftoken`
-- Edge: `.AspNet.Cookies`
 
 If you have a hard time obtaining the cookie(s), you can run:
 
 ```shell
-web-ext-deploy --get-cookies=firefox edge opera
+web-ext-deploy --get-cookies=firefox opera
 ```
 
-Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API.
+Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API.  
+As for the Edge Add-ons Store, you'll use the Microsoft Edge Publish API.
 
-## 2. Decide how to access the info
+## 2. Decide how to access the data & credentials
 
 - [`.env` files method](#env-files-method)
 - [CLI arguments method](#cli-arguments-method)
@@ -103,6 +105,7 @@ web-ext-deploy --env
 - `--firefox-dev-changelog` string?  
   If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox Add-ons reviewers.  
   New lines (`\n`) are supported.
+
 - `--edge-dev-changelog` string?  
   If specified and `edge.env` exists, it will be used to provide changelog for the Edge Add-ons reviewers.  
   New lines (`\n`) are supported.
@@ -126,10 +129,9 @@ web-ext-deploy --env
 
 - Edge Add-ons store:
 
-  - `EXT_ID` - Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+  - `CLIENT_ID`, `CLIENT_SECRET`, `ACCESS_TOKEN_URL`, `ACCESS_TOKEN` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)
+  - `PRODUCT_ID` - Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID`
   - `ZIP` - You can use `{version}`
-  - Due to the way the Edge dashboard works, when an extension is being reviewed or its review has just been canceled, it will take about a minute until a cancellation will cause its state to change from "In review" to "In draft", after which the new version can be submitted.  
-    Therefore, expect for longer wait times if you run the tool on an extension you had just published/canceled.
 
 - Opera Add-ons store:
   - `PACKAGE_ID` - Get it from `https://addons.opera.com/developer/package/PACKAGE_ID`
@@ -165,9 +167,12 @@ EXT_ID="ExtensionID"
 #### `edge.env`
 
 ```dotenv
-cookie=".AspNet.Cookies_value"
+CLIENT_ID="ClientID"
+CLIENT_SECRET="ClientSecret"
+ACCESS_TOKEN_URL="AccessTokenURL"
+ACCESS_TOKEN="AccessToken"
 ZIP="dist/some-zip-v{version}.zip"
-EXT_ID="ExtensionID"
+PRODUCT_ID="ProductID"
 ```
 
 #### `opera.env`
@@ -264,10 +269,16 @@ web-ext-deploy --firefox-ext-id="ExtensionID" --firefox-sessionid="sessionid_val
 
 #### Edge Add-ons CLI
 
-- `--edge-ext-id` string  
-  The extension ID from the Edge Add-ons Dashboard, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
-- `--edge-cookie` string  
-  The value of the cookie `.AspNet.Cookies`, which will be used to log in to the publisher's account.
+- `--edge-product-id` string  
+  The product ID from the Edge Add-ons Dashboard, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+- `--edge-client-id` string  
+  The client ID.
+- `--edge-client-secret` string  
+  The client secret.
+- `--edge-access-token-url` string  
+  The access token URL.
+- `--edge-access-token` string  
+  The access token.
 - `--edge-zip` string  
   The path to the ZIP from the root.  
   You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry in `package.json`
@@ -275,10 +286,12 @@ web-ext-deploy --firefox-ext-id="ExtensionID" --firefox-sessionid="sessionid_val
   The technical changes made in this version, which will be seen by the Edge Add-ons reviewers.  
   You can use `\n` for new lines.
 
+To get your `--edge-access-token`, `--edge-client-id`, `--edge-client-secret`, `--edge-access-token-url`, follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).
+
 Example:
 
 ```shell
-web-ext-deploy --edge-ext-id="ExtensionID" --edge-cookie=".AspNet.Cookies value" --edge-zip="dist/some-zip-v{version}.zip" --edge-dev-changelog="Changelog for reviewers\nWith line breaks"
+web-ext-deploy --edge-product-id="ProductID" --edge-access-token="accessToken value" --edge-client-id="clientId" --edge-client-secret="clientSecret" --edge-access-token-url="accessTokenUrl" --edge-zip="dist/some-zip-v{version}.zip" --edge-dev-changelog="Changelog for reviewers\nWith line breaks"
 ```
 
 **Note:**  
@@ -323,14 +336,14 @@ web-ext-deploy --opera-package-id=123456 --opera-sessionid="sessionid_value" --o
 
 <!-- prettier-ignore -->
 ```ts
-import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
+import { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
 ```
 
 ### CommonJS
 
 <!-- prettier-ignore -->
 ```js
-const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ext-deploy");
+const { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } = require("web-ext-deploy");
 ```
 
 ### Node.js API
@@ -360,9 +373,9 @@ const { deployChrome, deployFirefox, deployEdge, deployOpera } = require("web-ex
   If `true`, it will be logged to the console when the uploading has begun.
 
 To get your `refreshToken`, `clientId`, and `clientSecret`, follow [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md).  
- Returns `Promise<true>` or throws an exception.
+Returns `Promise<true>` or throws an exception.
 
-#### Firefox Add-ons API
+#### Firefox Publish API
 
 `deployFirefox` object  
  Options:
@@ -395,20 +408,25 @@ web-ext-deploy --get-cookies=firefox
 
 Returns `Promise<true>` or throws an exception.
 
-#### Edge Add-ons API
+#### Edge Publish API
 
-`deployEdge` object  
+`deployEdgePublishApi` object  
  Options:
 
-- `extId` string  
-  Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
-- `cookie` string  
-  The value of the cookie `.AspNet.Cookies`, which will be used to log in to the publisher's account.  
-  If you have a hard time obtaining it, you can run:
+- `productId` string  
+  Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID`
 
-```shell
-web-ext-deploy --get-cookies=edge
-```
+- `accessToken` string  
+  The access token.
+
+- `clientId` string  
+  The client ID.
+
+- `clientSecret` string  
+  The client secret.
+
+- `accessTokenUrl` string  
+  The access token URL.
 
 - `zip` string  
   The relative path from the root to the ZIP.  
@@ -419,13 +437,14 @@ web-ext-deploy --get-cookies=edge
 - `verbose` boolean?  
   If `true`, every step of uploading to the Edge Add-ons will be logged to the console.
 
+To get your `accessToken`, `clientId`, `clientSecret`, and `accessTokenUrl`, follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).  
 Returns `Promise<true>` or throws an exception.
 
 **Note:**  
 Due to the way the Edge dashboard works, when an extension is being reviewed or its review has just been canceled, it will take about a minute until a cancellation will cause its state to change from "In review" to "In draft", after which the new version can be submitted.  
 Therefore, expect for longer wait times if you run the tool on an extension you had just published/canceled.
 
-#### Opera Add-ons API
+#### Opera Publish API
 
 `deployOpera` object  
  Options:
@@ -469,7 +488,7 @@ Examples:
 
 <!-- prettier-ignore -->
 ```ts
-import { deployChrome, deployFirefox, deployEdge, deployOpera } from "web-ext-deploy";
+import { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
 
 deployChrome({
   extId: "EXT_ID",
@@ -490,9 +509,12 @@ deployFirefox({
   verbose: false
 }).catch(console.error);
 
-deployEdge({
-  extId: "EXT_ID",
-  cookie: ".AspNet.Cookies value",
+deployEdgePublishApi({
+  productId: "PRODUCT_ID",
+  clientId: "clientId",
+  clientSecret: "clientSecret",
+  accessTokenUrl: "accessTokenUrl",
+  accessToken: "accessToken",
   zip: "dist/some-zip-v{version}.zip",
   devChangelog: "Changes for reviewers",
   verbose: false
