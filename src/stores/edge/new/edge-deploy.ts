@@ -12,11 +12,7 @@ const store = "Edge";
 const baseUrl = `https://api.addons.microsoftedge.microsoft.com/v1`;
 const STATUS_ACCEPTED = 202;
 
-function getBaseHeaders({
-  accessToken,
-}: {
-  accessToken: string;
-}): {
+function getBaseHeaders({ accessToken }: { accessToken: string }): {
   Authorization: string;
 } {
   return {
