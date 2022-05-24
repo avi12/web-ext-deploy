@@ -11,4 +11,4 @@ updates:
       interval: "monthly"
     ignore:
       - dependency-name: "chrome-webstore-upload"
-        versions: ["0.6.2", "1.0.0"]
+        versions: ["0.6.1", "1.0.0"]
