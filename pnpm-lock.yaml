@@ -1,6 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
+  '@types/node': ^17.0.35
   '@types/puppeteer': ^5.4.5
   '@types/yargs': ^17.0.9
   '@typescript-eslint/eslint-plugin': ^5.13.0
@@ -34,6 +35,7 @@ dependencies:
   zip-local: 0.3.5
 
 devDependencies:
+  '@types/node': 17.0.35
   '@types/puppeteer': 5.4.5
   '@types/yargs': 17.0.9
   '@typescript-eslint/eslint-plugin': 5.13.0_gp77ynkmz6ur7pt5cz33sok2bi
@@ -43,7 +45,7 @@ devDependencies:
   nodemon: 2.0.15
   prettier: 2.5.1
   rimraf: 3.0.2
-  ts-node: 10.6.0_typescript@4.6.2
+  ts-node: 10.6.0_7efra6scaevs3m4slct6hnxlk4
   typescript: 4.6.2
 
 packages:
@@ -158,7 +160,7 @@ packages:
     dependencies:
       '@types/http-cache-semantics': 4.0.0
       '@types/keyv': 3.1.1
-      '@types/node': 17.0.21
+      '@types/node': 17.0.35
       '@types/responselike': 1.0.0
     dev: false
 
@@ -173,21 +175,21 @@ packages:
   /@types/keyv/3.1.1:
     resolution: {integrity: sha512-MPtoySlAZQ37VoLaPcTHCu1RWJ4llDkULYZIzOYxlhxBqYPB0RsRlmMU0R6tahtFe27mIdkHV+551ZWV4PLmVw==}
     dependencies:
-      '@types/node': 17.0.21
+      '@types/node': 17.0.35
 
-  /@types/node/17.0.21:
-    resolution: {integrity: sha512-DBZCJbhII3r90XbQxI8Y9IjjiiOGlZ0Hr32omXIZvwwZ7p4DMMXGrKXVyPfuoBOri9XNtL0UK69jYIBIsRX3QQ==}
+  /@types/node/17.0.35:
+    resolution: {integrity: sha512-vu1SrqBjbbZ3J6vwY17jBs8Sr/BKA+/a/WtjRG+whKg1iuLFOosq872EXS0eXWILdO36DHQQeku/ZcL6hz2fpg==}
 
   /@types/puppeteer/5.4.5:
     resolution: {integrity: sha512-lxCjpDEY+DZ66+W3x5Af4oHnEmUXt0HuaRzkBGE2UZiZEp/V1d3StpLPlmNVu/ea091bdNmVPl44lu8Wy/0ZCA==}
     dependencies:
-      '@types/node': 17.0.21
+      '@types/node': 17.0.35
     dev: true
 
   /@types/responselike/1.0.0:
     resolution: {integrity: sha512-85Y2BjiufFzaMIlvJDvTTB8Fxl2xfLo4HgmHzVBz08w4wDePCTjYw66PdrolO0kzli3yam/YCgRufyo1DdQVTA==}
     dependencies:
-      '@types/node': 17.0.21
+      '@types/node': 17.0.35
 
   /@types/yargs-parser/21.0.0:
     resolution: {integrity: sha512-iO9ZQHkZxHn4mSakYV0vFHAVDyEOIJQrV2uZ06HxEPcx+mt8swXoZHIbaaJ2crJYFfErySgktuTZ3BeLz+XmFA==}
@@ -203,7 +205,7 @@ packages:
     resolution: {integrity: sha512-8uALY5LTvSuHgloDVUvWP3pIauILm+8/0pDMokuDYIoNsOkSwd5AiHBTSEJjKTDcZr5z8UpgOWZkxBF4iJftoA==}
     requiresBuild: true
     dependencies:
-      '@types/node': 17.0.21
+      '@types/node': 17.0.35
     dev: false
     optional: true
 
@@ -1944,7 +1946,7 @@ packages:
     resolution: {integrity: sha1-gYT9NH2snNwYWZLzpmIuFLnZq2o=}
     dev: false
 
-  /ts-node/10.6.0_typescript@4.6.2:
+  /ts-node/10.6.0_7efra6scaevs3m4slct6hnxlk4:
     resolution: {integrity: sha512-CJen6+dfOXolxudBQXnVjRVvYTmTWbyz7cn+xq2XTsvnaXbHqr4gXSCNbS2Jj8yTZMuGwUoBESLaOkLascVVvg==}
     hasBin: true
     peerDependencies:
@@ -1963,6 +1965,7 @@ packages:
       '@tsconfig/node12': 1.0.9
       '@tsconfig/node14': 1.0.1
       '@tsconfig/node16': 1.0.2
+      '@types/node': 17.0.35
       acorn: 8.7.0
       acorn-walk: 8.2.0
       arg: 4.1.3
