@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { ElementHandle, Page } from "puppeteer";
+import { Page } from "puppeteer";
 import zipper from "zip-local";
 
 export function getFullPath(file: string): string {
@@ -11,7 +11,7 @@ export function getIsFileExists(file: string): boolean {
   return fs.existsSync(getFullPath(file));
 }
 
-export function isObjectEmpty(object: object) {
+export function isObjectEmpty(object: object): boolean {
   return Object.keys(object).length === 0;
 }
 
@@ -20,17 +20,19 @@ export function getCorrectZip(zipName: string): string {
     return zipName;
   }
 
-  const { version = "" } = JSON.parse(fs.readFileSync("package.json").toString());
+  const { version = "" } = JSON.parse(
+    fs.readFileSync("package.json").toString()
+  );
   return zipName.replace("{version}", version);
 }
 
-function getExtJson(zip: string) {
+function getExtJson(zip: string): JSON {
   const unzippedFs = zipper.sync.unzip(zip).memory();
   const manifest = unzippedFs.read("manifest.json", "text");
   return JSON.parse(manifest);
 }
 
-export function getExtInfo(zip: string, info: string) {
+export function getExtInfo(zip: string, info: string): any {
   return getExtJson(zip)[info];
 }
 
@@ -42,7 +44,7 @@ export function logSuccessfullyPublished({
   extId: string | number;
   store: string;
   zip: string;
-}) {
+}): void {
   const storeNames = {
     chrome: "Chrome Web Store",
     edge: "Edge Add-ons",
@@ -57,7 +59,7 @@ export function logSuccessfullyPublished({
   );
 }
 
-export async function disableImages(page: Page) {
+export async function disableImages(page: Page): Promise<void> {
   await page.setRequestInterception(true);
   page.on("request", request => {
     if (request.resourceType() === "image") {
@@ -78,17 +80,6 @@ export async function getExistingElementSelector(
     _remoteObject: { description }
   } = await Promise.race(promises);
   return description;
-}
-
-export async function getPropertyValue({
-  element,
-  propertyName
-}: {
-  element: ElementHandle;
-  propertyName: string;
-}) {
-  const property = await element.getProperty(propertyName);
-  return property._remoteObject.value;
 }
 
 const gStepCounters = {};
@@ -114,4 +105,30 @@ export function getVerboseMessage({
     msg = msg.trimLeft();
   }
   return msg;
+}
+
+export function createGitIgnoreIfNeeded(stores: string[]): void {
+  const filename = ".gitignore";
+  if (!fs.existsSync(filename)) {
+    fs.writeFileSync(filename, "*.env");
+    return;
+  }
+
+  const gitIgnoreCurrent = fs.readFileSync(filename).toString();
+  if (gitIgnoreCurrent.includes(".env")) {
+    if (gitIgnoreCurrent.includes("*.env")) {
+      return;
+    }
+
+    fs.appendFileSync(filename, stores.map(store => `${store}.env`).join("\n"));
+    return;
+  }
+
+  fs.appendFileSync(filename, "*.env");
+}
+
+export function headersToEnv(headersTotal: object): string {
+  return Object.entries(headersTotal)
+    .map(([header, value]) => `${header}="${value}"`)
+    .join("\n");
 }
