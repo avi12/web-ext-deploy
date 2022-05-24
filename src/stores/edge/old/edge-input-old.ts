@@ -1,6 +1,9 @@
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
-import { deployToEdge } from "./edge-deploy";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../../utils";
+import { deployToEdge } from "./edge-deploy-old";
 
+/**
+ * @deprecated Use `EdgeOptionsPublishApi` instead
+ */
 export class EdgeOptions {
   /** The cookie required to login to the publisher's account, called: `.AspNet.Cookies`<br>
    * If you have a hard time obtaining it, run: `--get-cookies=edge` */
@@ -25,14 +28,20 @@ export class EdgeOptions {
   /** If `true`, every step of uploading to the Edge Add-ons will be logged to the console. */
   verbose?: boolean;
 
-  constructor(options) {
+  constructor(options: EdgeOptions) {
     if (!options.extId) {
-      throw new Error(getErrorMessage("No extension ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID"));
+      throw new Error(
+        getErrorMessage(
+          "No extension ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID"
+        )
+      );
     }
 
     if (!options.cookie) {
-      throw new Error(getErrorMessage(`No cookie is provided. The cookie's name is ".AspNet.Cookies". If you have a hard time obtaining it, run:
-web-ext-deploy --get-cookies=edge`));
+      throw new Error(
+        getErrorMessage(`No cookie is provided. The cookie's name is ".AspNet.Cookies". If you have a hard time obtaining it, run:
+web-ext-deploy --get-cookies=edge`)
+      );
     }
 
     // Zip checking
@@ -45,7 +54,6 @@ web-ext-deploy --get-cookies=edge`));
         getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`)
       );
     }
-
   }
 }
 
@@ -62,8 +70,13 @@ export async function prepareToDeployEdge(
     options.devChangelog = options.devChangelog.replace(/\/\/n/g, "\n");
   }
 
+  console.log(
+    getErrorMessage(
+      "The old cookie-based deployment is deprecated. Please use the new Edge Publish API: https://github.com/avi12/web-ext-deploy/tree/main/EDGE_PUBLISH_API.md"
+    )
+  );
+
   // Validate the options
   new EdgeOptions(options);
   return deployToEdge(options);
 }
-

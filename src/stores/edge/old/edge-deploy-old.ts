@@ -1,13 +1,13 @@
 import puppeteer, { Page } from "puppeteer";
 import duration from "parse-duration";
-import { EdgeOptions } from "./edge-input";
+import { EdgeOptions } from "./edge-input-old";
 import {
   disableImages,
   getExistingElementSelector,
   getExtInfo,
   getVerboseMessage,
   logSuccessfullyPublished
-} from "../../utils";
+} from "../../../utils";
 import { compare } from "compare-versions";
 
 const store = "Edge";
