@@ -1,5 +1,5 @@
 import { OperaOptions } from "./opera-input";
-import puppeteer, { Page } from "puppeteer";
+import puppeteer, { Page, WrapElementHandle } from "puppeteer";
 
 import { disableImages, getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils";
 
@@ -67,7 +67,7 @@ async function uploadZip({
   packageId: number;
 }): Promise<boolean | number> {
   return new Promise(async (resolve, reject) => {
-    const clickUploadWhenPossible = async () => {
+    const clickUploadWhenPossible = async (): Promise<void> => {
       await page.waitForSelector(gSelectors.buttonUploadNewVersion);
       return page.click(gSelectors.buttonUploadNewVersion);
     };
@@ -91,17 +91,17 @@ async function uploadZip({
   });
 }
 
-async function switchToTabVersions({ page }: { page: Page }) {
+async function switchToTabVersions({ page }: { page: Page }): Promise<void> {
   await page.waitForSelector(gSelectors.tabs);
   const elTabs = await page.$$(gSelectors.tabs);
   const elTabVersions = elTabs[1];
   await elTabVersions.click();
 }
 
-async function openRelevantExtensionPage({ page, packageId }: { page: Page; packageId: number }) {
+async function openRelevantExtensionPage({ page, packageId }: { page: Page; packageId: number }): Promise<unknown> {
   const urlExtension = getBaseDashboardUrl(packageId);
   return new Promise(async (resolve, reject) => {
-    const responseListener = response => {
+    const responseListener = (response: puppeteer.HTTPResponse): void => {
       if (response.url() !== `https://addons.opera.com/api/developer/packages/${packageId}/`) {
         const isCookieInvalid = response.url().startsWith("https://auth.opera.com");
         if (isCookieInvalid) {
@@ -135,15 +135,16 @@ async function openRelevantExtensionPage({ page, packageId }: { page: Page; pack
   });
 }
 
-async function verifyPublicCodeExistence({ page }: { page: Page }) {
+async function verifyPublicCodeExistence({ page }: { page: Page }): Promise<void> {
   await page.waitForSelector(gSelectors.inputCodePublic);
 
-  const getInputValue = async selector => page.$eval(selector, (elInput: HTMLInputElement) => elInput.value);
+  const getInputValue = async (selector: string): Promise<WrapElementHandle<string>> =>
+    page.$eval(selector, (elInput: HTMLInputElement) => elInput.value);
 
-  const isSourceInputFull = async () => {
+  const isSourceInputFull = async (): Promise<boolean> => {
     const inputPublic = await getInputValue(gSelectors.inputCodePublic);
     const inputPrivate = await getInputValue(gSelectors.inputCodePrivate);
-    return inputPublic || inputPrivate;
+    return Boolean(inputPublic || inputPrivate);
   };
 
   if (await isSourceInputFull()) {
@@ -161,7 +162,7 @@ async function verifyPublicCodeExistence({ page }: { page: Page }) {
   );
 }
 
-async function updateExtension({ page, packageId }: { page: Page; packageId: number }) {
+async function updateExtension({ page, packageId }: { page: Page; packageId: number }): Promise<true> {
   await page.click(gSelectors.buttonSubmit);
 
   return new Promise(async (resolve, reject) => {
@@ -196,13 +197,13 @@ async function addChangelogIfNeeded({
   changelog?: string;
   isVerbose: boolean;
   zip: string;
-}) {
-  const switchToTabTranslations = async () => {
+}): Promise<void> {
+  const switchToTabTranslations = async (): Promise<void> => {
     const tabs = await page.$$(gSelectors.tabs);
     await tabs[2].click();
   };
 
-  const switchToEnglishMetadata = async () => {
+  const switchToEnglishMetadata = async (): Promise<void> => {
     await page.$$eval(
       gSelectors.tabsLanguages,
       (elLanguages: HTMLSpanElement[], default_locale: string) => {
@@ -240,7 +241,15 @@ async function addChangelogIfNeeded({
   await page.goto(url, { waitUntil: "networkidle0" });
 }
 
-async function addLoginCookie({ page, sessionid, csrftoken }: { page: Page; sessionid: string; csrftoken: string }) {
+async function addLoginCookie({
+  page,
+  sessionid,
+  csrftoken
+}: {
+  page: Page;
+  sessionid: string;
+  csrftoken: string;
+}): Promise<void> {
   const domain = "addons.opera.com";
   const cookies = [
     {
@@ -258,11 +267,11 @@ async function addLoginCookie({ page, sessionid, csrftoken }: { page: Page; sess
   await page.setCookie(...cookies);
 }
 
-function getBaseDashboardUrl(packageId: number) {
+function getBaseDashboardUrl(packageId: number): string {
   return `https://addons.opera.com/developer/package/${packageId}`;
 }
 
-async function cancelUpload({ page }: { page: Page }) {
+async function cancelUpload({ page }: { page: Page }): Promise<void> {
   await page.goto(page.url().split("?")[0], { waitUntil: "networkidle0" });
   await page.click(gSelectors.buttonCancel);
 }
@@ -277,8 +286,8 @@ async function deleteCurrentVersionIfAlreadyExists({
   packageId: number;
   zip: string;
   isVerbose: boolean;
-}) {
-  const deletePackage = async () => {
+}): Promise<boolean> {
+  const deletePackage = async (): Promise<void> => {
     await page.waitForSelector(gSelectors.buttonCancel);
     await page.click(gSelectors.buttonCancel);
 

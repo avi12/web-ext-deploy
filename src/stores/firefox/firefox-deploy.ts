@@ -92,7 +92,7 @@ async function uploadZipSourceIfNeeded({
   page: Page;
   zipSource: string;
   isUpload: boolean;
-}) {
+}): Promise<void> {
   const uploadAnswer = isUpload ? "yes" : "no";
   await page.click(`input[type=radio][name=has_source][value=${uploadAnswer}]`);
 
@@ -113,7 +113,7 @@ async function addChangelogsIfNeeded({
   changelog: string;
   devChangelog: string;
   isVerbose: boolean;
-}) {
+}): Promise<void> {
   if (changelog || devChangelog) {
     await page.waitForSelector(gSelectors.inputChangelog);
   }
@@ -142,7 +142,7 @@ async function addChangelogsIfNeeded({
   }
 }
 
-function getBaseDashboardUrl(extId?: string) {
+function getBaseDashboardUrl(extId?: string): string {
   let urlBase = "https://addons.mozilla.org/en-US/developers";
   if (extId) {
     urlBase += `/addon/${extId}`;
@@ -150,7 +150,7 @@ function getBaseDashboardUrl(extId?: string) {
   return urlBase;
 }
 
-async function addLoginCookie({ page, sessionid }: { page: Page; sessionid: string }) {
+async function addLoginCookie({ page, sessionid }: { page: Page; sessionid: string }): Promise<void> {
   const domain = "addons.mozilla.org";
   const cookies = [
     {
@@ -162,7 +162,7 @@ async function addLoginCookie({ page, sessionid }: { page: Page; sessionid: stri
   await page.setCookie(...cookies);
 }
 
-async function verifyValidCookies({ page }: { page: Page }) {
+async function verifyValidCookies({ page }: { page: Page }): Promise<true> {
   return new Promise(async (resolve, reject) => {
     if (page.url().startsWith(getBaseDashboardUrl())) {
       resolve(true);
@@ -178,7 +178,7 @@ async function verifyValidCookies({ page }: { page: Page }) {
   });
 }
 
-async function updateExtension({ page }: { page: Page }) {
+async function updateExtension({ page }: { page: Page }): Promise<void> {
   await page.waitForSelector(gSelectors.buttonSubmit);
   await page.click(gSelectors.buttonSubmit);
 }
