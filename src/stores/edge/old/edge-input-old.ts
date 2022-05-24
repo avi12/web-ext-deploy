@@ -72,7 +72,7 @@ export async function prepareToDeployEdge(
 
   console.log(
     getErrorMessage(
-      "The old cookie-based deployment is deprecated. Please use the new Edge Publish API: https://github.com/avi12/web-ext-deploy/tree/main/EDGE_PUBLISH_API.md"
+      "The old cookie-based deployment is deprecated. Please use the new Edge Publish API: https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
     )
   );
 
