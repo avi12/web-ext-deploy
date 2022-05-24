@@ -270,7 +270,7 @@ web-ext-deploy --firefox-ext-id="ExtensionID" --firefox-sessionid="sessionid_val
 #### Edge Add-ons CLI
 
 - `--edge-product-id` string  
-  The product ID from the Edge Add-ons Dashboard, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID`
+  The product ID from the Edge Add-ons Dashboard, e.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID`
 - `--edge-client-id` string  
   The client ID.
 - `--edge-client-secret` string  
