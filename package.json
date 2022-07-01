@@ -61,7 +61,7 @@
     ]
   },
   "devDependencies": {
-    "@types/node": "^17.0.35",
+    "@types/node": "^18.0.0",
     "@types/puppeteer": "^5.4.5",
     "@types/yargs": "^17.0.9",
     "@typescript-eslint/eslint-plugin": "^5.13.0",
