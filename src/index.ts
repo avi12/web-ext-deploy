@@ -27,8 +27,8 @@ const argv = yargs(process.argv.slice(2))
   })
   .parseSync();
 
-function getIsIntendingToCreateEdgeCredentials() {
-  return argv.edgeClientId || argv.edgeClientSecret || argv.edgeAccessTokenUrl;
+function getIsIntendingToCreateEdgeCredentials(): boolean {
+  return Boolean(argv.edgeClientId || argv.edgeClientSecret || argv.edgeAccessTokenUrl);
 }
 
 function checkIfIntendingToCreateEdgeCredentials(): boolean {
@@ -76,7 +76,7 @@ async function initCli(): Promise<void> {
   } = {
     chrome: deployChrome,
     firefox: deployFirefox,
-    edge: (<EdgeOptionsPublishApi>storeJsons.edge).accessToken ? deployEdgePublishApi : deployEdge,
+    edge: (<EdgeOptionsPublishApi>storeJsons.edge)?.accessToken ? deployEdgePublishApi : deployEdge,
     opera: deployOpera
   };
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
