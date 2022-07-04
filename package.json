@@ -68,7 +68,7 @@
     "@typescript-eslint/parser": "^5.13.0",
     "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.5.0",
-    "nodemon": "^2.0.15",
+    "nodemon": "^2.0.18",
     "prettier": "^2.5.1",
     "rimraf": "^3.0.2",
     "ts-node": "^10.6.0",
