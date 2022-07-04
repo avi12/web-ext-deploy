@@ -1,5 +1,5 @@
 import { OperaOptions } from "./opera-input";
-import puppeteer, { Page, WrapElementHandle } from "puppeteer";
+import puppeteer, { Page } from "puppeteer";
 
 import { disableImages, getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils";
 
@@ -138,7 +138,7 @@ async function openRelevantExtensionPage({ page, packageId }: { page: Page; pack
 async function verifyPublicCodeExistence({ page }: { page: Page }): Promise<void> {
   await page.waitForSelector(gSelectors.inputCodePublic);
 
-  const getInputValue = async (selector: string): Promise<WrapElementHandle<string>> =>
+  const getInputValue = async (selector: string): Promise<string> =>
     page.$eval(selector, (elInput: HTMLInputElement) => elInput.value);
 
   const isSourceInputFull = async (): Promise<boolean> => {

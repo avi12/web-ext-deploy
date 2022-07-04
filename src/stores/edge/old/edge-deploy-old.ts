@@ -31,13 +31,13 @@ const gSelectors = {
   alertDanger: "#genericErrorMessage"
 };
 
-function getBaseDashboardUrl(extId: string) {
+function getBaseDashboardUrl(extId: string): string {
   return `https://partner.microsoft.com/en-us/dashboard/microsoftedge/${extId}`;
 }
 
-async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: any }) {
+async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: any }): Promise<unknown> {
   return new Promise(async (resolve, reject) => {
-    const responseListener = response => {
+    const responseListener = (response: puppeteer.HTTPResponse): void => {
       if (!response.url().endsWith("lastUploadedPackage")) {
         const isCookieInvalid = response.url().startsWith("https://login.microsoftonline.com");
         if (isCookieInvalid) {
@@ -81,10 +81,10 @@ async function getCurrentVersion({ page }: { page: Page }): Promise<string> {
   const elNameVersionContainer = elNameVersionContainers[elNameVersionContainers.length - 1];
 
   const [elVersion] = await elNameVersionContainer.$x("span[3]");
-  return elVersion.evaluate((elVersion: HTMLSpanElement) => elVersion.textContent.trim());
+  return elVersion.evaluate(elVersion => elVersion.textContent.trim());
 }
 
-async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId: string }) {
+async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId: string }): Promise<void> {
   await page.goto(`${getBaseDashboardUrl(extId)}/packages`, {
     waitUntil: "networkidle0"
   });
@@ -92,7 +92,7 @@ async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId:
   await elInputFile.uploadFile(zip);
 }
 
-async function verifyNewVersionIsGreater({ page, zip }: { page: Page; zip: string }) {
+async function verifyNewVersionIsGreater({ page, zip }: { page: Page; zip: string }): Promise<unknown> {
   const versionCurrent = await getCurrentVersion({ page });
   const versionNew = getExtInfo(zip, "version");
 
@@ -114,7 +114,7 @@ async function verifyNewVersionIsGreater({ page, zip }: { page: Page; zip: strin
   });
 }
 
-async function addLoginCookie({ page, cookie }: { page: Page; cookie: string }) {
+async function addLoginCookie({ page, cookie }: { page: Page; cookie: string }): Promise<void> {
   const domain = "partner.microsoft.com";
   const cookies = [
     {
@@ -126,7 +126,7 @@ async function addLoginCookie({ page, cookie }: { page: Page; cookie: string }) 
   await page.setCookie(...cookies);
 }
 
-async function clickButtonContinue({ page }: { page: Page }) {
+async function clickButtonContinue({ page }: { page: Page }): Promise<void> {
   await page.$eval(gSelectors.buttonContinue, (elPackageNext: HTMLButtonElement) => {
     return new Promise(resolve => {
       new MutationObserver(() => resolve(true)).observe(elPackageNext, {
@@ -139,15 +139,19 @@ async function clickButtonContinue({ page }: { page: Page }) {
   await page.click(gSelectors.buttonContinue);
 }
 
-async function getLanguages({ page }: { page: Page }) {
-  return page.$$eval(gSelectors.errorIncompleteTranslations, (elIncompletes: HTMLDivElement[]) =>
+async function getLanguages({
+  page
+}: {
+  page: Page;
+}): Promise<Awaited<ReturnType<() => string>>> {
+  return page.$$eval(gSelectors.errorIncompleteTranslations, elIncompletes =>
     elIncompletes
       .map(elIncomplete => elIncomplete.closest("tr").querySelector(".action-link").childNodes[0].textContent.trim())
       .join(", ")
   );
 }
 
-async function verifyNoListingIssues({ page, extId }: { page: Page; extId: string }) {
+async function verifyNoListingIssues({ page, extId }: { page: Page; extId: string }): Promise<unknown> {
   return new Promise(async (resolve, reject) => {
     page.once("dialog", dialog => {
       dialog.accept();
@@ -181,7 +185,7 @@ async function addChangelogIfNeeded({
   devChangelog: string;
   page: Page;
   isVerbose: boolean;
-}) {
+}): Promise<void> {
   if (!devChangelog) {
     return;
   }
@@ -197,12 +201,12 @@ async function addChangelogIfNeeded({
   }
 }
 
-async function clickButtonPublish({ page }: { page: Page }) {
+async function clickButtonPublish({ page }: { page: Page }): Promise<void> {
   await page.waitForSelector(gSelectors.buttonPublish);
   await page.click(gSelectors.buttonPublish);
 }
 
-async function clickButtonPublishText(page: Page, extId: string) {
+async function clickButtonPublishText(page: Page, extId: string): Promise<void> {
   await page.goto(`${getBaseDashboardUrl(extId)}/availability`, {
     waitUntil: "networkidle0"
   });
@@ -210,14 +214,14 @@ async function clickButtonPublishText(page: Page, extId: string) {
   await page.click(gSelectors.buttonPublishText);
 }
 
-async function clickPublishInOverview({ page, extId }: { page: Page; extId: string }) {
+async function clickPublishInOverview({ page, extId }: { page: Page; extId: string }): Promise<void> {
   const urlOverview = `${getBaseDashboardUrl(extId)}/${gPathDashboard}`;
   await page.goto(urlOverview, { waitUntil: "networkidle0" });
   await page.waitForSelector(gSelectors.buttonPublishOverview);
   await page.click(gSelectors.buttonPublishOverview);
 }
 
-async function clickCancelWhenPossible({ page }: { page: Page }) {
+async function clickCancelWhenPossible({ page }: { page: Page }): Promise<unknown> {
   const timeToWait = duration("65s");
   // noinspection UnnecessaryLocalVariableJS
   const isCanceled = await page.$eval(
@@ -248,7 +252,7 @@ async function clickCancelWhenPossible({ page }: { page: Page }) {
   return isCanceled;
 }
 
-async function confirmCancelWhenPossible({ page }: { page: Page }) {
+async function confirmCancelWhenPossible({ page }: { page: Page }): Promise<void> {
   await page.waitForSelector(gSelectors.buttonConfirm);
   await page.$eval(gSelectors.buttonConfirm, (elConfirm: HTMLButtonElement) => elConfirm.click());
 }
@@ -261,7 +265,7 @@ async function cancelVersionInReviewIfNeeded({
   page: Page;
   isVerbose: boolean;
   zip: string;
-}) {
+}): Promise<void> {
   // Scenario 1: It's live in the store (Update & Unpublish are available)
   // Scenario 2: It's in draft form (Edit, Publish & Unpublish are available)
   // Scenario 3: It's being reviewed (Update, Cancel & Unpublish are available)
@@ -297,7 +301,7 @@ async function cancelVersionInReviewIfNeeded({
   await new Promise(resolve => setTimeout(() => resolve(true), duration("65s")));
 }
 
-async function getIsInStore({ page }: { page: Page }) {
+async function getIsInStore({ page }: { page: Page }): Promise<boolean> {
   // In-store: Update & Unpublish are available
   // In-draft: Edit, Publish & Unpublish are available
   // In-review: Update, Cancel (initially disabled) & Unpublish are available
