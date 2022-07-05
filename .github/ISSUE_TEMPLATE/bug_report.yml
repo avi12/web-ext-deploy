@@ -17,6 +17,7 @@ body:
       label: How to reproduce
       placeholder:
         "E.g. have an `.env` file like so:"
+        "```env"
     validations:
       required: true
   - type: textarea
