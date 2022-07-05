@@ -16,10 +16,7 @@ body:
     attributes:
       label: How to reproduce
       placeholder:
-        "E.g. have an `.env` file like so:" |
-        "```env" |
-        "EXT_ID=12345" |
-        "..."
+        "E.g. have an `.env` file like so:"
     validations:
       required: true
   - type: textarea
