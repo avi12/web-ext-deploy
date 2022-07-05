@@ -8,25 +8,14 @@ body:
     attributes:
       label: Describe the bug
       description: A clear and concise description of what the bug is
-      placeholder: E.g. "the `.env` method fails to upload to the Edge Addons store"
+      placeholder: E.g. "the .env method fails to upload to the Edge Addons store"
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
       label: How to reproduce
-      placeholder:
-        E.g. have an `.env` file like so:\n
-        ```env\n
-        EXT_ID=12345\n
-        ...
-    validations:
-      required: true
-  - type: textarea
-    id: expected-behavior
-    attributes:
-      label: Expected behavior
-      placeholder: Uploading to this store should be possible
+      placeholder: "E.g. have an .env file like so: [...]"
     validations:
       required: true
   - type: input
