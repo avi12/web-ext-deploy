@@ -24,6 +24,12 @@ body:
       label: What's the version you're running?
     validations:
       required: true
+  - type: input
+    attributes:
+      label: What OS are you running it on?
+      placeholder: E.g. Windows 10 x64 21H2
+    validations:
+      required: true
   - type: textarea
     id: additional-context
     attributes:
