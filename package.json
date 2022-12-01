@@ -62,7 +62,7 @@
   },
   "devDependencies": {
     "@types/node": "^18.0.1",
-    "@types/puppeteer": "^5.4.5",
+    "@types/puppeteer": "^7.0.4",
     "@types/yargs": "^17.0.9",
     "@typescript-eslint/eslint-plugin": "^5.13.0",
     "@typescript-eslint/parser": "^5.13.0",
