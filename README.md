@@ -332,18 +332,11 @@ web-ext-deploy --opera-package-id=123456 --opera-sessionid="sessionid_value" --o
 
 ## Node.js API method
 
-### ESM / TypeScript
+### ESM
 
 <!-- prettier-ignore -->
 ```ts
 import { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
-```
-
-### CommonJS
-
-<!-- prettier-ignore -->
-```js
-const { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } = require("web-ext-deploy");
 ```
 
 ### Node.js API
@@ -356,7 +349,7 @@ const { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } = requi
 #### Chrome Web Store API
 
 `deployChrome` object  
- Options:
+Options:
 
 - `extId` string  
   Get it from `https://chrome.google.com/webstore/detail/EXT_ID`, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
@@ -378,7 +371,7 @@ Returns `Promise<true>` or throws an exception.
 #### Firefox Publish API
 
 `deployFirefox` object  
- Options:
+Options:
 
 - `extId` string  
   Get it from `https://addons.mozilla.org/addon/EXT_ID`
@@ -411,7 +404,7 @@ Returns `Promise<true>` or throws an exception.
 #### Edge Publish API
 
 `deployEdgePublishApi` object  
- Options:
+Options:
 
 - `productId` string  
   Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID`
@@ -447,7 +440,7 @@ Therefore, expect for longer wait times if you run the tool on an extension you 
 #### Opera Publish API
 
 `deployOpera` object  
- Options:
+Options:
 
 - `packageId` number  
   The package ID of the extension from the store dashboard, e.g. `https://addons.opera.com/developer/package/PACKAGE_ID`
@@ -491,7 +484,7 @@ Examples:
 import { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
 
 deployChrome({
-  extId: "EXT_ID",
+  extId: "ExtensionID",
   refreshToken: "refreshToken",
   clientId: "clientId",
   clientSecret: "clientSecret",

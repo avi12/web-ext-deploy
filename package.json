@@ -2,12 +2,18 @@
   "name": "web-ext-deploy",
   "version": "0.8.4",
   "description": "A tool for deploying WebExtensions to multiple stores.",
-  "main": "./dist/index.js",
-  "module": "./dist-esm/index.js",
-  "bin": {
-    "web-ext-deploy": "dist/index.js"
+  "type": "module",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist-esm/*.d.ts"
+      ]
+    }
   },
-  "types": "./dist/index.d.ts",
+  "bin": {
+    "web-ext-deploy": "dist-esm/index.js"
+  },
+  "types": "./dist-esm/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/avi12/web-ext-deploy"
@@ -26,7 +32,7 @@
     "edge-publish"
   ],
   "files": [
-    "dist/**/*"
+    "dist-esm/**/*"
   ],
   "author": {
     "name": "avi12",
@@ -42,11 +48,10 @@
   "scripts": {
     "debug:dev": "nodemon --config nodemon-dev.json",
     "debug:prod": "nodemon --",
-    "clean": "rimraf dist dist-esm",
-    "prepare": "pnpm run clean && pnpm run build",
-    "build": "pnpm run build:esm && pnpm run build:cjs",
-    "build:cjs": "tsc --build",
-    "build:esm": "tsc --target ESNext --module ES6 --outDir dist-esm",
+    "clean": "rimraf dist-esm",
+    "prepare": "pnpm clean && pnpm build",
+    "build": "pnpm build:esm",
+    "build:esm": "tsc --target ESNext --module ESNext --outDir dist-esm",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
     "format": "prettier --write \"{src,test,examples}/**/*.{ts,tsx}\"",
