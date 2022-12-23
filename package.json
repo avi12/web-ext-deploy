@@ -55,8 +55,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "pnpm run lint:fix",
-      "pnpm run format",
+      "pnpm lint:fix",
+      "pnpm format",
       "git add"
     ]
   },
