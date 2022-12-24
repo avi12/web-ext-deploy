@@ -76,7 +76,7 @@ async function initCli(): Promise<void> {
   } = {
     chrome: deployChrome,
     firefox: deployFirefox,
-    edge: (<EdgeOptionsPublishApi>storeJsons.edge)?.accessToken ? deployEdgePublishApi : deployEdge,
+    edge: deployEdgePublishApi,
     opera: deployOpera
   };
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
