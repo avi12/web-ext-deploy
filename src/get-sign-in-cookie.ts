@@ -11,9 +11,9 @@ async function saveFirefoxHeaders(page: Page): Promise<string> {
   return new Promise(async resolve => {
     const url = "https://addons.mozilla.org/en-US/developers/";
     const selLogin = "a.Button";
-    const isUrlMatch = url => url.endsWith("/developers/");
+    const isUrlMatch = (url): boolean => url.endsWith("/developers/");
     const nameCookie = "sessionid";
-    const extractCookies = cookies => {
+    const extractCookies = (cookies): string => {
       const value = cookies
         .split("; ")
         .find(cookie => cookie.startsWith(nameCookie))
@@ -50,7 +50,7 @@ async function saveOperaHeaders(page: Page): Promise<string> {
   return new Promise(async resolve => {
     const url = "https://addons.opera.com/developer/";
     const cookiesToLogin = ["sessionid", "csrftoken"];
-    const extractCookies = cookiesInput =>
+    const extractCookies = (cookiesInput): string =>
       cookiesInput
         .split("; ")
         .filter(cookie => cookie.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
@@ -86,7 +86,7 @@ const siteFuncs = {
   opera: saveOperaHeaders
 } as const;
 
-function appendToEnv(filename: string, headers: string) {
+function appendToEnv(filename: string, headers: string): void {
   const { parsed: envCurrent = {} } = dotenv.config({ path: filename });
   const envHeaders = dotenv.parse(headers);
   const envNew = { ...envCurrent, ...envHeaders };
