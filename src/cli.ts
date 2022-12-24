@@ -133,6 +133,6 @@ export function getJsonStoresFromCli(): typeof StoreObjects {
   return fillMissing(jsonStoresRaw);
 }
 
-export async function getCookies(siteNames: string[]): Promise<void> {
+export async function getCookies(siteNames: SupportedGetCookies[]): Promise<void> {
   return getSignInCookie(siteNames);
 }
