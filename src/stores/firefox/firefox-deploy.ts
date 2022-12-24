@@ -84,10 +84,10 @@ async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId:
 }
 
 async function uploadZipSourceIfNeeded({
-                                         page,
-                                         zipSource,
-                                         isUpload
-                                       }: {
+  page,
+  zipSource,
+  isUpload
+}: {
   page: Page;
   zipSource: string;
   isUpload: boolean;
@@ -103,11 +103,11 @@ async function uploadZipSourceIfNeeded({
 }
 
 async function addChangelogsIfNeeded({
-                                       page,
-                                       changelog,
-                                       devChangelog,
-                                       isVerbose
-                                     }: {
+  page,
+  changelog,
+  devChangelog,
+  isVerbose
+}: {
   page: Page;
   changelog: string;
   devChangelog: string;
@@ -183,23 +183,23 @@ async function updateExtension({ page }: { page: Page }): Promise<void> {
 }
 
 export default async function deployToFirefox({
-                                                extId,
-                                                zip,
-                                                sessionid,
-                                                zipSource = "",
-                                                changelog = "",
-                                                devChangelog = "",
-                                                verbose: isVerbose
-                                              }: FirefoxOptions): Promise<boolean> {
+  extId,
+  zip,
+  sessionid,
+  zipSource = "",
+  changelog = "",
+  devChangelog = "",
+  verbose: isVerbose
+}: FirefoxOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
     const puppeteerArgs =
       process.env.NODE_ENV === "development"
         ? {
-          headless: false,
-          defaultViewport: { width, height },
-          args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
-        }
+            headless: false,
+            defaultViewport: { width, height },
+            args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+          }
         : {};
     const browser = await puppeteer.launch(puppeteerArgs);
 
