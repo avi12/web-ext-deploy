@@ -3,7 +3,7 @@ import fs from "fs";
 import dotenv from "dotenv";
 import { createGitIgnoreIfNeeded, headersToEnv } from "./utils";
 
-function getFilename(site) {
+function getFilename(site: SupportedGetCookies): string {
   return `./${site}.env`;
 }
 
@@ -93,11 +93,11 @@ function appendToEnv(filename: string, headers: string) {
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
-function getInvalidSIte(siteNames: string[]) {
+function getInvalidSIte(siteNames: SupportedGetCookies[]): string {
   return siteNames.find(site => !siteFuncs[site]);
 }
 
-export async function getSignInCookie(siteNames: string[]) {
+export async function getSignInCookie(siteNames: SupportedGetCookies[]): Promise<void> {
   const invalidSIte = getInvalidSIte(siteNames);
   if (invalidSIte) {
     throw new Error(`Invalid site: ${invalidSIte}`);
