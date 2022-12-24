@@ -99,7 +99,7 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }) {
 const StoreObjects = {
   chrome: {} as ChromeOptions,
   firefox: {} as FirefoxOptions,
-  edge: argv.edgeAccessToken ? ({} as EdgeOptionsPublishApi) : ({} as EdgeOptions),
+  edge: {} as EdgeOptionsPublishApi,
   opera: {} as OperaOptions
 } as const;
 
