@@ -103,16 +103,6 @@ export async function deployFirefox(options: FirefoxOptions): Promise<boolean> {
   return prepareToDeployFirefox(options);
 }
 
-/**
- * @deprecated Use `deployEdgePublishApi` instead
- */
-export async function deployEdge(options: EdgeOptions): Promise<boolean> {
-  if (argv.edgeDevChangelog) {
-    options.devChangelog = argv.edgeDevChangelog;
-  }
-  return prepareToDeployEdge(options);
-}
-
 export async function deployEdgePublishApi(options: EdgeOptionsPublishApi): Promise<boolean> {
   if (argv.edgeDevChangelog) {
     options.devChangelog = argv.edgeDevChangelog;
