@@ -1,7 +1,8 @@
-import puppeteer, { Page } from "puppeteer";
-import fs from "fs";
 import dotenv from "dotenv";
-import { createGitIgnoreIfNeeded, headersToEnv } from "./utils";
+import puppeteer, { Page } from "puppeteer";
+import { SupportedGetCookies } from "./types.js";
+import { createGitIgnoreIfNeeded, headersToEnv } from "./utils.js";
+import fs from "fs";
 
 function getFilename(site: SupportedGetCookies): string {
   return `./${site}.env`;

@@ -1,6 +1,6 @@
 import axios from "axios";
-import { createGitIgnoreIfNeeded, headersToEnv } from "./utils";
 import dotenv from "dotenv";
+import { createGitIgnoreIfNeeded, headersToEnv } from "./utils.js";
 import fs from "fs";
 
 type EdgePublishApi = {

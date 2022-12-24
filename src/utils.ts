@@ -2,6 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { Page } from "puppeteer";
 import zipper from "zip-local";
+import fs from "fs";
+import path from "path";
 
 export function getFullPath(file: string): string {
   return path.resolve(process.cwd(), file);

@@ -1,5 +1,6 @@
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
-import deployToFirefox from "./firefox-deploy";
+import chalk from "chalk";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
+import deployToFirefox from "./firefox-deploy.js";
 
 export class FirefoxOptions {
   /** The `sessionid` cookie value to login to the publisher's account. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=firefox` */

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 import yargs from "yargs/yargs";
-import { getCookies, getJsonStoresFromCli } from "./cli";
-import { ChromeOptions, prepareToDeployChrome } from "./stores/chrome/chrome-input";
-import { FirefoxOptions, prepareToDeployFirefox } from "./stores/firefox/firefox-input";
-import { EdgeOptions, prepareToDeployEdge } from "./stores/edge/old/edge-input-old";
-import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input";
-import { getEdgePublishApiAccessToken } from "./get-edge-publish-api-access-token";
-import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/edge/new/edge-input";
-import { Stores } from "./types";
+import { getCookies, getJsonStoresFromCli } from "./cli.js";
+import { getEdgePublishApiAccessToken } from "./get-edge-publish-api-access-token.js";
+import { ChromeOptions, prepareToDeployChrome } from "./stores/chrome/chrome-input.js";
+import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/edge/edge-input.js";
+import { FirefoxOptions, prepareToDeployFirefox } from "./stores/firefox/firefox-input.js";
+import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input.js";
+import { Stores, SupportedGetCookies } from "./types.js";
 
 const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy(?:[\\/](?:dist-esm|src)[\\/]index\.(?:ts|js))?$/));
 

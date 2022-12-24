@@ -1,13 +1,12 @@
-import { FirefoxOptions } from "./firefox-input";
 import puppeteer, { Page } from "puppeteer";
-
 import {
   disableImages,
   getExistingElementSelector,
   getFullPath,
   getVerboseMessage,
   logSuccessfullyPublished
-} from "../../utils";
+} from "../../utils.js";
+import { FirefoxOptions } from "./firefox-input.js";
 
 const STORE = "Firefox";
 const SELECTORS = {

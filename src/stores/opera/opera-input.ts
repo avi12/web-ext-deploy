@@ -1,5 +1,5 @@
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils";
-import deployToOpera from "./opera-deploy";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
+import deployToOpera from "./opera-deploy.js";
 
 export class OperaOptions {
   /** The `sessionid` cookie to login to the publisher's account. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */

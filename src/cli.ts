@@ -1,14 +1,14 @@
-import yargs from "yargs";
-import { isObjectEmpty } from "./utils";
-import dotenv from "dotenv";
 import { camelCase } from "camel-case";
-import { ChromeOptions } from "./stores/chrome/chrome-input";
-import { FirefoxOptions } from "./stores/firefox/firefox-input";
-import { OperaOptions } from "./stores/opera/opera-input";
-import { getSignInCookie } from "./get-sign-in-cookie";
-import { EdgeOptionsPublishApi } from "./stores/edge/new/edge-input";
-import { Stores } from "./types";
-import { EdgeOptions } from "./stores/edge/old/edge-input-old";
+import chalk from "chalk";
+import dotenv from "dotenv";
+import yargs from "yargs";
+import { getSignInCookie } from "./get-sign-in-cookie.js";
+import { ChromeOptions } from "./stores/chrome/chrome-input.js";
+import { EdgeOptionsPublishApi } from "./stores/edge/edge-input.js";
+import { FirefoxOptions } from "./stores/firefox/firefox-input.js";
+import { OperaOptions } from "./stores/opera/opera-input.js";
+import { Stores, SupportedGetCookies } from "./types.js";
+import { isObjectEmpty } from "./utils.js";
 
 const argv = yargs(process.argv.slice(2))
   .options({

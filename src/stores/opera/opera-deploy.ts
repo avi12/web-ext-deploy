@@ -1,7 +1,6 @@
-import { OperaOptions } from "./opera-input";
-import puppeteer, { Page } from "puppeteer";
-
-import { disableImages, getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils";
+import puppeteer, { ElementHandle, HTTPResponse, Page } from "puppeteer";
+import { disableImages, getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
+import { OperaOptions } from "./opera-input.js";
 
 const STORE = "Opera";
 const SELECTORS = {
