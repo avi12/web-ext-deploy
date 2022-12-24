@@ -110,8 +110,7 @@ export async function getSignInCookie(siteNames: SupportedGetCookies[]): Promise
     args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
   });
 
-  for (let i = 0; i < siteNames.length; i++) {
-    const siteName = siteNames[i];
+  for (const siteName of siteNames) {
     let [page] = await browser.pages();
     if (page.url() !== "about:blank") {
       page = await browser.newPage();
@@ -129,5 +128,5 @@ export async function getSignInCookie(siteNames: SupportedGetCookies[]): Promise
 
   createGitIgnoreIfNeeded(siteNames);
 
-  console.log(`Info: Saved the login cookies of: ${siteNames}`);
+  console.log(`Info: Saved the login cookies of: ${siteNames.join(", ")}`);
 }
