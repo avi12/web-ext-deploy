@@ -1,70 +1,42 @@
-import { EdgeOptionsPublishApi } from "./edge-input";
-import axios, { AxiosResponse } from "axios";
+import Axios, { AxiosInstance, AxiosResponse } from "axios";
+import { getEdgePublishApiAccessToken } from "../../get-edge-publish-api-access-token.js";
+import { getErrorMessage, getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
+import { EdgeOptionsPublishApi } from "./edge-input.js";
 import fs from "fs";
-import { getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../../utils";
-import { getEdgePublishApiAccessToken } from "../../../get-edge-publish-api-access-token";
 
-const store = "Edge";
-const baseUrl = `https://api.addons.microsoftedge.microsoft.com/v1`;
+const STORE = "Edge";
 const STATUS_ACCEPTED = 202;
-
-function getBaseHeaders({ accessToken }: { accessToken: string }): {
-  Authorization: string;
-} {
-  return {
-    Authorization: `Bearer ${accessToken}`
-  };
-}
+let axios: AxiosInstance;
 
 async function getUploadStatus({
-  accessToken,
   productID,
   operationID
 }: {
-  accessToken: string;
   productID: string;
   operationID: string;
 }): Promise<AxiosResponse> {
-  return axios(`${baseUrl}/products/${productID}/submissions/draft/package/operations/${operationID}`, {
-    headers: getBaseHeaders({ accessToken })
-  });
-}
-
-function getErrorMessage({
-  zip,
-  error,
-  actionName
-}: {
-  zip: string;
-  error: number | string;
-  actionName: string;
-}): string {
-  return getVerboseMessage({
-    store,
-    prefix: "Error",
-    message: `Failed to ${actionName} ${getExtInfo(zip, "name")}: ${error}`
-  });
+  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#checking-the-status-of-a-package-upload
+  return axios(`/products/${productID}/submissions/draft/package/operations/${operationID}`);
 }
 
 async function upload({
-  accessToken,
   zip,
   productId
 }: {
-  accessToken: string;
   zip: string;
   productId: string;
 }): Promise<{ location?: string; error?: string }> {
+  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#uploading-a-package-to-update-an-existing-submission
   return axios
-    .post(`${baseUrl}/products/${productId}/submissions/draft/package`, fs.readFileSync(zip), {
+    .post(`/products/${productId}/submissions/draft/package`, fs.readFileSync(zip), {
       headers: {
-        ...getBaseHeaders({ accessToken }),
         "Content-Type": "application/zip"
       }
     })
     .then(({ headers }) => ({ location: headers.location }))
     .catch(e => ({
       error: getErrorMessage({
+        store: STORE,
         zip,
         error: e.response.data.message,
         actionName: "upload"
@@ -73,12 +45,10 @@ async function upload({
 }
 
 async function loopProgress({
-  accessToken,
   productId,
   location,
   zip
 }: {
-  accessToken: string;
   productId: string;
   location: string;
   zip: string;
@@ -87,13 +57,12 @@ async function loopProgress({
   do {
     try {
       ({ data } = await getUploadStatus({
-        accessToken,
         productID: productId,
         operationID: location
       }));
-    } catch (e) {
+    } catch (error) {
       return {
-        error: getErrorMessage({ zip, error: e, actionName: "upload" })
+        error: getErrorMessage({ store: STORE, zip, error, actionName: "upload" })
       };
     }
 
@@ -102,64 +71,52 @@ async function loopProgress({
 
   if (data.status === "Failed") {
     return {
-      error: getErrorMessage({ zip, error: data.status, actionName: "upload" })
+      error: getErrorMessage({ store: STORE, zip, error: data.status, actionName: "upload" })
     };
   }
   return { error: "" };
 }
 
 async function publish({
-  accessToken,
   productId,
   devChangelog,
   zip
 }: {
-  accessToken: string;
   productId: string;
   devChangelog: string;
   zip: string;
 }): Promise<{ error: string; operationId: string }> {
+  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#publishing-the-submission
   return axios
-    .post(
-      `${baseUrl}/products/${productId}/submissions`,
-      {
-        notes: devChangelog
-      },
-      {
-        headers: getBaseHeaders({ accessToken })
-      }
-    )
+    .post(`/products/${productId}/submissions`, { notes: devChangelog })
     .then(({ status, data, headers: { location } }) => ({
-      error: status !== STATUS_ACCEPTED ? getErrorMessage({ zip, error: data.status, actionName: "publish" }) : "",
+      error:
+        status !== STATUS_ACCEPTED
+          ? getErrorMessage({ store: STORE, zip, error: data.status, actionName: "publish" })
+          : "",
       operationId: location
     }))
     .catch(e => ({
-      error: getErrorMessage({
-        zip,
-        error: e.response.data,
-        actionName: "publish"
-      }),
+      error: getErrorMessage({ store: STORE, zip, error: e.response.data, actionName: "publish" }),
       operationId: ""
     }));
 }
 
 async function checkPublishStatus({
-  accessToken,
   productId,
   operationId,
   zip
 }: {
-  accessToken: string;
   productId: string;
   operationId: string;
   zip: string;
 }): Promise<{ error: string }> {
-  return axios(`${baseUrl}/products/${productId}/submissions/operations/${operationId}`, {
-    headers: getBaseHeaders({ accessToken })
-  }).then(({ data }) => ({
+  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#checking-the-status-of-a-package-upload
+  return axios(`/products/${productId}/submissions/operations/${operationId}`).then(({ data }) => ({
     error:
       data.status === "Failed"
         ? getErrorMessage({
+            store: STORE,
             zip,
             error: data.message,
             actionName: "publish"
@@ -179,45 +136,51 @@ export async function deployToEdgePublishApi({
   devChangelog
 }: EdgeOptionsPublishApi): Promise<true> {
   return new Promise(async (resolve, reject) => {
+    axios = Axios.create({
+      baseURL: "https://api.addons.microsoftedge.microsoft.com/v1",
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+
     if (verbose) {
       console.log(
         getVerboseMessage({
-          store,
-          message: `Updating ${getExtInfo(zip, "name")} with product ID ${productId} `
+          store: STORE,
+          message: `Updating ${getExtInfo(zip, "name")} with product ID ${productId}`
         })
       );
     }
 
     const { location, error: errorUpload } = await upload({
-      accessToken,
       zip,
       productId
     });
     if (errorUpload) {
-      if (errorUpload.includes("Invalid JWT")) {
-        const { accessToken } = await getEdgePublishApiAccessToken({
-          clientId,
-          clientSecret,
-          accessTokenUrl
-        });
-        await deployToEdgePublishApi({
-          productId,
-          zip,
-          verbose,
-          devChangelog,
-          accessToken,
-          accessTokenUrl,
-          clientSecret,
-          clientId
-        });
-      } else {
+      if (!errorUpload.includes("Invalid JWT")) {
         reject(errorUpload);
+        return;
       }
+
+      const { accessToken } = await getEdgePublishApiAccessToken({
+        clientId,
+        clientSecret,
+        accessTokenUrl
+      });
+      await deployToEdgePublishApi({
+        productId,
+        zip,
+        verbose,
+        devChangelog,
+        accessToken,
+        accessTokenUrl,
+        clientSecret,
+        clientId
+      });
       return;
     }
 
     const { error: errorProgress } = await loopProgress({
-      accessToken,
       productId,
       location,
       zip
@@ -230,26 +193,24 @@ export async function deployToEdgePublishApi({
     if (verbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Publishing ${getExtInfo(zip, "name")} version ${getExtInfo(zip, "version")}`
         })
       );
     }
 
     const { error: errorPublish, operationId } = await publish({
-      accessToken,
       productId,
       devChangelog,
       zip
     });
 
     if (errorPublish) {
-      reject(getErrorMessage({ zip, error: errorPublish, actionName: "publish" }));
+      reject(getErrorMessage({ store: STORE, zip, error: errorPublish, actionName: "publish" }));
       return;
     }
 
     const { error: errorPublishStatus } = await checkPublishStatus({
-      accessToken,
       productId,
       operationId,
       zip
@@ -260,7 +221,7 @@ export async function deployToEdgePublishApi({
       return;
     }
 
-    logSuccessfullyPublished({ store, extId: productId, zip });
+    logSuccessfullyPublished({ store: STORE, extId: productId, zip });
     resolve(true);
   });
 }

@@ -1,5 +1,5 @@
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../../utils";
-import { deployToEdgePublishApi } from "./edge-deploy";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
+import { deployToEdgePublishApi } from "./edge-deploy.js";
 
 export class EdgeOptionsPublishApi {
   /**
