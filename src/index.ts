@@ -52,7 +52,7 @@ async function initCli(): Promise<void> {
   }
 
   if (argv.getCookies) {
-    await getCookies(argv.getCookies as string[]);
+    await getCookies(argv.getCookies as SupportedGetCookies[]);
     process.exit();
     return;
   }

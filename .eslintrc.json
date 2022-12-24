@@ -9,12 +9,8 @@
     },
     "allowImportExportEverywhere": true
   },
-  "plugins": ["@typescript-eslint"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "prettier"
-  ],
+  "plugins": ["@typescript-eslint", "import"],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/eslint-recommended", "prettier"],
   "env": {
     "node": true
   },
@@ -26,6 +22,16 @@
     "@typescript-eslint/explicit-function-return-type": "warn",
     "@typescript-eslint/interface-name-prefix": "off",
     "no-async-promise-executor": "off",
-    "semi": "warn"
+    "semi": "warn",
+    "import/order": [
+      "warn",
+      {
+        "groups": ["external", "internal"],
+        "alphabetize": {
+          "order": "asc"
+        }
+      }
+    ],
+    "import/extensions": ["warn", "ignorePackages", { "js": "always" }]
   }
 }
