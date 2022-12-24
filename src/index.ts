@@ -9,7 +9,7 @@ import { getEdgePublishApiAccessToken } from "./get-edge-publish-api-access-toke
 import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/edge/new/edge-input";
 import { Stores } from "./types";
 
-const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy(?:[\\/](?:dist|src)[\\/]index\.(?:ts|js))?$/));
+const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy(?:[\\/](?:dist-esm|src)[\\/]index\.(?:ts|js))?$/));
 
 const argv = yargs(process.argv.slice(2))
   .options({
