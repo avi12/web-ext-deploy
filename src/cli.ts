@@ -30,10 +30,6 @@ const argv = yargs(process.argv.slice(2))
     firefoxChangelog: { type: "string" },
     firefoxDevChangelog: { type: "string" },
     // edge
-    /** @deprecated Use an access token, client ID, client secret, and access token URL instead */
-    edgeCookie: { type: "string" },
-    /** @deprecated Use product ID instead */
-    edgeExtId: { type: "string" },
     edgeAccessToken: { type: "string" },
     edgeClientId: { type: "string" },
     edgeClientSecret: { type: "string" },
@@ -96,7 +92,10 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }): any {
   return Object.fromEntries(entriesWithCamelCasedKeys);
 }
 
-const StoreObjects = {
+const StoreObjects: {
+  // eslint-disable-next-line no-unused-vars
+  [key in typeof Stores[number]]: ChromeOptions | FirefoxOptions | EdgeOptionsPublishApi | OperaOptions;
+} = {
   chrome: {} as ChromeOptions,
   firefox: {} as FirefoxOptions,
   edge: {} as EdgeOptionsPublishApi,
