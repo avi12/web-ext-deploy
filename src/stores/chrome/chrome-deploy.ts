@@ -3,7 +3,7 @@ import { ChromeOptions } from "./chrome-input";
 import fs from "fs";
 import { getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../utils";
 
-const store = "Chrome";
+const STORE = "Chrome";
 
 export async function deployToChrome({
   extId: extensionId,
@@ -24,7 +24,7 @@ export async function deployToChrome({
     if (verbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Updating extension with ID ${extensionId}`
         })
       );
@@ -36,7 +36,7 @@ export async function deployToChrome({
       const errors = itemError.map(({ error_detail }) => error_detail);
       reject(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Item "${extensionId}" (${getExtInfo(zip, "name")}):
           ${errors.join("\n")}`,
           prefix: "Error"
@@ -47,7 +47,7 @@ export async function deployToChrome({
 
     await client.publish();
 
-    logSuccessfullyPublished({ extId: extensionId, store, zip });
+    logSuccessfullyPublished({ extId: extensionId, store: STORE, zip });
 
     resolve(true);
   });

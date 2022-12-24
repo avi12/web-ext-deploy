@@ -9,15 +9,15 @@ import {
   logSuccessfullyPublished
 } from "../../utils";
 
-const store = "Firefox";
-const gSelectors = {
+const STORE = "Firefox";
+const SELECTORS = {
   listErrors: ".errorlist",
   buttonSubmit: "button[type=submit]",
   inputFile: "input[type=file]",
   inputRadio: "input[type=radio]",
   inputChangelog: "textarea[name*=release_notes]",
   inputDevChangelog: "textarea[name=approval_notes]"
-};
+} as const;
 
 async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: string }): Promise<boolean> {
   const urlSubmission = `${getBaseDashboardUrl(extId)}/versions/submit/`;
@@ -39,10 +39,10 @@ async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: s
 }
 
 async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId: string }): Promise<boolean> {
-  const elInputFile = await page.$(gSelectors.inputFile);
+  const elInputFile = await page.$(SELECTORS.inputFile);
   await elInputFile.uploadFile(zip);
 
-  await page.$eval(gSelectors.buttonSubmit, (elSubmit: HTMLButtonElement) => {
+  await page.$eval(SELECTORS.buttonSubmit, (elSubmit: HTMLButtonElement) => {
     return new Promise(resolve => {
       new MutationObserver(() => {
         elSubmit.click();
@@ -54,13 +54,13 @@ async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId:
     });
   });
 
-  const selectorExisting = await getExistingElementSelector(page, [gSelectors.listErrors, gSelectors.inputRadio]);
+  const selectorExisting = await getExistingElementSelector(page, [SELECTORS.listErrors, SELECTORS.inputRadio]);
   return new Promise(async (resolve, reject) => {
-    if (!selectorExisting.includes(gSelectors.listErrors)) {
+    if (!selectorExisting.includes(SELECTORS.listErrors)) {
       resolve(true);
       return;
     }
-    const errors = await page.$eval(gSelectors.listErrors, elErrors =>
+    const errors = await page.$eval(SELECTORS.listErrors, elErrors =>
       // @ts-ignore
       [...elErrors.children]
         .map(elError => elError.textContent.trim())
@@ -85,10 +85,10 @@ async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId:
 }
 
 async function uploadZipSourceIfNeeded({
-  page,
-  zipSource,
-  isUpload
-}: {
+                                         page,
+                                         zipSource,
+                                         isUpload
+                                       }: {
   page: Page;
   zipSource: string;
   isUpload: boolean;
@@ -97,28 +97,28 @@ async function uploadZipSourceIfNeeded({
   await page.click(`input[type=radio][name=has_source][value=${uploadAnswer}]`);
 
   if (isUpload) {
-    const elFileInput = await page.$(gSelectors.inputFile);
+    const elFileInput = await page.$(SELECTORS.inputFile);
     await elFileInput.uploadFile(zipSource);
   }
-  await page.click(gSelectors.buttonSubmit);
+  await page.click(SELECTORS.buttonSubmit);
 }
 
 async function addChangelogsIfNeeded({
-  page,
-  changelog,
-  devChangelog,
-  isVerbose
-}: {
+                                       page,
+                                       changelog,
+                                       devChangelog,
+                                       isVerbose
+                                     }: {
   page: Page;
   changelog: string;
   devChangelog: string;
   isVerbose: boolean;
 }): Promise<void> {
   if (changelog || devChangelog) {
-    await page.waitForSelector(gSelectors.inputChangelog);
+    await page.waitForSelector(SELECTORS.inputChangelog);
   }
   if (changelog) {
-    await page.type(gSelectors.inputChangelog, changelog);
+    await page.type(SELECTORS.inputChangelog, changelog);
     if (isVerbose) {
       console.log(
         getVerboseMessage({
@@ -130,7 +130,7 @@ async function addChangelogsIfNeeded({
   }
 
   if (devChangelog) {
-    await page.type(gSelectors.inputDevChangelog, devChangelog);
+    await page.type(SELECTORS.inputDevChangelog, devChangelog);
     if (isVerbose) {
       console.log(
         getVerboseMessage({
@@ -170,7 +170,7 @@ async function verifyValidCookies({ page }: { page: Page }): Promise<true> {
     }
     reject(
       getVerboseMessage({
-        store,
+        store: STORE,
         message: "Invalid/expired cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=firefox",
         prefix: "Error"
       })
@@ -179,28 +179,28 @@ async function verifyValidCookies({ page }: { page: Page }): Promise<true> {
 }
 
 async function updateExtension({ page }: { page: Page }): Promise<void> {
-  await page.waitForSelector(gSelectors.buttonSubmit);
-  await page.click(gSelectors.buttonSubmit);
+  await page.waitForSelector(SELECTORS.buttonSubmit);
+  await page.click(SELECTORS.buttonSubmit);
 }
 
 export default async function deployToFirefox({
-  extId,
-  zip,
-  sessionid,
-  zipSource = "",
-  changelog = "",
-  devChangelog = "",
-  verbose: isVerbose
-}: FirefoxOptions): Promise<boolean> {
+                                                extId,
+                                                zip,
+                                                sessionid,
+                                                zipSource = "",
+                                                changelog = "",
+                                                devChangelog = "",
+                                                verbose: isVerbose
+                                              }: FirefoxOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
     const puppeteerArgs =
       process.env.NODE_ENV === "development"
         ? {
-            headless: false,
-            defaultViewport: { width, height },
-            args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
-          }
+          headless: false,
+          defaultViewport: { width, height },
+          args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+        }
         : {};
     const browser = await puppeteer.launch(puppeteerArgs);
 
@@ -212,7 +212,7 @@ export default async function deployToFirefox({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Launched a Puppeteer session in ${urlStart}`
         })
       );
@@ -231,7 +231,7 @@ export default async function deployToFirefox({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: "Opened relevant extension page"
         })
       );
@@ -248,7 +248,7 @@ export default async function deployToFirefox({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Opened extension page of ${extId}`
         })
       );
@@ -269,7 +269,7 @@ export default async function deployToFirefox({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Uploading ZIP: ${zip}`
         })
       );
@@ -284,7 +284,7 @@ export default async function deployToFirefox({
     if (isVerbose && zipSource) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Uploading source ZIP: ${zip}`
         })
       );
@@ -300,7 +300,7 @@ export default async function deployToFirefox({
     if (isVerbose && zipSource) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: ("Uploaded ZIP " + (zipSource ? "and source ZIP" : "")).trim()
         })
       );
@@ -308,7 +308,7 @@ export default async function deployToFirefox({
 
     await updateExtension({ page });
 
-    logSuccessfullyPublished({ extId, store, zip });
+    logSuccessfullyPublished({ extId, store: STORE, zip });
 
     await browser.close();
     resolve(true);

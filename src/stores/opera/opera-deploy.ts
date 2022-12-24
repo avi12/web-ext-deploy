@@ -3,9 +3,8 @@ import puppeteer, { Page } from "puppeteer";
 
 import { disableImages, getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils";
 
-const store = "Opera";
-
-const gSelectors = {
+const STORE = "Opera";
+const SELECTORS = {
   listErrors: ".alert-danger",
   listPackages: "[ng-repeat*=packageVersion]",
   tabs: `.nav-tabs [ng-bind-html="tab.name"]`,
@@ -18,16 +17,16 @@ const gSelectors = {
   inputCodePrivate: `editable-field[field-value="packageVersion.source_for_moderators_url"] input`,
   inputChangelog: `history-tab[param=en] editable-field[field-value="translation.changelog"] textarea`,
   buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
-};
+} as const;
 
 async function getErrorsOrNone({ page, packageId }: { page: Page; packageId: number }): Promise<boolean | number> {
   return new Promise(async (resolve, reject) => {
     await Promise.race([
-      page.waitForSelector(gSelectors.listErrors),
+      page.waitForSelector(SELECTORS.listErrors),
       page.waitForNavigation({ waitUntil: "networkidle0" })
     ]);
 
-    const errors = await page.$$eval(gSelectors.listErrors, elErrors =>
+    const errors = await page.$$eval(SELECTORS.listErrors, elErrors =>
       [...elErrors]
         .map(elError => elError.children[1].textContent.trim())
         .map(error => {
@@ -47,7 +46,7 @@ async function getErrorsOrNone({ page, packageId }: { page: Page; packageId: num
     const prefixError = errors.length === 1 ? "Error" : "Errors";
     reject(
       getVerboseMessage({
-        store,
+        store: STORE,
         message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
       `,
@@ -68,8 +67,8 @@ async function uploadZip({
 }): Promise<boolean | number> {
   return new Promise(async (resolve, reject) => {
     const clickUploadWhenPossible = async (): Promise<void> => {
-      await page.waitForSelector(gSelectors.buttonUploadNewVersion);
-      return page.click(gSelectors.buttonUploadNewVersion);
+      await page.waitForSelector(SELECTORS.buttonUploadNewVersion);
+      return page.click(SELECTORS.buttonUploadNewVersion);
     };
 
     clickUploadWhenPossible()
@@ -85,15 +84,15 @@ async function uploadZip({
       })
       .catch(reject);
 
-    await page.waitForSelector(gSelectors.inputFile);
-    const elInputFile = await page.$(gSelectors.inputFile);
+    await page.waitForSelector(SELECTORS.inputFile);
+    const elInputFile = (await page.$(SELECTORS.inputFile)) as ElementHandle<HTMLInputElement>;
     await elInputFile.uploadFile(zip);
   });
 }
 
 async function switchToTabVersions({ page }: { page: Page }): Promise<void> {
-  await page.waitForSelector(gSelectors.tabs);
-  const elTabs = await page.$$(gSelectors.tabs);
+  await page.waitForSelector(SELECTORS.tabs);
+  const elTabs = await page.$$(SELECTORS.tabs);
   const elTabVersions = elTabs[1];
   await elTabVersions.click();
 }
@@ -101,13 +100,13 @@ async function switchToTabVersions({ page }: { page: Page }): Promise<void> {
 async function openRelevantExtensionPage({ page, packageId }: { page: Page; packageId: number }): Promise<unknown> {
   const urlExtension = getBaseDashboardUrl(packageId);
   return new Promise(async (resolve, reject) => {
-    const responseListener = (response: puppeteer.HTTPResponse): void => {
+    const responseListener = (response: HTTPResponse): void => {
       if (response.url() !== `https://addons.opera.com/api/developer/packages/${packageId}/`) {
         const isCookieInvalid = response.url().startsWith("https://auth.opera.com");
         if (isCookieInvalid) {
           reject(
             getVerboseMessage({
-              store,
+              store: STORE,
               message:
                 "Invalid/expired authentication cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=opera",
               prefix: "Error"
@@ -120,7 +119,7 @@ async function openRelevantExtensionPage({ page, packageId }: { page: Page; pack
       if (response.statusText() === "Not Found") {
         reject(
           getVerboseMessage({
-            store,
+            store: STORE,
             message: `Extension with package ID ${packageId} does not exist`
           })
         );
@@ -136,14 +135,14 @@ async function openRelevantExtensionPage({ page, packageId }: { page: Page; pack
 }
 
 async function verifyPublicCodeExistence({ page }: { page: Page }): Promise<void> {
-  await page.waitForSelector(gSelectors.inputCodePublic);
+  await page.waitForSelector(SELECTORS.inputCodePublic);
 
   const getInputValue = async (selector: string): Promise<string> =>
     page.$eval(selector, (elInput: HTMLInputElement) => elInput.value);
 
   const isSourceInputFull = async (): Promise<boolean> => {
-    const inputPublic = await getInputValue(gSelectors.inputCodePublic);
-    const inputPrivate = await getInputValue(gSelectors.inputCodePrivate);
+    const inputPublic = await getInputValue(SELECTORS.inputCodePublic);
+    const inputPrivate = await getInputValue(SELECTORS.inputCodePrivate);
     return Boolean(inputPublic || inputPrivate);
   };
 
@@ -155,7 +154,7 @@ async function verifyPublicCodeExistence({ page }: { page: Page }): Promise<void
 
   console.log(
     getVerboseMessage({
-      store,
+      store: STORE,
       message: `You must provide a link to your extension's source code. ${urlCurrent}`,
       prefix: "Error"
     })
@@ -163,10 +162,10 @@ async function verifyPublicCodeExistence({ page }: { page: Page }): Promise<void
 }
 
 async function updateExtension({ page, packageId }: { page: Page; packageId: number }): Promise<true> {
-  await page.click(gSelectors.buttonSubmit);
+  await page.click(SELECTORS.buttonSubmit);
 
   return new Promise(async (resolve, reject) => {
-    const errors = await page.$$eval(gSelectors.listErrors, elErrors =>
+    const errors = await page.$$eval(SELECTORS.listErrors, elErrors =>
       [...elErrors].map(elError => elError.querySelector(".ng-scope").textContent.trim())
     );
     if (errors.length === 0) {
@@ -177,7 +176,7 @@ async function updateExtension({ page, packageId }: { page: Page; packageId: num
     const prefixError = errors.length === 1 ? "Error" : "Errors";
     reject(
       getVerboseMessage({
-        store,
+        store: STORE,
         message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
       `,
@@ -199,13 +198,13 @@ async function addChangelogIfNeeded({
   zip: string;
 }): Promise<void> {
   const switchToTabTranslations = async (): Promise<void> => {
-    const tabs = await page.$$(gSelectors.tabs);
+    const tabs = await page.$$(SELECTORS.tabs);
     await tabs[2].click();
   };
 
   const switchToEnglishMetadata = async (): Promise<void> => {
     await page.$$eval(
-      gSelectors.tabsLanguages,
+      SELECTORS.tabsLanguages,
       (elLanguages: HTMLSpanElement[], default_locale: string) => {
         const elTabEnglish = elLanguages.find(elLanguage =>
           elLanguage.textContent.includes(`(${default_locale})`)
@@ -220,17 +219,17 @@ async function addChangelogIfNeeded({
     await switchToTabTranslations();
     await switchToEnglishMetadata();
 
-    await page.waitForSelector(gSelectors.inputChangelog);
-    await page.$eval(gSelectors.inputChangelog, (elInput: HTMLInputElement) => {
+    await page.waitForSelector(SELECTORS.inputChangelog);
+    await page.evaluate(SELECTORS.inputChangelog, (elInput: HTMLInputElement) => {
       elInput.value = "";
     });
-    await page.type(gSelectors.inputChangelog, changelog);
-    await page.click(gSelectors.buttonSubmitChangelog);
+    await page.type(SELECTORS.inputChangelog, changelog);
+    await page.click(SELECTORS.buttonSubmitChangelog);
 
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Added changelog: ${changelog}`
         })
       );
@@ -273,7 +272,7 @@ function getBaseDashboardUrl(packageId: number): string {
 
 async function cancelUpload({ page }: { page: Page }): Promise<void> {
   await page.goto(page.url().split("?")[0], { waitUntil: "networkidle0" });
-  await page.click(gSelectors.buttonCancel);
+  await page.click(SELECTORS.buttonCancel);
 }
 
 async function deleteCurrentVersionIfAlreadyExists({
@@ -288,13 +287,13 @@ async function deleteCurrentVersionIfAlreadyExists({
   isVerbose: boolean;
 }): Promise<boolean> {
   const deletePackage = async (): Promise<void> => {
-    await page.waitForSelector(gSelectors.buttonCancel);
-    await page.click(gSelectors.buttonCancel);
+    await page.waitForSelector(SELECTORS.buttonCancel);
+    await page.click(SELECTORS.buttonCancel);
 
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Deleted existing package version ${version}`
         })
       );
@@ -350,7 +349,7 @@ export default async function deployToOpera({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Launched a Puppeteer session in ${urlStart}`
         })
       );
@@ -367,7 +366,7 @@ export default async function deployToOpera({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: "Opened relevant extension page"
         })
       );
@@ -401,7 +400,7 @@ export default async function deployToOpera({
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store,
+          store: STORE,
           message: `Uploaded ZIP: ${zip}`
         })
       );
@@ -419,7 +418,7 @@ export default async function deployToOpera({
       return;
     }
 
-    logSuccessfullyPublished({ extId: packageId, store, zip });
+    logSuccessfullyPublished({ extId: packageId, store: STORE, zip });
 
     await browser.close();
     resolve(true);
