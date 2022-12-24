@@ -1,5 +1,4 @@
-import * as fs from "fs";
-import * as path from "path";
+import chalk from "chalk";
 import { Page } from "puppeteer";
 import zipper from "zip-local";
 import fs from "fs";
@@ -54,7 +53,7 @@ export function logSuccessfullyPublished({
   const extName = getExtInfo(zip, "name");
   const extVersion = getExtInfo(zip, "version");
   const storeName = storeNames[store] || store;
-  console.log(`Successfully updated "${extId}" (${extName}) to version ${extVersion} on ${storeName}!`);
+  console.log(chalk.green(`Successfully updated "${extId}" (${extName}) to version ${extVersion} on ${storeName}!`));
 }
 
 export async function disableImages(page: Page): Promise<void> {
@@ -115,7 +114,7 @@ export function getVerboseMessage({
   if (prefix === "Info") {
     msg = msg.trim();
   } else if (prefix === "Error") {
-    msg = msg.trimLeft();
+    msg = chalk.red(msg.trimStart());
   }
   return msg;
 }

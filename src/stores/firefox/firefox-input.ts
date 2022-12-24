@@ -67,7 +67,7 @@ web-ext-deploy --get-cookies=firefox`
 }
 
 function getErrorMessage(message: string): string {
-  return `Firefox: ${message}`;
+  return chalk.red(`Firefox: ${message}`);
 }
 
 export async function prepareToDeployFirefox(options: FirefoxOptions): Promise<boolean> {

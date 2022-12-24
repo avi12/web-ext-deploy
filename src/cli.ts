@@ -48,6 +48,7 @@ const argv = yargs(process.argv.slice(2))
 
 function getJsons(isUseEnv?: boolean): { [p: string]: any } {
   if (isUseEnv) {
+    console.log(chalk.blue("Using env mode"));
     return Stores.reduce((stores: { [s: string]: unknown }, store: string) => {
       const { parsed = {} } = dotenv.config({ path: `${store}.env` });
       if (!isObjectEmpty(parsed)) {
@@ -62,6 +63,7 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
     }, {});
   }
 
+  console.log(chalk.blue("Using CLI mode"));
   const getFlagsArguments = (argv: any, store: string): { [s: string]: unknown } => {
     const entries = Object.entries(argv)
       .filter(([key]) => key.startsWith(`${store}-`))

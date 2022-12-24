@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import chalk from "chalk";
 import yargs from "yargs/yargs";
 import { getCookies, getJsonStoresFromCli } from "./cli.js";
 import { getEdgePublishApiAccessToken } from "./get-edge-publish-api-access-token.js";
@@ -82,7 +83,7 @@ async function initCli(): Promise<void> {
   try {
     await Promise.all(promises);
   } catch (e) {
-    throw new Error(e);
+    throw new Error(chalk.red(e));
   }
 }
 
