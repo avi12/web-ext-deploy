@@ -84,7 +84,7 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
   }, {} as { [store in typeof Stores[number]]: unknown });
 }
 
-function jsonCamelCased(jsonStores: { [s: string]: string | number }) {
+function jsonCamelCased(jsonStores: { [s: string]: string | number }): any {
   const entriesStores = Object.entries(jsonStores);
 
   const entriesWithCamelCasedKeys = entriesStores.map(([store, values]) => {
