@@ -77,6 +77,24 @@ export async function getExistingElementSelector(page: Page, selectors: string[]
 
 const gStepCounters = {};
 
+export function getErrorMessage({
+  store,
+  zip,
+  error = "",
+  actionName
+}: {
+  store: "Chrome" | "Edge" | "Firefox" | "Opera";
+  zip: string;
+  error?: number | string;
+  actionName: string;
+}): string {
+  return getVerboseMessage({
+    store,
+    prefix: "Error",
+    message: `Failed to ${actionName} ${getExtInfo(zip, "name")}: ${error}`.trim()
+  });
+}
+
 export function getVerboseMessage({
   message,
   prefix,
