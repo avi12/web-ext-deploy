@@ -2,7 +2,7 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["esnext"],
+    "lib": ["esnext", "DOM"],
     "module": "ESNext",
     "moduleResolution": "NodeNext",
     "noEmitOnError": true,
