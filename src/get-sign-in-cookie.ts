@@ -80,48 +80,11 @@ async function saveOperaHeaders(page: Page): Promise<string> {
     await page.goto(url);
   });
 }
-async function saveEdgeHeaders(page: Page): Promise<string> {
-  return new Promise(async resolve => {
-    const url = "https://partner.microsoft.com/dashboard/microsoftedge/overview";
-    const isUrlMatch = url => url.endsWith("/overview");
-    const nameCookie = ".AspNet.Cookies";
-    const extractCookies = cookies => {
-      const value = cookies
-        .split("; ")
-        .find(cookie => cookie.startsWith(nameCookie))
-        .split("=")[1];
-
-      return `cookie=${value}`;
-    };
-    const devtools = await page.target().createCDPSession();
-
-    await devtools.send("Fetch.enable", {
-      patterns: [
-        {
-          resourceType: "Document"
-        }
-      ]
-    });
-
-    devtools.on("Fetch.requestPaused", async ({ requestId, request }) => {
-      const isRequiredCookiesExist = request.headers?.Cookie?.includes(nameCookie);
-
-      if (isRequiredCookiesExist && isUrlMatch(request.url)) {
-        resolve(extractCookies(request.headers.Cookie));
-      }
-
-      await devtools.send("Fetch.continueRequest", { requestId });
-    });
-
-    await page.goto(url);
-  });
-}
 
 const siteFuncs = {
   firefox: saveFirefoxHeaders,
-  opera: saveOperaHeaders,
-  edge: saveEdgeHeaders
-};
+  opera: saveOperaHeaders
+} as const;
 
 function appendToEnv(filename: string, headers: string) {
   const { parsed: envCurrent = {} } = dotenv.config({ path: filename });
