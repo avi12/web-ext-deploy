@@ -63,7 +63,9 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
     }, {});
   }
 
-  console.log(chalk.blue("Using CLI mode"));
+  if (!argv.env) {
+    console.trace(chalk.blue("Using CLI mode"));
+  }
   const getFlagsArguments = (argv: any, store: string): { [s: string]: unknown } => {
     const entries = Object.entries(argv)
       .filter(([key]) => key.startsWith(`${store}-`))
