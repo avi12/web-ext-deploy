@@ -78,7 +78,7 @@ async function initCli(): Promise<void> {
     firefox: deployFirefox,
     edge: deployEdgePublishApi,
     opera: deployOpera
-  };
+  } as const;
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
   try {
     await Promise.all(promises);
