@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { Page } from "puppeteer";
 import zipper from "zip-local";
+import { Stores } from "./types.js";
 import fs from "fs";
 import path from "path";
 
@@ -21,7 +21,7 @@ export function getCorrectZip(zipName: string): string {
     return zipName;
   }
 
-  const { version = "" } = JSON.parse(fs.readFileSync("package.json").toString());
+  const { version = "" } = JSON.parse(fs.readFileSync("package.json", "utf8"));
   return zipName.replace("{version}", version);
 }
 
@@ -44,36 +44,18 @@ export function logSuccessfullyPublished({
   store: string;
   zip: string;
 }): void {
-  const storeNames = {
+  const storeNames: {
+    // eslint-disable-next-line no-unused-vars
+    [store in typeof Stores[number]]: string;
+  } = {
     chrome: "Chrome Web Store",
     edge: "Edge Add-ons",
     firefox: "Firefox Add-ons",
     opera: "Opera Add-ons"
   };
-  const extName = getExtInfo(zip, "name");
-  const extVersion = getExtInfo(zip, "version");
+  const { name, version } = getExtJson(zip) as JSON & { name: string; version: string };
   const storeName = storeNames[store] || store;
-  console.log(chalk.green(`Successfully updated "${extId}" (${extName}) to version ${extVersion} on ${storeName}!`));
-}
-
-export async function disableImages(page: Page): Promise<void> {
-  await page.setRequestInterception(true);
-  page.on("request", request => {
-    if (request.resourceType() === "image") {
-      request.abort();
-      return;
-    }
-    request.continue();
-  });
-}
-
-export async function getExistingElementSelector(page: Page, selectors: string[]): Promise<string> {
-  const promises = selectors.map(selector => page.waitForSelector(selector));
-  const {
-    // @ts-ignore
-    _remoteObject: { description }
-  } = await Promise.race(promises);
-  return description;
+  console.log(chalk.green(`Successfully updated "${extId}" (${name}) to version ${version} on ${storeName}! ✔`));
 }
 
 const gStepCounters = {};
