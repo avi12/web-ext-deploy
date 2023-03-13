@@ -1,5 +1,5 @@
-import puppeteer, { ElementHandle, HTTPResponse, Page } from "puppeteer";
-import { disableImages, getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
+import { Browser, BrowserContext, chromium, Page, Response } from "playwright";
+import { getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 import { OperaOptions } from "./opera-input.js";
 
 const STORE = "Opera";
@@ -8,8 +8,8 @@ const SELECTORS = {
   listPackages: "[ng-repeat*=packageVersion]",
   tabs: `.nav-tabs [ng-bind-html="tab.name"]`,
   tabsLanguages: `.nav-stacked [ng-bind-html="tab.name"]`,
-  buttonSubmit: "[ng-click*=submit]",
-  buttonUploadNewVersion: `[ng-click*="upload()"]`,
+  buttonSubmit: "[ng-click='submitForModeration()']",
+  buttonUploadNewVersion: `[ng-click*="upload"]`,
   buttonCancel: "[ng-click*=cancel]",
   inputFile: "input[type=file]",
   inputCodePublic: `editable-field[field-value="packageVersion.source_url"] input`,
@@ -18,41 +18,35 @@ const SELECTORS = {
   buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
 } as const;
 
-async function getErrorsOrNone({ page, packageId }: { page: Page; packageId: number }): Promise<boolean | number> {
-  return new Promise(async (resolve, reject) => {
-    await Promise.race([
-      page.waitForSelector(SELECTORS.listErrors),
-      page.waitForNavigation({ waitUntil: "networkidle0" })
-    ]);
+async function verifyUploadIsValid({
+  page,
+  packageId
+}: {
+  page: Page;
+  packageId: number;
+}): Promise<{ errors: boolean; message?: string }> {
+  await Promise.race([page.waitForSelector(SELECTORS.listErrors), page.waitForLoadState("networkidle")]);
 
-    const errors = await page.$$eval(SELECTORS.listErrors, elErrors =>
-      [...elErrors]
-        .map(elError => elError.children[1].textContent.trim())
-        .map(error => {
-          if (error.includes("already uploaded")) {
-            return error.split(". ")[0];
-          }
-          return error;
-        })
-    );
-    if (page.url().match(/(\d|\?tab=conversation)$/) || errors.length === 0) {
-      resolve(true);
-      return;
-    }
-    if (errors.length > 0 && errors[errors.length - 1].match(/500|not a valid/)) {
-      resolve(500);
-    }
-    const prefixError = errors.length === 1 ? "Error" : "Errors";
-    reject(
-      getVerboseMessage({
-        store: STORE,
-        message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
+  const errors = await page.$$eval(SELECTORS.listErrors, elErrors =>
+    [...elErrors].map(elError => elError.children[1].textContent.trim())
+  );
+  if (page.url().match(/(\d|\?tab=conversation)$/) || errors.length === 0) {
+    return { errors: false };
+  }
+  if (errors.length > 0 && errors[errors.length - 1].match(/500|not a valid/)) {
+    return { errors: false };
+  }
+  const prefixError = errors.length === 1 ? "Error" : "Errors";
+  return {
+    errors: true,
+    message: getVerboseMessage({
+      store: STORE,
+      message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
       `,
-        prefix: "Error"
-      })
-    );
-  });
+      prefix: "Error"
+    })
+  };
 }
 
 async function uploadZip({
@@ -63,43 +57,37 @@ async function uploadZip({
   page: Page;
   zip: string;
   packageId: number;
-}): Promise<boolean | number> {
+}): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
-    const clickUploadWhenPossible = async (): Promise<void> => {
-      await page.waitForSelector(SELECTORS.buttonUploadNewVersion);
-      return page.click(SELECTORS.buttonUploadNewVersion);
-    };
+    await page.setInputFiles(SELECTORS.inputFile, zip);
+    await page.click(SELECTORS.buttonUploadNewVersion);
 
-    clickUploadWhenPossible()
-      .then(() => getErrorsOrNone({ page, packageId }))
-      .then(errors => {
-        const isUploadSuccessful = typeof errors === "boolean";
-        if (isUploadSuccessful) {
-          resolve(true);
-          return;
-        }
-
-        resolve(uploadZip({ page, zip, packageId }));
-      })
-      .catch(reject);
-
-    await page.waitForSelector(SELECTORS.inputFile);
-    const elInputFile = (await page.$(SELECTORS.inputFile)) as ElementHandle<HTMLInputElement>;
-    await elInputFile.uploadFile(zip);
+    const { errors, message } = await verifyUploadIsValid({ page, packageId });
+    if (errors) {
+      reject({ error: message, failType: "upload" });
+      return;
+    }
+    resolve(true);
   });
 }
 
 async function switchToTabVersions({ page }: { page: Page }): Promise<void> {
   await page.waitForSelector(SELECTORS.tabs);
-  const elTabs = await page.$$(SELECTORS.tabs);
-  const elTabVersions = elTabs[1];
+  const [, elTabVersions] = await page.$$(SELECTORS.tabs);
   await elTabVersions.click();
 }
 
-async function openRelevantExtensionPage({ page, packageId }: { page: Page; packageId: number }): Promise<unknown> {
-  const urlExtension = getBaseDashboardUrl(packageId);
-  return new Promise(async (resolve, reject) => {
-    const responseListener = (response: HTTPResponse): void => {
+async function openRelevantExtensionPage({
+  page,
+  packageId,
+  urlStart
+}: {
+  page: Page;
+  packageId: number;
+  urlStart: string;
+}): Promise<void> {
+  await new Promise(async (resolve, reject) => {
+    const listener = async (response: Response): Promise<void> => {
       if (response.url() !== `https://addons.opera.com/api/developer/packages/${packageId}/`) {
         const isCookieInvalid = response.url().startsWith("https://auth.opera.com");
         if (isCookieInvalid) {
@@ -116,6 +104,7 @@ async function openRelevantExtensionPage({ page, packageId }: { page: Page; pack
       }
 
       if (response.statusText() === "Not Found") {
+        page.off("response", listener);
         reject(
           getVerboseMessage({
             store: STORE,
@@ -124,12 +113,13 @@ async function openRelevantExtensionPage({ page, packageId }: { page: Page; pack
         );
         return;
       }
-      page.off("response", responseListener);
-      switchToTabVersions({ page }).then(() => resolve(true));
+      await switchToTabVersions({ page });
+      page.off("response", listener);
+      resolve(true);
     };
-    page.on("response", responseListener);
+    page.on("response", listener);
 
-    page.goto(urlExtension).catch(() => {});
+    await page.goto(urlStart);
   });
 }
 
@@ -173,15 +163,16 @@ async function updateExtension({ page, packageId }: { page: Page; packageId: num
     }
 
     const prefixError = errors.length === 1 ? "Error" : "Errors";
-    reject(
-      getVerboseMessage({
+    reject({
+      error: getVerboseMessage({
         store: STORE,
         message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
       ${errors.join("\n")}
       `,
         prefix: "Error"
-      })
-    );
+      }),
+      failType: "update"
+    });
   });
 }
 
@@ -235,34 +226,33 @@ async function addChangelogIfNeeded({
     }
   }
 
-  const url = page.url().split("?")[0];
-  await page.goto(url, { waitUntil: "networkidle0" });
+  await page.goto(page.url().split("?")[0]);
 }
 
 async function addLoginCookie({
-  page,
+  context,
   sessionid,
   csrftoken
 }: {
-  page: Page;
+  context: BrowserContext;
   sessionid: string;
   csrftoken: string;
 }): Promise<void> {
   const domain = "addons.opera.com";
-  const cookies = [
+  await context.addCookies([
     {
       name: "sessionid",
       value: sessionid,
-      domain
+      domain,
+      path: "/"
     },
     {
       name: "csrftoken",
       value: csrftoken,
-      domain
+      domain,
+      path: "/"
     }
-  ];
-
-  await page.setCookie(...cookies);
+  ]);
 }
 
 function getBaseDashboardUrl(packageId: number): string {
@@ -270,7 +260,7 @@ function getBaseDashboardUrl(packageId: number): string {
 }
 
 async function cancelUpload({ page }: { page: Page }): Promise<void> {
-  await page.goto(page.url().split("?")[0], { waitUntil: "networkidle0" });
+  await page.goto(page.url().split("?")[0]);
   await page.click(SELECTORS.buttonCancel);
 }
 
@@ -287,7 +277,28 @@ async function deleteCurrentVersionIfAlreadyExists({
 }): Promise<boolean> {
   const deletePackage = async (): Promise<void> => {
     await page.waitForSelector(SELECTORS.buttonCancel);
-    await page.click(SELECTORS.buttonCancel);
+    const { error } = await page.$eval<{ error: null | string }>(
+      SELECTORS.buttonCancel,
+      (elButton: HTMLButtonElement) => {
+        return new Promise(resolve => {
+          if (elButton.disabled) {
+            resolve({ error: "Version is already deployed" });
+            return;
+          }
+          elButton.click();
+          resolve({ error: null });
+        });
+      }
+    );
+    if (error) {
+      throw new Error(
+        getVerboseMessage({
+          store: STORE,
+          message: error,
+          prefix: "Error"
+        })
+      );
+    }
 
     if (isVerbose) {
       console.log(
@@ -306,7 +317,6 @@ async function deleteCurrentVersionIfAlreadyExists({
   const isExists = await page.$eval(
     selVersions,
     (elVersions: HTMLSelectElement, version) =>
-      // @ts-ignore
       [...elVersions.options].some(elOption => elOption.textContent === version),
     version
   );
@@ -320,6 +330,67 @@ async function deleteCurrentVersionIfAlreadyExists({
   return false;
 }
 
+async function prepareToDeploy({
+  browser,
+  page,
+  packageId,
+  zip,
+  isVerbose,
+  urlStart,
+  changelog
+}: {
+  browser: Browser;
+  page: Page;
+  packageId: number;
+  zip: string;
+  isVerbose: boolean;
+  urlStart: string;
+  changelog?: string;
+}): Promise<{ error?: string }> {
+  return new Promise(async resolve => {
+    const isDeleted = await deleteCurrentVersionIfAlreadyExists({
+      page,
+      packageId,
+      zip,
+      isVerbose
+    });
+    if (isDeleted) {
+      await page.reload();
+      await page.goto(urlStart);
+    }
+
+    return switchToTabVersions({ page })
+      .then(() =>
+        uploadZip({
+          page,
+          zip: getFullPath(zip),
+          packageId
+        })
+      )
+      .then(() => {
+        if (isVerbose) {
+          console.log(
+            getVerboseMessage({
+              store: STORE,
+              message: `Uploaded ZIP: ${zip}`
+            })
+          );
+        }
+      })
+      .then(() => verifyPublicCodeExistence({ page }))
+      .then(() => addChangelogIfNeeded({ page, changelog, isVerbose, zip }))
+      .then(() => updateExtension({ page, packageId }))
+      .then(() => resolve({ error: "" }))
+      .catch(async ({ error, failType }) => {
+        if (failType === "upload") {
+          await cancelUpload({ page });
+        }
+        await browser.close();
+        resolve({ error });
+      });
+  });
+}
+
 export default async function deployToOpera({
   sessionid,
   csrftoken,
@@ -330,32 +401,30 @@ export default async function deployToOpera({
 }: OperaOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
-    const puppeteerArgs =
-      process.env.NODE_ENV === "development"
-        ? {
-            headless: false,
-            defaultViewport: { width, height },
-            args: [`--window-size=${width},${height}`] //, "--window-position=0,0"],
-          }
-        : {};
-    const browser = await puppeteer.launch(puppeteerArgs);
+    const isDev = process.env.NODE_ENV === "development";
+    const browser = await chromium.launch(
+      isDev && {
+        headless: false,
+        args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+      }
+    );
+    const context = await browser.newContext(isDev && { viewport: { width, height } });
 
-    const [page] = await browser.pages();
-    await disableImages(page);
-    await addLoginCookie({ page, sessionid, csrftoken });
+    await addLoginCookie({ context, sessionid, csrftoken });
+    const page = await context.newPage();
     const urlStart = `${getBaseDashboardUrl(packageId)}?tab=versions`;
 
     if (isVerbose) {
       console.log(
         getVerboseMessage({
           store: STORE,
-          message: `Launched a Puppeteer session in ${urlStart}`
+          message: `Launched a Playwright session in ${urlStart}`
         })
       );
     }
 
     try {
-      await openRelevantExtensionPage({ page, packageId });
+      await openRelevantExtensionPage({ page, packageId, urlStart });
     } catch (e) {
       await browser.close();
       reject(e);
@@ -371,54 +440,12 @@ export default async function deployToOpera({
       );
     }
 
-    const isDeleted = await deleteCurrentVersionIfAlreadyExists({
-      page,
-      packageId,
-      zip,
-      isVerbose
-    });
-    if (isDeleted) {
-      await page.reload();
-      await page.goto(urlStart);
-    }
-
-    await switchToTabVersions({ page });
-
-    try {
-      await uploadZip({
-        page,
-        zip: getFullPath(zip),
-        packageId
-      });
-    } catch (e) {
-      await browser.close();
-      reject(e);
-      return;
-    }
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: `Uploaded ZIP: ${zip}`
-        })
-      );
-    }
-
-    await verifyPublicCodeExistence({ page });
-    await addChangelogIfNeeded({ page, changelog, isVerbose, zip });
-
-    try {
-      await updateExtension({ page, packageId });
-    } catch (e) {
-      await cancelUpload({ page });
-      await browser.close();
-      reject(e);
-      return;
-    }
+    let error;
+    do {
+      ({ error } = await prepareToDeploy({ browser, page, packageId, zip, isVerbose, urlStart, changelog }));
+    } while (error?.includes("400"));
 
     logSuccessfullyPublished({ extId: packageId, store: STORE, zip });
-
     await browser.close();
     resolve(true);
   });

@@ -1,11 +1,5 @@
-import puppeteer, { Page } from "puppeteer";
-import {
-  disableImages,
-  getExistingElementSelector,
-  getFullPath,
-  getVerboseMessage,
-  logSuccessfullyPublished
-} from "../../utils.js";
+import { BrowserContext, chromium, Page } from "playwright";
+import { getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 import { FirefoxOptions } from "./firefox-input.js";
 
 const STORE = "Firefox";
@@ -38,8 +32,8 @@ async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: s
 }
 
 async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId: string }): Promise<boolean> {
-  const elInputFile = await page.$(SELECTORS.inputFile);
-  await elInputFile.uploadFile(zip);
+  const elInputFile = page.locator(SELECTORS.inputFile);
+  await elInputFile.setInputFiles(zip);
 
   await page.$eval(SELECTORS.buttonSubmit, (elSubmit: HTMLButtonElement) => {
     return new Promise(resolve => {
@@ -53,24 +47,20 @@ async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId:
     });
   });
 
-  const selectorExisting = await getExistingElementSelector(page, [SELECTORS.listErrors, SELECTORS.inputRadio]);
+  await page.waitForSelector(`${SELECTORS.listErrors}, ${SELECTORS.inputRadio}`);
+  const selectorExisting = page.locator(SELECTORS.listErrors) ? SELECTORS.listErrors : SELECTORS.inputRadio;
+
   return new Promise(async (resolve, reject) => {
-    if (!selectorExisting.includes(SELECTORS.listErrors)) {
+    if (selectorExisting === SELECTORS.inputRadio) {
       resolve(true);
       return;
     }
-    const errors = await page.$eval(SELECTORS.listErrors, elErrors =>
-      // @ts-ignore
-      [...elErrors.children]
-        .map(elError => elError.textContent.trim())
-        .map(error => {
-          if (error.includes("already exists")) {
-            return error.split(". ")[0];
-          }
-          return error;
-        })
+
+    const errors = await page.evaluate(
+      selListErrors => [...document.querySelector(selListErrors).children].map(elError => elError.textContent.trim()),
+      SELECTORS.listErrors
     );
-    const prefixError = errors.length > 1 ? "Errors" : "";
+    const prefixError = errors.length > 1 ? "Errors " : "";
     reject(
       getVerboseMessage({
         store: "Firefox",
@@ -83,21 +73,14 @@ async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId:
   });
 }
 
-async function uploadZipSourceIfNeeded({
-  page,
-  zipSource,
-  isUpload
-}: {
-  page: Page;
-  zipSource: string;
-  isUpload: boolean;
-}): Promise<void> {
+async function uploadZipSourceIfNeeded({ page, zipSource }: { page: Page; zipSource: string }): Promise<void> {
+  const isUpload = Boolean(zipSource);
   const uploadAnswer = isUpload ? "yes" : "no";
   await page.click(`input[type=radio][name=has_source][value=${uploadAnswer}]`);
 
   if (isUpload) {
-    const elFileInput = await page.$(SELECTORS.inputFile);
-    await elFileInput.uploadFile(zipSource);
+    const elFileInput = page.locator(SELECTORS.inputFile);
+    await elFileInput.setInputFiles(getFullPath(zipSource));
   }
   await page.click(SELECTORS.buttonSubmit);
 }
@@ -149,16 +132,16 @@ function getBaseDashboardUrl(extId?: string): string {
   return urlBase;
 }
 
-async function addLoginCookie({ page, sessionid }: { page: Page; sessionid: string }): Promise<void> {
+async function addLoginCookie({ context, sessionid }: { context: BrowserContext; sessionid: string }): Promise<void> {
   const domain = "addons.mozilla.org";
-  const cookies = [
+  await context.addCookies([
     {
+      domain,
+      path: "/",
       name: "sessionid",
-      value: sessionid,
-      domain
+      value: sessionid
     }
-  ];
-  await page.setCookie(...cookies);
+  ]);
 }
 
 async function verifyValidCookies({ page }: { page: Page }): Promise<true> {
@@ -193,31 +176,29 @@ export default async function deployToFirefox({
 }: FirefoxOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     const [width, height] = [1280, 720];
-    const puppeteerArgs =
-      process.env.NODE_ENV === "development"
-        ? {
-            headless: false,
-            defaultViewport: { width, height },
-            args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
-          }
-        : {};
-    const browser = await puppeteer.launch(puppeteerArgs);
+    const isDev = process.env.NODE_ENV === "development";
+    const browser = await chromium.launch(
+      isDev && {
+        headless: false,
+        args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+      }
+    );
+    const context = await browser.newContext(isDev && { viewport: { width, height } });
 
-    const [page] = await browser.pages();
-    await disableImages(page);
-    await addLoginCookie({ page, sessionid });
+    await addLoginCookie({ context, sessionid });
+    const page = await context.newPage();
     const urlStart = getBaseDashboardUrl(extId);
 
     if (isVerbose) {
       console.log(
         getVerboseMessage({
           store: STORE,
-          message: `Launched a Puppeteer session in ${urlStart}`
+          message: `Launched a Playwright session in ${urlStart}`
         })
       );
     }
 
-    await page.goto(urlStart, { waitUntil: "networkidle0" });
+    await page.goto(urlStart);
 
     try {
       await verifyValidCookies({ page });
@@ -274,11 +255,7 @@ export default async function deployToFirefox({
       );
     }
 
-    await uploadZipSourceIfNeeded({
-      page,
-      zipSource: getFullPath(zipSource),
-      isUpload: Boolean(zipSource)
-    });
+    await uploadZipSourceIfNeeded({ page, zipSource });
 
     if (isVerbose && zipSource) {
       console.log(
