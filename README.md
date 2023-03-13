@@ -25,7 +25,7 @@ Supported stores:
 
 # Core packages used
 
-- [Puppeteer](https://github.com/puppeteer/puppeteer) - for updating extensions on Firefox Add-ons
+- [Playwright](https://github.com/microsoft/playwright) - for updating extensions on Firefox Add-ons
   Add-ons / Opera Add-ons store.
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 - [Microsoft Edge Publish API](https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api)
@@ -158,7 +158,7 @@ EXT_ID="ExtensionID"
 #### `firefox.env`
 
 ```dotenv
-sessionid="sessionid_value"
+SESSIONID="sessionid_value"
 ZIP="dist/some-zip-v{version}.zip"
 ZIP_SOURCE="dist/some-zip-source-v{version}.zip"
 EXT_ID="ExtensionID"
@@ -178,8 +178,8 @@ PRODUCT_ID="ProductID"
 #### `opera.env`
 
 ```dotenv
-sessionid="sessionid_value"
-csrftoken="csrftoken_value"
+SESSIONID="sessionid_value"
+CSRFTOKEN="csrftoken_value"
 ZIP="dist/some-zip-v{version}.zip"
 PACKAGE_ID=123456
 ```
