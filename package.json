@@ -89,11 +89,7 @@
     "fetch-blob": "^3.2.0",
     "formdata-node": "^5.0.0",
     "formdata-polyfill": "^4.0.10",
-    "jose": "^4.11.1",
-    "jsonwebtoken": "^8.5.1",
-    "node-fetch": "^3.3.0",
-    "parse-duration": "^1.0.2",
-    "puppeteer": "^19.4.1",
+    "playwright": "^1.31.2",
     "yargs": "^17.6.2",
     "zip-local": "^0.3.5"
   }
