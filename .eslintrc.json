@@ -23,6 +23,7 @@
     "@typescript-eslint/interface-name-prefix": "off",
     "no-async-promise-executor": "off",
     "semi": "warn",
+    "indent": ["warn", 2],
     "import/order": [
       "warn",
       {
