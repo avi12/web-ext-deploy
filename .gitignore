@@ -6,5 +6,4 @@ dist-esm
 *.env
 .DS_Store
 .idea
-examples/**/package-json.lock
-dist_packed
+dist-pack-ext
