@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
-import puppeteer, { Page } from "puppeteer";
+
+import { chromium, Page } from "playwright";
 import { SupportedGetCookies } from "./types.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "./utils.js";
 import fs from "fs";
@@ -8,81 +9,59 @@ function getFilename(site: SupportedGetCookies): string {
   return `./${site}.env`;
 }
 
+function extractCookies({ cookiesInput, cookiesToLogin }: { cookiesInput: string; cookiesToLogin: string[] }): string {
+  return cookiesInput
+    .split("; ")
+    .filter(cookieName => cookieName.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
+    .map(cookieName => cookieName.toUpperCase())
+    .join("\n");
+}
+
+async function addNavigationListener({
+  page,
+  cookiesToLogin,
+  urlToEnd,
+  resolve
+}: {
+  page: Page;
+  cookiesToLogin: string[];
+  urlToEnd: string;
+  // eslint-disable-next-line no-unused-vars
+  resolve: (value: PromiseLike<unknown> | unknown) => void;
+}): Promise<void> {
+  page.on("request", async data => {
+    const { cookie } = await data.allHeaders();
+    if (!cookie) {
+      return;
+    }
+    const isRequiredCookiesExist = cookiesToLogin.every(cookieName => cookie.includes(` ${cookieName}=`));
+    if (isRequiredCookiesExist && data.url() === urlToEnd) {
+      resolve(extractCookies({ cookiesInput: cookie, cookiesToLogin }));
+    }
+  });
+}
+
 async function saveFirefoxHeaders(page: Page): Promise<string> {
   return new Promise(async resolve => {
+    const cookiesToLogin = ["sessionid"];
     const url = "https://addons.mozilla.org/en-US/developers/";
-    const selLogin = "a.Button";
-    const isUrlMatch = (url): boolean => url.endsWith("/developers/");
-    const nameCookie = "sessionid";
-    const extractCookies = (cookies): string => {
-      const value = cookies
-        .split("; ")
-        .find(cookie => cookie.startsWith(nameCookie))
-        .split("=")[1];
-
-      return `${nameCookie}=${value}`;
-    };
-
-    const devtools = await page.target().createCDPSession();
-
-    await devtools.send("Fetch.enable", {
-      patterns: [
-        {
-          resourceType: "Document"
-        }
-      ]
-    });
-
-    devtools.on("Fetch.requestPaused", async ({ requestId, request }) => {
-      const isRequiredHeadersExist = Boolean(request.headers.Cookie);
-
-      if (isRequiredHeadersExist && isUrlMatch(request.url)) {
-        resolve(extractCookies(request.headers.Cookie));
-      }
-      await devtools.send("Fetch.continueRequest", { requestId });
-    });
-
-    await page.goto(url, { waitUntil: "domcontentloaded" });
-    await page.click(selLogin);
+    await addNavigationListener({ page, cookiesToLogin, resolve, urlToEnd: url });
+    await page.goto(url);
+    await page.click("a.Button");
   });
 }
 
 async function saveOperaHeaders(page: Page): Promise<string> {
   return new Promise(async resolve => {
-    const url = "https://addons.opera.com/developer/";
     const cookiesToLogin = ["sessionid", "csrftoken"];
-    const extractCookies = (cookiesInput): string =>
-      cookiesInput
-        .split("; ")
-        .filter(cookie => cookie.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
-        .join("\n");
-    const devtools = await page.target().createCDPSession();
-
-    await devtools.send("Fetch.enable", {
-      patterns: [
-        {
-          resourceType: "Document"
-        }
-      ]
-    });
-
-    devtools.on("Fetch.requestPaused", async ({ requestId, request }) => {
-      const isRequiredCookiesExist = cookiesToLogin.every(cookie =>
-        request.headers?.Cookie?.match(new RegExp(` ${cookie}=`))
-      );
-
-      if (isRequiredCookiesExist) {
-        resolve(extractCookies(request.headers.Cookie));
-      }
-
-      await devtools.send("Fetch.continueRequest", { requestId });
-    });
-
+    const url = "https://addons.opera.com/developer/";
+    await addNavigationListener({ page, cookiesToLogin, resolve, urlToEnd: url });
     await page.goto(url);
   });
 }
 
-const siteFuncs = {
+// eslint-disable-next-line no-unused-vars
+const siteFuncs: { [key in SupportedGetCookies]: Function } = {
   firefox: saveFirefoxHeaders,
   opera: saveOperaHeaders
 } as const;
@@ -105,19 +84,17 @@ export async function getSignInCookie(siteNames: SupportedGetCookies[]): Promise
   }
 
   const [width, height] = [1280, 720];
-  const browser = await puppeteer.launch({
+  const browser = await chromium.launch({
     headless: false,
-    defaultViewport: { width, height },
     args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+  });
+  const context = await browser.newContext({
+    viewport: { width, height }
   });
 
   for (const siteName of siteNames) {
-    let [page] = await browser.pages();
-    if (page.url() !== "about:blank") {
-      page = await browser.newPage();
-    }
-
-    const pagesCurrent = await browser.pages();
+    const page = await context.newPage();
+    const pagesCurrent = context.pages();
     if (pagesCurrent.length > 1) {
       await pagesCurrent[0].close();
     }
