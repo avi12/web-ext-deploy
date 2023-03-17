@@ -7,7 +7,7 @@ import { ChromeOptions, prepareToDeployChrome } from "./stores/chrome/chrome-inp
 import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/edge/edge-input.js";
 import { FirefoxOptions, prepareToDeployFirefox } from "./stores/firefox/firefox-input.js";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input.js";
-import { Stores, SupportedGetCookies } from "./types.js";
+import { Stores, SupportedGetCookies, SupportedStores } from "./types.js";
 
 const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy(?:[\\/](?:dist-esm|src)[\\/]index\.(?:ts|js))?$/));
 
@@ -71,8 +71,9 @@ async function initCli(): Promise<void> {
   const storeEntries = Object.entries(storeJsons);
 
   const storeFuncs: {
-    // eslint-disable-next-line no-unused-vars
-    [store in typeof Stores[number]]: (deploy) => Promise<boolean>;
+    [store in SupportedStores]: (
+      deploy: ChromeOptions | FirefoxOptions | EdgeOptionsPublishApi | OperaOptions
+    ) => Promise<boolean>;
   } = {
     chrome: deployChrome,
     firefox: deployFirefox,

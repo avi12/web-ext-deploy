@@ -7,7 +7,7 @@ import { ChromeOptions } from "./stores/chrome/chrome-input.js";
 import { EdgeOptionsPublishApi } from "./stores/edge/edge-input.js";
 import { FirefoxOptions } from "./stores/firefox/firefox-input.js";
 import { OperaOptions } from "./stores/opera/opera-input.js";
-import { Stores, SupportedGetCookies } from "./types.js";
+import { Stores, SupportedGetCookies, SupportedStores } from "./types.js";
 import { isObjectEmpty } from "./utils.js";
 
 const argv = yargs(process.argv.slice(2))
@@ -80,8 +80,7 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
       stores[store] = jsonStore;
     }
     return stores;
-    // eslint-disable-next-line no-unused-vars
-  }, {} as { [store in typeof Stores[number]]: unknown });
+  }, {} as { [store in SupportedStores]: unknown });
 }
 
 function jsonCamelCased(jsonStores: { [s: string]: string | number }): any {
@@ -97,8 +96,7 @@ function jsonCamelCased(jsonStores: { [s: string]: string | number }): any {
 }
 
 const StoreObjects: {
-  // eslint-disable-next-line no-unused-vars
-  [key in typeof Stores[number]]: ChromeOptions | FirefoxOptions | EdgeOptionsPublishApi | OperaOptions;
+  [key in SupportedStores]: ChromeOptions | FirefoxOptions | EdgeOptionsPublishApi | OperaOptions;
 } = {
   chrome: {} as ChromeOptions,
   firefox: {} as FirefoxOptions,
