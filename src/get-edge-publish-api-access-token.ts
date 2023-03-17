@@ -45,7 +45,6 @@ async function getData({ clientId, clientSecret, accessTokenUrl }: EdgePublishAp
 export function appendToEdgeEnv(data: object): void {
   const filename = "./edge.env";
   const { parsed: envCurrent = {} } = dotenv.config({ path: filename });
-  delete envCurrent.cookie;
   const envAccessToken = dotenv.parse(headersToEnv(data));
   const envNew = { ...envCurrent, ...envAccessToken };
   fs.writeFileSync(filename, headersToEnv(envNew));
