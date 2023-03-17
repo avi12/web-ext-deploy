@@ -48,7 +48,7 @@ async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId:
   });
 
   await page.waitForSelector(`${SELECTORS.listErrors}, ${SELECTORS.inputRadio}`);
-  const selectorExisting = page.locator(SELECTORS.listErrors) ? SELECTORS.listErrors : SELECTORS.inputRadio;
+  const selectorExisting = page.locator(SELECTORS.inputRadio) ? SELECTORS.inputRadio : SELECTORS.listErrors;
 
   return new Promise(async (resolve, reject) => {
     if (selectorExisting === SELECTORS.inputRadio) {
