@@ -49,15 +49,7 @@ async function verifyUploadIsValid({
   };
 }
 
-async function uploadZip({
-  page,
-  zip,
-  packageId
-}: {
-  page: Page;
-  zip: string;
-  packageId: number;
-}): Promise<boolean> {
+async function uploadZip({ page, zip, packageId }: { page: Page; zip: string; packageId: number }): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     await page.setInputFiles(SELECTORS.inputFile, zip);
     await page.click(SELECTORS.buttonUploadNewVersion);
