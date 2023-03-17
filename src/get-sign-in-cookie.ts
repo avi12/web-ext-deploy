@@ -26,7 +26,6 @@ async function addNavigationListener({
   page: Page;
   cookiesToLogin: string[];
   urlToEnd: string;
-  // eslint-disable-next-line no-unused-vars
   resolve: (value: PromiseLike<unknown> | unknown) => void;
 }): Promise<void> {
   page.on("request", async data => {
@@ -60,7 +59,6 @@ async function saveOperaHeaders(page: Page): Promise<string> {
   });
 }
 
-// eslint-disable-next-line no-unused-vars
 const siteFuncs: { [key in SupportedGetCookies]: Function } = {
   firefox: saveFirefoxHeaders,
   opera: saveOperaHeaders

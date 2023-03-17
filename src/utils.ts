@@ -45,7 +45,6 @@ export function logSuccessfullyPublished({
   zip: string;
 }): void {
   const storeNames: {
-    // eslint-disable-next-line no-unused-vars
     [store in typeof Stores[number]]: string;
   } = {
     chrome: "Chrome Web Store",
