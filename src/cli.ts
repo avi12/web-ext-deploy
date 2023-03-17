@@ -50,7 +50,8 @@ const argv = yargs(process.argv.slice(2))
 function getJsons(isUseEnv?: boolean): Record<string, any> {
   if (isUseEnv) {
     console.log(chalk.blue("Using env mode"));
-    return Stores.reduce((stores: { [s: string]: unknown }, store: string) => {
+    const stores = (argv.include || Stores) as SupportedStores[];
+    return stores.reduce((stores: Record<string, any>, store: string) => {
       const { parsed = {} } = dotenv.config({ path: `${store}.env` });
       if (!isObjectEmpty(parsed)) {
         const yargsStoreArgs = getJsons(false);

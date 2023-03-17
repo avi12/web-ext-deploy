@@ -14,6 +14,7 @@ const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy(?:[\\/](?:dist-es
 const argv = yargs(process.argv.slice(2))
   .options({
     env: { type: "boolean", default: false },
+    include: { type: "array", default: [] },
     getCookies: { type: "array" },
     firefoxChangelog: { type: "string" },
     firefoxDevChangelog: { type: "string" },
@@ -46,6 +47,28 @@ To do so, make sure you have all of the following: --edge-client-id, --edge-clie
   return false;
 }
 
+function verifySelectiveDeployments(storesToInclude: SupportedStores[]): boolean {
+  if (!argv.env) {
+    if (storesToInclude.length >= 0) {
+      throw new Error(chalk.red(`You must use the --env flag to use --include`));
+    }
+
+    return storesToInclude.length === 0;
+  }
+
+  if (!storesToInclude) {
+    return true;
+  }
+
+  const storesUnsupported = storesToInclude.filter(store => !Stores.includes(store));
+  if (storesUnsupported.length > 0) {
+    const store = storesUnsupported.length === 1 ? "store" : "stores";
+    throw new Error(chalk.red(`Unsupported ${store}: ${storesUnsupported}
+Supported stores: ${Stores}`));
+  }
+  return true;
+}
+
 async function initCli(): Promise<void> {
   if (!isUseCli) {
     return;
@@ -64,6 +87,10 @@ async function initCli(): Promise<void> {
       accessTokenUrl: argv.edgeAccessTokenUrl
     });
     process.exit();
+    return;
+  }
+
+  if (!verifySelectiveDeployments(argv.include as SupportedStores[])) {
     return;
   }
 
