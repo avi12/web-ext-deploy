@@ -13,6 +13,7 @@ import { isObjectEmpty } from "./utils.js";
 const argv = yargs(process.argv.slice(2))
   .options({
     env: { type: "boolean" },
+    include: { type: "array" },
     extId: { type: "string" },
     zip: { type: "string" },
     verbose: { type: "boolean" },
@@ -46,27 +47,23 @@ const argv = yargs(process.argv.slice(2))
   })
   .parseSync();
 
-function getJsons(isUseEnv?: boolean): { [p: string]: any } {
+function getJsons(isUseEnv?: boolean): Record<string, any> {
   if (isUseEnv) {
     console.log(chalk.blue("Using env mode"));
     return Stores.reduce((stores: { [s: string]: unknown }, store: string) => {
       const { parsed = {} } = dotenv.config({ path: `${store}.env` });
       if (!isObjectEmpty(parsed)) {
         const yargsStoreArgs = getJsons(false);
-        let additionalParams = {};
-        if (yargsStoreArgs[store]) {
-          additionalParams = yargsStoreArgs[store];
-        }
-        stores[store] = { ...parsed, ...additionalParams };
+        stores[store] = { ...parsed, ...yargsStoreArgs[store] };
       }
       return stores;
     }, {});
   }
 
   if (!argv.env) {
-    console.trace(chalk.blue("Using CLI mode"));
+    console.log(chalk.blue("Using CLI mode"));
   }
-  const getFlagsArguments = (argv: any, store: string): { [s: string]: unknown } => {
+  const getFlagsArguments = (argv: any, store: string): Record<string, any> => {
     const entries = Object.entries(argv)
       .filter(([key]) => key.startsWith(`${store}-`))
       .map(([key, value]) => [key.replace(`${store}-`, ""), value]);
@@ -83,7 +80,7 @@ function getJsons(isUseEnv?: boolean): { [p: string]: any } {
   }, {} as { [store in SupportedStores]: unknown });
 }
 
-function jsonCamelCased(jsonStores: { [s: string]: string | number }): any {
+function jsonCamelCased(jsonStores: Record<string, any>): any {
   const entriesStores = Object.entries(jsonStores);
 
   const entriesWithCamelCasedKeys = entriesStores.map(([store, values]) => {
@@ -117,7 +114,7 @@ function fillMissing(jsonStoresRaw: typeof StoreObjects): typeof StoreObjects {
       return;
     }
     entries.forEach(([store, values]) => {
-      values[argument] = values[argument] || argv[argument];
+      values[argument] ||= argv[argument];
       jsonStores[store] = values;
     });
   });
@@ -128,7 +125,9 @@ function fillMissing(jsonStoresRaw: typeof StoreObjects): typeof StoreObjects {
 export function getJsonStoresFromCli(): typeof StoreObjects {
   const jsonStoresRaw = jsonCamelCased(getJsons(argv.env));
   if (isObjectEmpty(jsonStoresRaw)) {
-    throw new Error("Please supply details of at least one store. See https://github.com/avi12/web-ext-deploy#usage");
+    throw new Error(
+      chalk.red("Please supply details of at least one store. See https://github.com/avi12/web-ext-deploy#usage")
+    );
   }
 
   return fillMissing(jsonStoresRaw);
