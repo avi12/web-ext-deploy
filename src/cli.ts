@@ -64,7 +64,7 @@ function getJsons(isUseEnv?: boolean): Record<string, any> {
   if (!argv.env) {
     console.log(chalk.blue("Using CLI mode"));
   }
-  const getFlagsArguments = (argv: any, store: string): Record<string, any> => {
+  const getFlagsArguments = (argv: any, store: SupportedStores): Record<string, any> => {
     const entries = Object.entries(argv)
       .filter(([key]) => key.startsWith(`${store}-`))
       .map(([key, value]) => [key.replace(`${store}-`, ""), value]);
@@ -72,7 +72,7 @@ function getJsons(isUseEnv?: boolean): Record<string, any> {
     return Object.fromEntries(entries);
   };
 
-  return Stores.reduce((stores, store: string) => {
+  return Stores.reduce((stores, store: SupportedStores) => {
     const jsonStore = getFlagsArguments(argv, store);
     if (!isObjectEmpty(jsonStore)) {
       stores[store] = jsonStore;
