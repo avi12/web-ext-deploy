@@ -127,7 +127,7 @@ export function getJsonStoresFromCli(): typeof StoreObjects {
   const jsonStoresRaw = jsonCamelCased(getJsons(argv.env));
   if (isObjectEmpty(jsonStoresRaw)) {
     throw new Error(
-      chalk.red("Please supply details of at least one store. See https://github.com/avi12/web-ext-deploy#usage")
+      chalk.red("Please supply parameters of at least one store. See https://github.com/avi12/web-ext-deploy#usage")
     );
   }
 
