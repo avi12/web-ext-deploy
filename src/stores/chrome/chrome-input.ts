@@ -24,7 +24,7 @@ export class ChromeOptions {
   /** If `true`, it will be logged to the console when the uploading has begun. */
   verbose: false;
 
-  constructor(options) {
+  constructor(options: ChromeOptions) {
     if (!options.extId) {
       throw new Error(
         getErrorMessage("No extension ID is provided, e.g. https://chrome.google.com/webstore/detail/EXT_ID")
