@@ -95,12 +95,14 @@ web-ext-deploy --env
 - `--verbose` boolean?  
   If specified, the steps of every store will be logged to the console.
 
-- `--include` (`"chrome" | "firefox" | "edge" | "opera"`)[]?  
+- `--publish-only` (`"chrome" | "firefox" | "edge" | "opera"`)[]?  
   If specified, for each specified store that has an `.env` file, it will be deployed.  
   E.g. if you have `chrome.env`, `firefox.env`, `opera.env`, and you run:
+
   ```shell
-  web-ext-deploy --env --include=chrome firefox
+  web-ext-deploy --env --publish-only=chrome firefox
   ```
+
   It will only deploy to Chrome Web Store and Firefox Add-ons Store.
 
 - `--zip` string?  

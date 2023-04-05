@@ -14,7 +14,7 @@ const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy(?:[\\/](?:dist-es
 const argv = yargs(process.argv.slice(2))
   .options({
     env: { type: "boolean", default: false },
-    include: { type: "array", default: [] },
+    publishOnly: { type: "array", default: [] },
     getCookies: { type: "array" },
     firefoxChangelog: { type: "string" },
     firefoxDevChangelog: { type: "string" },
@@ -50,7 +50,7 @@ To do so, make sure you have all of the following: --edge-client-id, --edge-clie
 function verifySelectiveDeployments(storesToInclude: SupportedStores[]): boolean {
   if (!argv.env) {
     if (storesToInclude.length >= 0) {
-      throw new Error(chalk.red(`You must use the --env flag to use --include`));
+      throw new Error(chalk.red(`You must use the --env flag to use --publish-only`));
     }
 
     return storesToInclude.length === 0;
@@ -90,7 +90,7 @@ async function initCli(): Promise<void> {
     return;
   }
 
-  if (!verifySelectiveDeployments(argv.include as SupportedStores[])) {
+  if (!verifySelectiveDeployments(argv.publishOnly as SupportedStores[])) {
     return;
   }
 

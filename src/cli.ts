@@ -13,7 +13,7 @@ import { isObjectEmpty } from "./utils.js";
 const argv = yargs(process.argv.slice(2))
   .options({
     env: { type: "boolean" },
-    include: { type: "array" },
+    publishOnly: { type: "array" },
     extId: { type: "string" },
     zip: { type: "string" },
     verbose: { type: "boolean" },
@@ -50,7 +50,7 @@ const argv = yargs(process.argv.slice(2))
 function getJsons(isUseEnv?: boolean): Record<string, any> {
   if (isUseEnv) {
     console.log(chalk.blue("Using env mode"));
-    const stores = (argv.include || Stores) as SupportedStores[];
+    const stores = (argv.publishOnly || Stores) as SupportedStores[];
     return stores.reduce((stores: Record<string, any>, store: string) => {
       const { parsed = {} } = dotenv.config({ path: `${store}.env` });
       if (!isObjectEmpty(parsed)) {
