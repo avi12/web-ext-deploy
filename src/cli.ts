@@ -5,7 +5,7 @@ import yargs from "yargs";
 import { getSignInCookie } from "./get-sign-in-cookie.js";
 import { ChromeOptions } from "./stores/chrome/chrome-input.js";
 import { EdgeOptionsPublishApi } from "./stores/edge/edge-input.js";
-import { FirefoxOptions } from "./stores/firefox/firefox-input.js";
+import { FirefoxOptionsSubmissionApi } from "./stores/firefox/firefox-input.js";
 import { OperaOptions } from "./stores/opera/opera-input.js";
 import { Stores, SupportedGetCookies, SupportedStores } from "./types.js";
 import { isObjectEmpty } from "./utils.js";
@@ -94,10 +94,10 @@ function jsonCamelCased(jsonStores: Record<string, any>): any {
 }
 
 const StoreObjects: {
-  [key in SupportedStores]: ChromeOptions | FirefoxOptions | EdgeOptionsPublishApi | OperaOptions;
+  [key in SupportedStores]: ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions;
 } = {
   chrome: {} as ChromeOptions,
-  firefox: {} as FirefoxOptions,
+  firefox: {} as FirefoxOptionsSubmissionApi,
   edge: {} as EdgeOptionsPublishApi,
   opera: {} as OperaOptions
 } as const;

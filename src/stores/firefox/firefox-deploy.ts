@@ -1,292 +1,253 @@
-import { BrowserContext, chromium, Page } from "playwright";
-import { getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
-import { FirefoxOptions } from "./firefox-input.js";
+import Axios, { AxiosInstance, AxiosResponse } from "axios";
+import FormData from "form-data";
+import jwt from "jsonwebtoken";
+import { FirefoxCreateNewVersion, FirefoxUploadDetail, FirefoxUploadSource } from "../../types.js";
+import { getErrorMessage, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
+import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
+import fs from "fs";
 
 const STORE = "Firefox";
-const SELECTORS = {
-  listErrors: ".errorlist",
-  buttonSubmit: "button[type=submit]",
-  inputFile: "input[type=file]",
-  inputRadio: "input[type=radio]",
-  inputChangelog: "textarea[name*=release_notes]",
-  inputDevChangelog: "textarea[name=approval_notes]"
-} as const;
+let axios: AxiosInstance;
 
-async function openRelevantExtensionPage({ page, extId }: { page: Page; extId: string }): Promise<boolean> {
-  const urlSubmission = `${getBaseDashboardUrl(extId)}/versions/submit/`;
+function getJwtBlob({ jwtIssuer, jwtSecret }: { jwtIssuer: string; jwtSecret: string }): string {
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: jwtIssuer,
+    jti: Math.random().toString(),
+    iat: issuedAt,
+    exp: issuedAt + 60
+  };
+  return jwt.sign(payload, jwtSecret, { algorithm: "HS256" });
+}
 
-  const response = await page.goto(urlSubmission);
-  return new Promise((resolve, reject) => {
-    if (response.statusText() === "Forbidden") {
-      reject(
-        getVerboseMessage({
-          store: "Firefox",
-          message: `Extension ID does not exist: ${extId}`,
-          prefix: "Error"
-        })
-      );
-      return;
+function getFormData({ zip }: { zip: string }): FormData {
+  const formData = new FormData();
+  formData.append("upload", fs.createReadStream(zip));
+  formData.append("channel", "listed");
+  return formData;
+}
+
+async function uploadZip({ zip }: { zip: string }): Promise<{
+  uuid: string;
+  version: string;
+}> {
+  // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#upload-create
+  const {
+    data: { uuid, version }
+  } = await axios.post<FirefoxUploadDetail>(`upload/`, getFormData({ zip }), {
+    headers: {
+      "Content-Type": "multipart/form-data"
     }
-    resolve(true);
   });
+  return { uuid, version };
 }
 
-async function uploadZip({ page, zip, extId }: { page: Page; zip: string; extId: string }): Promise<boolean> {
-  const elInputFile = page.locator(SELECTORS.inputFile);
-  await elInputFile.setInputFiles(zip);
-
-  await page.$eval(SELECTORS.buttonSubmit, (elSubmit: HTMLButtonElement) => {
-    return new Promise(resolve => {
-      new MutationObserver(() => {
-        elSubmit.click();
-        resolve(true);
-      }).observe(elSubmit, {
-        attributes: true,
-        attributeFilter: ["disabled"]
-      });
-    });
-  });
-
-  await page.waitForSelector(`${SELECTORS.listErrors}, ${SELECTORS.inputRadio}`);
-  const selectorExisting = page.locator(SELECTORS.inputRadio) ? SELECTORS.inputRadio : SELECTORS.listErrors;
-
-  return new Promise(async (resolve, reject) => {
-    if (selectorExisting === SELECTORS.inputRadio) {
-      resolve(true);
-      return;
-    }
-
-    const errors = await page.evaluate(
-      selListErrors => [...document.querySelector(selListErrors).children].map(elError => elError.textContent.trim()),
-      SELECTORS.listErrors
-    );
-    const prefixError = errors.length > 1 ? "Errors " : "";
-    reject(
-      getVerboseMessage({
-        store: "Firefox",
-        prefix: prefixError,
-        message: `${prefixError}at the upload of "${extId}":
-      ${errors.join("\n")}
-      `
-      })
-    );
-  });
-}
-
-async function uploadZipSourceIfNeeded({ page, zipSource }: { page: Page; zipSource: string }): Promise<void> {
-  const isUpload = Boolean(zipSource);
-  const uploadAnswer = isUpload ? "yes" : "no";
-  await page.click(`input[type=radio][name=has_source][value=${uploadAnswer}]`);
-
-  if (isUpload) {
-    const elFileInput = page.locator(SELECTORS.inputFile);
-    await elFileInput.setInputFiles(getFullPath(zipSource));
-  }
-  await page.click(SELECTORS.buttonSubmit);
-}
-
-async function addChangelogsIfNeeded({
-  page,
+async function createNewVersion({
+  slug,
+  uuid,
   changelog,
   devChangelog,
   isVerbose
 }: {
-  page: Page;
+  slug: string;
+  uuid: string;
   changelog: string;
   devChangelog: string;
   isVerbose: boolean;
-}): Promise<void> {
-  if (changelog || devChangelog) {
-    await page.waitForSelector(SELECTORS.inputChangelog);
-  }
+}): Promise<AxiosResponse<FirefoxCreateNewVersion>> {
+  // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#version-create
+  const objChangelogs: {
+    release_notes?: { "en-US": string };
+    approval_notes?: string;
+  } = {};
+
   if (changelog) {
-    await page.type(SELECTORS.inputChangelog, changelog);
+    objChangelogs.release_notes = {
+      "en-US": changelog
+    };
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store: "Firefox",
-          message: `Added changelog: ${changelog}`
+          store: STORE,
+          message: `Adding changelog: ${changelog}`
         })
       );
     }
   }
 
   if (devChangelog) {
-    await page.type(SELECTORS.inputDevChangelog, devChangelog);
+    objChangelogs.approval_notes = devChangelog;
     if (isVerbose) {
       console.log(
         getVerboseMessage({
-          store: "Firefox",
-          message: `Added changelog for reviewers: ${devChangelog}`
+          store: STORE,
+          message: `Adding changelog for reviewers: ${devChangelog}`
         })
       );
     }
   }
-}
 
-function getBaseDashboardUrl(extId?: string): string {
-  let urlBase = "https://addons.mozilla.org/en-US/developers";
-  if (extId) {
-    urlBase += `/addon/${extId}`;
-  }
-  return urlBase;
-}
-
-async function addLoginCookie({ context, sessionid }: { context: BrowserContext; sessionid: string }): Promise<void> {
-  const domain = "addons.mozilla.org";
-  await context.addCookies([
-    {
-      domain,
-      path: "/",
-      name: "sessionid",
-      value: sessionid
-    }
-  ]);
-}
-
-async function verifyValidCookies({ page }: { page: Page }): Promise<true> {
-  return new Promise(async (resolve, reject) => {
-    if (page.url().startsWith(getBaseDashboardUrl())) {
-      resolve(true);
-      return;
-    }
-    reject(
-      getVerboseMessage({
-        store: STORE,
-        message: "Invalid/expired cookie. Please get a new one, e.g. by running: web-ext-deploy --get-cookies=firefox",
-        prefix: "Error"
-      })
-    );
+  return axios.post(`addon/${slug}/versions/`, {
+    upload: uuid,
+    ...objChangelogs
   });
 }
 
-async function updateExtension({ page }: { page: Page }): Promise<void> {
-  await page.waitForSelector(SELECTORS.buttonSubmit);
-  await page.click(SELECTORS.buttonSubmit);
+async function validateUpload({ uuid }: { uuid: string }): Promise<FirefoxUploadDetail> {
+  return new Promise((resolve, reject) => {
+    // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#upload-detail
+    let delayInSeconds = 1;
+    const maxDelayInSeconds = 60;
+    let timeout;
+
+    function clearTimer(): void {
+      clearTimeout(timeout);
+    }
+
+    async function retry(): Promise<void> {
+      axios(`upload/${uuid}/`)
+        .then(({ data }: { data: FirefoxUploadDetail }) => {
+          if (!data.processed) {
+            return false;
+          }
+          clearTimer();
+          if (data.valid) {
+            resolve(data);
+            return true;
+          }
+
+          const errors = data.validation.messages.filter(({ type }) => type === "error").map(({ message }) => message);
+          reject({
+            response: {
+              data: {
+                error: errors.length === 1 ? errors[0] : "\n" + errors.join("\n")
+              }
+            }
+          });
+          return true;
+        })
+        .then(isProcessed => {
+          if (isProcessed) {
+            clearTimer();
+            return;
+          }
+          if (delayInSeconds < maxDelayInSeconds) {
+            delayInSeconds *= 2;
+          }
+          clearTimer();
+          timeout = setTimeout(retry, delayInSeconds * 1000);
+        })
+        .catch(reject);
+    }
+
+    retry();
+  });
+}
+
+async function uploadSourceCodeIfNeeded({
+  slug,
+  zipSource,
+  version
+}: {
+  slug: string;
+  zipSource: string;
+  version: string;
+}): Promise<AxiosResponse<FirefoxUploadSource>> {
+  // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#version-sources
+  const formData = new FormData();
+  formData.append("source", fs.createReadStream(zipSource));
+  return axios.patch<FirefoxUploadSource>(`addon/${slug}/versions/${version}/`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
 }
 
 export default async function deployToFirefox({
   extId,
+  jwtIssuer,
+  jwtSecret,
   zip,
-  sessionid,
   zipSource = "",
   changelog = "",
   devChangelog = "",
   verbose: isVerbose
-}: FirefoxOptions): Promise<boolean> {
+}: FirefoxOptionsSubmissionApi): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
-    const [width, height] = [1280, 720];
-    const isDev = process.env.NODE_ENV === "development";
-    const browser = await chromium.launch(
-      isDev && {
-        headless: false,
-        args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+    axios = Axios.create({
+      baseURL: `https://addons.mozilla.org/api/v5/addons/`,
+      headers: {
+        Authorization: `JWT ${getJwtBlob({ jwtIssuer, jwtSecret })}`
       }
-    );
-    const context = await browser.newContext(isDev && { viewport: { width, height } });
-
-    await addLoginCookie({ context, sessionid });
-    const page = await context.newPage();
-    const urlStart = getBaseDashboardUrl(extId);
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: `Launched a Playwright session in ${urlStart}`
-        })
-      );
-    }
-
-    await page.goto(urlStart);
-
-    try {
-      await verifyValidCookies({ page });
-    } catch (e) {
-      await browser.close();
-      reject(e);
-      return;
-    }
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: "Opened relevant extension page"
-        })
-      );
-    }
-
-    try {
-      await openRelevantExtensionPage({ page, extId: extId.trim() });
-    } catch (e) {
-      await browser.close();
-      reject(e);
-      return;
-    }
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: `Opened extension page of ${extId}`
-        })
-      );
-    }
-
-    try {
-      await uploadZip({
-        page,
-        zip: getFullPath(zip),
-        extId: extId.trim()
-      });
-    } catch (e) {
-      await browser.close();
-      reject(e);
-      return;
-    }
-
-    if (isVerbose) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: `Uploading ZIP: ${zip}`
-        })
-      );
-    }
-
-    await uploadZipSourceIfNeeded({ page, zipSource });
-
-    if (isVerbose && zipSource) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: `Uploading source ZIP: ${zip}`
-        })
-      );
-    }
-
-    await addChangelogsIfNeeded({
-      page,
-      changelog,
-      devChangelog,
-      isVerbose
     });
 
-    if (isVerbose && zipSource) {
-      console.log(
-        getVerboseMessage({
+    try {
+      const { uuid, version } = await uploadZip({ zip });
+
+      await validateUpload({ uuid });
+
+      if (isVerbose) {
+        console.log(
+          getVerboseMessage({
+            store: STORE,
+            message: `Uploaded ZIP: ${zip}`
+          })
+        );
+      }
+
+      await createNewVersion({
+        slug: extId,
+        uuid,
+        changelog,
+        devChangelog,
+        isVerbose
+      });
+
+      if (isVerbose) {
+        console.log(
+          getVerboseMessage({
+            store: STORE,
+            message: `Creating a new version: ${version}`
+          })
+        );
+      }
+
+      await uploadSourceCodeIfNeeded({
+        slug: extId,
+        zipSource,
+        version
+      });
+
+      if (isVerbose) {
+        console.log(
+          getVerboseMessage({
+            store: STORE,
+            message: `Uploaded source ZIP: ${zipSource}`
+          })
+        );
+      }
+    } catch ({ response: { data } }) {
+      const error: string = data.detail || data.error;
+      const timeErrorMessage = (): string => {
+        const secondsTotal = Number(error.match(/\d+/)[0]);
+        const dateNext = new Date(Date.now() + secondsTotal * 1000);
+        const timeNext = dateNext.toLocaleTimeString();
+        return `${error} You can upload again at ${timeNext}.
+Or, you can deploy manually: https://addons.mozilla.org/developers/addon/${extId}/versions/submit/`;
+      };
+      reject(
+        getErrorMessage({
           store: STORE,
-          message: ("Uploaded ZIP " + (zipSource ? "and source ZIP" : "")).trim()
+          zip,
+          error: error.includes("Request was throttled") ? timeErrorMessage() : error,
+          actionName: "proceed to update"
         })
       );
+      return;
     }
-
-    await updateExtension({ page });
 
     logSuccessfullyPublished({ extId, store: STORE, zip });
 
-    await browser.close();
     resolve(true);
   });
 }

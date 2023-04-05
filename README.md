@@ -23,12 +23,12 @@ Supported stores:
   - [CLI API](#opera-add-ons-cli)
   - [Node.js API](#opera-add-ons-api)
 
-# Core packages used
+# Core packages/APIs used
 
-- [Playwright](https://github.com/microsoft/playwright) - for updating extensions on Firefox Add-ons
-  Add-ons / Opera Add-ons store.
+- [Playwright](https://github.com/microsoft/playwright) - for updating extensions on Opera Add-ons store.
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 - [Microsoft Edge Publish API](https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api)
+- [Firefox Add-ons Store Submission API](https://blog.mozilla.org/addons/2022/03/17/new-api-for-submitting-and-updating-add-ons/)
 
 # Installing
 
@@ -59,13 +59,12 @@ Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/w
 
 ### Disclaimer: I do NOT take any responsibility for leaked cookies or credentials.
 
-- Firefox: `sessionid`
 - Opera: `sessionid`, `csrftoken`
 
 If you have a hard time obtaining the cookie(s), you can run:
 
 ```shell
-web-ext-deploy --get-cookies=firefox opera
+web-ext-deploy --get-cookies=opera
 ```
 
 Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API.  
@@ -136,6 +135,7 @@ web-ext-deploy --env
   - `EXT_ID` - Get it from `https://addons.mozilla.org/addon/EXT_ID`
   - `ZIP` - The relative path to the ZIP. You can use `{version}`, which will be replaced by the `version` entry from your `package.json`
   - `ZIP_SOURCE` - Optional. The relative path to the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) of your extension, if applicable.
+  - `JWT_ISSUER`, `JWT_SECRET` - obtain from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/).
 
 - Edge Add-ons store:
 
@@ -168,7 +168,8 @@ EXT_ID="ExtensionID"
 #### `firefox.env`
 
 ```dotenv
-SESSIONID="sessionid_value"
+JWT_ISSUER="JwtIssuer"
+JWT_SECRET="JwtSecret"
 ZIP="dist/some-zip-v{version}.zip"
 ZIP_SOURCE="dist/some-zip-source-v{version}.zip"
 EXT_ID="ExtensionID"
@@ -251,12 +252,10 @@ web-ext-deploy --chrome-ext-id="ExtensionID" --chrome-refresh-token="RefreshToke
 
 - `--firefox-ext-id` string  
   The extension ID from the store URL, e.g. `https://addons.mozilla.org/addon/EXT_ID`
-- `--firefox-sessionid` string  
-  The value of the `sessionid` cookie, which will be used to log in to the publisher's account.  
-  If you have a hard time getting its value, run:
-  ```shell
-  web-ext-deploy --get-cookies=firefox
-  ```
+- `--firefox-jwt-issuer` string  
+  The JWT issuer.
+- `--firefox-jwt-secret` string  
+  The JWT secret.
 - `--firefox-zip` string  
   The relative path to the ZIP from the root.  
   You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
@@ -271,10 +270,12 @@ web-ext-deploy --chrome-ext-id="ExtensionID" --chrome-refresh-token="RefreshToke
   The technical changes made in this version, which will be seen by the Firefox Add-ons reviewers.  
   You can use `\n` for new lines.
 
+Get your `--firefox-jwt-issuer` and `--firefox-jwt-secret` from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/).
+
 Example:
 
 ```shell
-web-ext-deploy --firefox-ext-id="ExtensionID" --firefox-sessionid="sessionid_value" --firefox-zip="dist/some-zip-v{version}.zip" --firefox-changelog="Changelog\nWith line breaks" --firefox-dev-changelog="Changelog for reviewers\nWith line breaks"
+web-ext-deploy --firefox-ext-id="ExtensionID" --firefox-jwt-issuer="JwtIssuer" --firefox-jwt-secret="JwtSecret" --firefox-zip="dist/some-zip-v{version}.zip" --firefox-changelog="Changelog\nWith line breaks" --firefox-dev-changelog="Changelog for reviewers\nWith line breaks"
 ```
 
 #### Edge Add-ons CLI
@@ -385,14 +386,10 @@ Options:
 
 - `extId` string  
   Get it from `https://addons.mozilla.org/addon/EXT_ID`
-- `sessionid` string  
-  The value of the cookie `sessionid`, which will be used to log in to the publisher's account.  
-  If you have a hard time obtaining it, you can run:
-
-```shell
-web-ext-deploy --get-cookies=firefox
-```
-
+- `jwtIssuer` string  
+  The JWT issuer.
+- `jwtSecret` string  
+  The JWT secret.
 - `zip` string  
   The relative path from the root to the ZIP.  
   You can use `{version}` in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
@@ -409,6 +406,7 @@ web-ext-deploy --get-cookies=firefox
 - `verbose` boolean?  
   If `true`, every step of uploading to the Firefox Add-ons will be logged to the console.
 
+Get your `jwtIssuer` and `jwtSecret` from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/).  
 Returns `Promise<true>` or throws an exception.
 
 #### Edge Publish API
@@ -489,9 +487,8 @@ Returns `Promise<true>` or throws an exception.
 
 Examples:
 
-<!-- prettier-ignore -->
 ```ts
-import { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
+import { deployChrome, deployFirefoxSubmissionApi, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
 
 deployChrome({
   extId: "ExtensionID",
@@ -502,9 +499,10 @@ deployChrome({
   verbose: false
 }).catch(console.error);
 
-deployFirefox({
+deployFirefoxSubmissionApi({
   extId: "EXT_ID",
-  sessionid: "sessionid_value",
+  jwtIssuer: "jwtIssuer",
+  jwtSecret: "jwtSecret",
   zip: "dist/some-zip-v{version}.zip",
   zipSource: "dist/zip-source-v{version}.zip",
   changelog: "Some changes",

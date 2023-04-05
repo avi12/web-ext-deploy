@@ -2,9 +2,12 @@ import chalk from "chalk";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 import deployToFirefox from "./firefox-deploy.js";
 
-export class FirefoxOptions {
-  /** The `sessionid` cookie value to login to the publisher's account. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=firefox` */
-  sessionid: string;
+export class FirefoxOptionsSubmissionApi {
+  /** The JWT issuer. Get it from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/). */
+  jwtIssuer: string;
+
+  /** The JWT secret. Get it from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/). */
+  jwtSecret: string;
 
   /** The extension ID. E.g. `https://addons.mozilla.org/addon/EXT_ID` */
   extId: string;
@@ -37,18 +40,18 @@ export class FirefoxOptions {
   /** If `true`, every step of uploading to the Firefox Add-ons will be logged to the console. */
   verbose?: boolean;
 
-  constructor(options) {
+  constructor(options: FirefoxOptionsSubmissionApi) {
     if (!options.extId) {
       throw new Error(getErrorMessage("No extension ID is provided, e.g. https://addons.mozilla.org/addon/EXT_ID"));
     }
 
-    if (!options.sessionid) {
-      throw new Error(
-        getErrorMessage(
-          `No cookie header is provided. If you have a hard time obtaining it, run:
-web-ext-deploy --get-cookies=firefox`
-        )
-      );
+    const messageObtain = "Get it from https://addons.mozilla.org/developers/addon/api/key/";
+    if (!options.jwtIssuer) {
+      throw new Error(getErrorMessage(`No JWT issuer is provided. ${messageObtain}`));
+    }
+
+    if (!options.jwtSecret) {
+      throw new Error(getErrorMessage(`No JWT secret is provided. ${messageObtain}`));
     }
 
     // Zip checking
@@ -70,7 +73,7 @@ function getErrorMessage(message: string): string {
   return chalk.red(`Firefox: ${message}`);
 }
 
-export async function prepareToDeployFirefox(options: FirefoxOptions): Promise<boolean> {
+export async function prepareToDeployFirefox(options: FirefoxOptionsSubmissionApi): Promise<boolean> {
   options.zip = getCorrectZip(options.zip);
   if (options.zipSource) {
     options.zipSource = getCorrectZip(options.zipSource);
@@ -85,6 +88,6 @@ export async function prepareToDeployFirefox(options: FirefoxOptions): Promise<b
   }
 
   // Validate the options
-  new FirefoxOptions(options);
+  new FirefoxOptionsSubmissionApi(options);
   return deployToFirefox(options);
 }

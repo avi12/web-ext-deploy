@@ -5,7 +5,7 @@ import { getCookies, getJsonStoresFromCli } from "./cli.js";
 import { getEdgePublishApiAccessToken } from "./get-edge-publish-api-access-token.js";
 import { ChromeOptions, prepareToDeployChrome } from "./stores/chrome/chrome-input.js";
 import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/edge/edge-input.js";
-import { FirefoxOptions, prepareToDeployFirefox } from "./stores/firefox/firefox-input.js";
+import { FirefoxOptionsSubmissionApi, prepareToDeployFirefox } from "./stores/firefox/firefox-input.js";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input.js";
 import { Stores, SupportedGetCookies, SupportedStores } from "./types.js";
 
@@ -101,11 +101,11 @@ async function initCli(): Promise<void> {
 
   const storeFuncs: {
     [store in SupportedStores]: (
-      deploy: ChromeOptions | FirefoxOptions | EdgeOptionsPublishApi | OperaOptions
+      deploy: ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions
     ) => Promise<boolean>;
   } = {
     chrome: deployChrome,
-    firefox: deployFirefox,
+    firefox: deployFirefoxSubmissionApi,
     edge: deployEdgePublishApi,
     opera: deployOpera
   } as const;
@@ -123,7 +123,7 @@ export async function deployChrome(options: ChromeOptions): Promise<boolean> {
   return prepareToDeployChrome(options);
 }
 
-export async function deployFirefox(options: FirefoxOptions): Promise<boolean> {
+export async function deployFirefoxSubmissionApi(options: FirefoxOptionsSubmissionApi): Promise<boolean> {
   if (argv.firefoxChangelog) {
     options.changelog = argv.firefoxChangelog;
   }

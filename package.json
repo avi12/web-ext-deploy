@@ -66,6 +66,7 @@
     ]
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.1",
     "@types/node": "^18.11.17",
     "@types/yargs": "^17.0.17",
     "@typescript-eslint/eslint-plugin": "^5.47.0",
@@ -73,7 +74,7 @@
     "eslint": "^8.30.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-import": "^2.26.0",
-    "nodemon": "^2.0.20",
+    "nodemon": "^2.0.22",
     "prettier": "^2.8.1",
     "rimraf": "^3.0.2",
     "ts-node": "^10.9.1",
@@ -87,8 +88,10 @@
     "compare-versions": "6.0.0-rc.1",
     "dotenv": "^16.0.3",
     "fetch-blob": "^3.2.0",
+    "form-data": "^4.0.0",
     "formdata-node": "^5.0.0",
     "formdata-polyfill": "^4.0.10",
+    "jsonwebtoken": "^9.0.0",
     "playwright": "^1.31.2",
     "yargs": "^17.6.2",
     "zip-local": "^0.3.5"
