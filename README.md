@@ -345,9 +345,8 @@ web-ext-deploy --opera-package-id=123456 --opera-sessionid="sessionid_value" --o
 
 ### ESM
 
-<!-- prettier-ignore -->
 ```ts
-import { deployChrome, deployFirefox, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
+import { deployChrome, deployFirefoxSubmissionApi, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
 ```
 
 ### Node.js API
