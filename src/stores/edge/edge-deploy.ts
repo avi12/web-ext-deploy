@@ -114,14 +114,7 @@ async function checkPublishStatus({
   // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#checking-the-status-of-a-package-upload
   return axios(`/products/${productId}/submissions/operations/${operationId}`).then(({ data }) => ({
     error:
-      data.status === "Failed"
-        ? getErrorMessage({
-            store: STORE,
-            zip,
-            error: data.message,
-            actionName: "publish"
-          })
-        : ""
+      data.status === "Failed" ? getErrorMessage({ store: STORE, zip, error: data.message, actionName: "publish" }) : ""
   }));
 }
 
