@@ -107,13 +107,14 @@ export function createGitIgnoreIfNeeded(stores: string[]): void {
     return;
   }
 
-  const gitIgnoreCurrent = fs.readFileSync(filename).toString();
+  const gitIgnoreCurrent = fs.readFileSync(filename, "utf8");
   if (gitIgnoreCurrent.includes(".env")) {
     if (gitIgnoreCurrent.includes("*.env")) {
       return;
     }
 
-    fs.appendFileSync(filename, stores.map(store => `${store}.env`).join("\n"));
+    const storesToAppend = stores.filter(store => !gitIgnoreCurrent.includes(`${store}.env`));
+    fs.appendFileSync(filename, storesToAppend.map(store => `${store}.env`).join("\n"));
     return;
   }
 
