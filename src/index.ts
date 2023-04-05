@@ -63,8 +63,10 @@ function verifySelectiveDeployments(storesToInclude: SupportedStores[]): boolean
   const storesUnsupported = storesToInclude.filter(store => !Stores.includes(store));
   if (storesUnsupported.length > 0) {
     const store = storesUnsupported.length === 1 ? "store" : "stores";
-    throw new Error(chalk.red(`Unsupported ${store}: ${storesUnsupported}
-Supported stores: ${Stores}`));
+    throw new Error(
+      chalk.red(`Unsupported ${store}: ${storesUnsupported}
+Supported stores: ${Stores}`)
+    );
   }
   return true;
 }
