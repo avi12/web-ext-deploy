@@ -132,7 +132,7 @@ export async function deployToEdgePublishApi({
   accessTokenUrl,
   accessToken,
   zip,
-  verbose,
+  verbose: isVerbose,
   devChangelog
 }: EdgeOptionsPublishApi): Promise<true> {
   return new Promise(async (resolve, reject) => {
@@ -143,7 +143,7 @@ export async function deployToEdgePublishApi({
       }
     });
 
-    if (verbose) {
+    if (isVerbose) {
       console.log(
         getVerboseMessage({
           store: STORE,
@@ -170,7 +170,7 @@ export async function deployToEdgePublishApi({
       await deployToEdgePublishApi({
         productId,
         zip,
-        verbose,
+        verbose: isVerbose,
         devChangelog,
         accessToken,
         accessTokenUrl,
@@ -190,7 +190,7 @@ export async function deployToEdgePublishApi({
       return;
     }
 
-    if (verbose) {
+    if (isVerbose) {
       console.log(
         getVerboseMessage({
           store: STORE,

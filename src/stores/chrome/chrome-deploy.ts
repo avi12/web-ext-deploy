@@ -10,7 +10,7 @@ export async function deployToChrome({
   clientId,
   clientSecret,
   refreshToken,
-  verbose,
+  verbose: isVerbose,
   zip
 }: ChromeOptions): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
@@ -21,7 +21,7 @@ export async function deployToChrome({
       refreshToken
     });
 
-    if (verbose) {
+    if (isVerbose) {
       console.log(
         getVerboseMessage({
           store: STORE,
