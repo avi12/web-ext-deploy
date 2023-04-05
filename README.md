@@ -380,7 +380,7 @@ Returns `Promise<true>` or throws an exception.
 
 #### Firefox Publish API
 
-`deployFirefox` object  
+`deployFirefoxSubmissionApi` object  
 Options:
 
 - `extId` string  
