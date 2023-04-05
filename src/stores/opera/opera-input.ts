@@ -26,7 +26,7 @@ export class OperaOptions {
   /** If `true`, every step of uploading to the Opera Add-ons will be logged to the console. */
   verbose?: boolean;
 
-  constructor(options) {
+  constructor(options: OperaOptions) {
     if (!options.packageId) {
       throw new Error(
         getErrorMessage("No package ID is provided, e.g. https://addons.opera.com/developer/package/PACKAGE_ID")
