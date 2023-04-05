@@ -24,12 +24,20 @@
     "web-ext-publish",
     "chrome-deploy",
     "chrome-publish",
+    "chrome-extension",
     "firefox-deploy",
     "firefox-publish",
+    "firefox-extension",
+    "firefox-addon",
+    "firefox-submission-api",
     "opera-deploy",
     "opera-publish",
+    "opera-extension",
+    "opera-addon",
     "edge-deploy",
-    "edge-publish"
+    "edge-publish",
+    "edge-extension",
+    "edge-publish-api"
   ],
   "files": [
     "dist-esm/**/*"
