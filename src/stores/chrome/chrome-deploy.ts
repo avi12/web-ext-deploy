@@ -1,6 +1,6 @@
 import ChromeUpload from "chrome-webstore-upload";
-import { getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 import { ChromeOptions } from "./chrome-input.js";
+import { getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 import fs from "fs";
 
 const STORE = "Chrome";

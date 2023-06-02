@@ -1,7 +1,7 @@
 import Axios, { AxiosInstance, AxiosResponse } from "axios";
+import { EdgeOptionsPublishApi } from "./edge-input.js";
 import { getEdgePublishApiAccessToken } from "../../get-edge-publish-api-access-token.js";
 import { getErrorMessage, getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
-import { EdgeOptionsPublishApi } from "./edge-input.js";
 import fs from "fs";
 
 const STORE = "Edge";

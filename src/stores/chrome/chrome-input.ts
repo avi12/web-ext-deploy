@@ -1,5 +1,5 @@
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 import { deployToChrome } from "./chrome-deploy.js";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
 export class ChromeOptions {
   /** The extension ID. `https://chrome.google.com/webstore/detail/EXT_ID`<br>

@@ -1,6 +1,6 @@
 import { Browser, BrowserContext, chromium, Page, Response } from "playwright";
-import { getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 import { OperaOptions } from "./opera-input.js";
+import { getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 
 const STORE = "Opera";
 const SELECTORS = {

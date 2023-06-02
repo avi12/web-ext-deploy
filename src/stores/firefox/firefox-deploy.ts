@@ -1,9 +1,9 @@
 import Axios, { AxiosInstance, AxiosResponse } from "axios";
 import FormData from "form-data";
 import jwt from "jsonwebtoken";
+import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
 import { FirefoxCreateNewVersion, FirefoxUploadDetail, FirefoxUploadSource } from "../../types.js";
 import { getErrorMessage, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
-import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
 import fs from "fs";
 
 const STORE = "Firefox";

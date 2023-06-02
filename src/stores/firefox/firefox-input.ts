@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 import deployToFirefox from "./firefox-deploy.js";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
 export class FirefoxOptionsSubmissionApi {
   /** The JWT issuer. Get it from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/). */
