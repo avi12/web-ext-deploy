@@ -417,8 +417,8 @@ export default async function deployToOpera({
     try {
       await openRelevantExtensionPage({ page, packageId, urlStart });
     } catch (e) {
-      await browser.close();
       reject(e);
+      await browser.close();
       return;
     }
 
