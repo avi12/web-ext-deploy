@@ -3,20 +3,19 @@ import { OperaOptions } from "./opera-input.js";
 import { getExtInfo, getFullPath, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 
 const STORE = "Opera";
-const SELECTORS = {
-  listErrors: ".alert-danger",
-  listPackages: "[ng-repeat*=packageVersion]",
-  tabs: `.nav-tabs [ng-bind-html="tab.name"]`,
-  tabsLanguages: `.nav-stacked [ng-bind-html="tab.name"]`,
-  buttonSubmit: "[ng-click='submitForModeration()']",
-  buttonUploadNewVersion: `[ng-click*="upload"]`,
-  buttonCancel: "[ng-click*=cancel]",
-  inputFile: "input[type=file]",
-  inputCodePublic: `editable-field[field-value="packageVersion.source_url"] input`,
-  inputCodePrivate: `editable-field[field-value="packageVersion.source_for_moderators_url"] input`,
-  inputChangelog: `history-tab[param=en] editable-field[field-value="translation.changelog"] textarea`,
-  buttonSubmitChangelog: `editable-field span[ng-click="$ctrl.updateValue()"]`
-} as const;
+enum SELECTORS {
+  listErrors = ".alert-danger",
+  tabs = `.nav-tabs [ng-bind-html="tab.name"]`,
+  tabsLanguages = `.nav-stacked [ng-bind-html="tab.name"]`,
+  buttonSubmit = "[ng-click='submitForModeration()']",
+  buttonUploadNewVersion = `[ng-click*="upload"]`,
+  buttonCancel = "[ng-click*=cancel]",
+  inputFile = "input[type=file]",
+  inputCodePublic = `editable-field[field-value="packageVersion.source_url"] input`,
+  inputCodePrivate = `editable-field[field-value="packageVersion.source_for_moderators_url"] input`,
+  inputChangelog = `history-tab[param=en] editable-field[field-value="translation.changelog"] textarea`,
+  buttonSubmitChangelog = `editable-field span[ng-click="$ctrl.updateValue()"]`
+}
 
 async function verifyUploadIsValid({
   page,
@@ -27,7 +26,7 @@ async function verifyUploadIsValid({
 }): Promise<{ errors: boolean; message?: string }> {
   await Promise.race([page.waitForSelector(SELECTORS.listErrors), page.waitForLoadState("networkidle")]);
 
-  const errors = await page.$$eval(SELECTORS.listErrors, elErrors =>
+  const errors = await page.$$eval(SELECTORS.listErrors, (elErrors: HTMLElement[]) =>
     [...elErrors].map(elError => elError.children[1].textContent.trim())
   );
   if (page.url().match(/(\d|\?tab=conversation)$/) || errors.length === 0) {
