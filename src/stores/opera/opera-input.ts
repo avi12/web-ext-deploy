@@ -70,7 +70,7 @@ export async function prepareToDeployOpera(options: OperaOptions): Promise<boole
   options.zip = getCorrectZip(options.zip);
 
   if (options.changelog) {
-    options.changelog = options.changelog.replace(/\/\/n/g, "\n");
+    options.changelog = options.changelog.replaceAll("\\\\n", "\n");
   }
 
   // Validate the options
