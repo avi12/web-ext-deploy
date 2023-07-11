@@ -40,16 +40,6 @@ async function addNavigationListener({
   });
 }
 
-async function saveFirefoxHeaders(page: Page): Promise<string> {
-  return new Promise(async resolve => {
-    const cookiesToLogin = ["sessionid"];
-    const url = "https://addons.mozilla.org/en-US/developers/";
-    await addNavigationListener({ page, cookiesToLogin, resolve, urlToEnd: url });
-    await page.goto(url);
-    await page.click("a.Button");
-  });
-}
-
 async function saveOperaHeaders(page: Page): Promise<string> {
   return new Promise(async resolve => {
     const cookiesToLogin = ["sessionid", "csrftoken"];
@@ -60,7 +50,6 @@ async function saveOperaHeaders(page: Page): Promise<string> {
 }
 
 const siteFuncs: { [key in SupportedGetCookies]: Function } = {
-  firefox: saveFirefoxHeaders,
   opera: saveOperaHeaders
 } as const;
 
