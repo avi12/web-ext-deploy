@@ -9,7 +9,7 @@ enum SELECTORS {
   tabsLanguages = `.nav-stacked [ng-bind-html="tab.name"]`,
   buttonSubmit = "[ng-click='submitForModeration()']",
   buttonUploadNewVersion = `[ng-click*="upload"]`,
-  buttonCancel = "[ng-click*=cancel]",
+  buttonCancel = "[ng-click*=cancelChanges]",
   inputFile = "input[type=file]",
   inputCodePublic = `editable-field[field-value="packageVersion.source_url"] input`,
   inputCodePrivate = `editable-field[field-value="packageVersion.source_for_moderators_url"] input`,
@@ -145,25 +145,32 @@ async function updateExtension({ page, packageId }: { page: Page; packageId: num
   await page.click(SELECTORS.buttonSubmit);
 
   return new Promise(async (resolve, reject) => {
-    const errors = await page.$$eval(SELECTORS.listErrors, elErrors =>
-      [...elErrors].map(elError => elError.querySelector(".ng-scope").textContent.trim())
-    );
-    if (errors.length === 0) {
-      resolve(true);
-      return;
-    }
-
-    const prefixError = errors.length === 1 ? "Error" : "Errors";
-    reject({
-      error: getVerboseMessage({
-        store: STORE,
-        message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
-      ${errors.join("\n")}
-      `,
-        prefix: "Error"
-      }),
-      failType: "update"
-    });
+    const listener = async (response: Response): Promise<void> => {
+      const isBackAtTheMainExtPage = response.url().endsWith(`packages/${packageId}/`);
+      if (!isBackAtTheMainExtPage) {
+        return;
+      }
+      page.off("response", listener);
+      const errors = await page.$$eval(SELECTORS.listErrors, elErrors =>
+        [...elErrors].map(elError => elError.querySelector(".ng-scope").textContent.trim())
+      );
+      if (errors.length === 0) {
+        resolve(true);
+        return;
+      }
+      const prefixError = errors.length === 1 ? "Error" : "Errors";
+      reject({
+        error: getVerboseMessage({
+          store: STORE,
+          message: `${prefixError} at the upload of extension's ZIP with package ID ${packageId}:
+    ${errors.join("\n")}
+    `,
+          prefix: "Error"
+        }),
+        failType: "update"
+      });
+    };
+    page.on("response", listener);
   });
 }
 
@@ -358,26 +365,30 @@ async function prepareToDeploy({
           packageId
         })
       )
-      .then(() => {
-        if (isVerbose) {
+      .then(() => process.env.NODE_ENV === "development" && console.log("Uploaded ZIP"))
+      .then(
+        () =>
+          isVerbose &&
           console.log(
             getVerboseMessage({
               store: STORE,
               message: `Uploaded ZIP: ${zip}`
             })
-          );
-        }
-      })
+          )
+      )
       .then(() => verifyPublicCodeExistence({ page }))
+      .then(() => process.env.NODE_ENV === "development" && console.log("Verified public code existence"))
       .then(() => addChangelogIfNeeded({ page, changelog, isVerbose, zip }))
+      .then(() => process.env.NODE_ENV === "development" && console.log("Added changelog if needed"))
       .then(() => updateExtension({ page, packageId }))
+      .then(() => process.env.NODE_ENV === "development" && console.log("Updated extension"))
       .then(() => resolve({ error: "" }))
       .catch(async ({ error, failType }) => {
         if (failType === "upload") {
           await cancelUpload({ page });
         }
-        await browser.close();
         resolve({ error });
+        await browser.close();
       });
   });
 }
