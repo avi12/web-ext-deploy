@@ -1,5 +1,46 @@
+import { z } from "zod";
 import { deployToEdgePublishApi } from "./edge-deploy.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
+
+const messageObtain = "To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md";
+
+const EdgeOptionsPublishApiSchema = z.object({
+  clientId: z.string({
+    required_error: getErrorMessage(`No client ID is provided. ${messageObtain}`)
+  }),
+  clientSecret: z.string({
+    required_error: getErrorMessage(`No client secret is provided. ${messageObtain}`)
+  }),
+  accessTokenUrl: z.string({
+    required_error: getErrorMessage(`No access token URL is provided. ${messageObtain}`)
+  }),
+  accessToken: z.string({
+    required_error: getErrorMessage(`No access token is provided. ${messageObtain}`)
+  }),
+  productId: z.string({
+    required_error: getErrorMessage(
+      "No product ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"
+    )
+  }),
+  zip: z
+    .string({
+      required_error: getErrorMessage("No zip is provided")
+    })
+    .transform(getCorrectZip)
+    .superRefine((val, ctx) => {
+      if (!getIsFileExists(val)) {
+        ctx.addIssue({
+          message: getErrorMessage(`Zip doesn't exist: ${getFullPath(val)}`),
+          code: z.ZodIssueCode.custom
+        });
+      }
+    }),
+  devChangelog: z
+    .string()
+    .transform(cl => cl.replace(/\/\n/g, "\n"))
+    .optional(),
+  verbose: z.boolean().optional()
+});
 
 export class EdgeOptionsPublishApi {
   /**
@@ -46,40 +87,7 @@ export class EdgeOptionsPublishApi {
   verbose?: boolean;
 
   constructor(options: EdgeOptionsPublishApi) {
-    if (!options.productId) {
-      throw new Error(
-        getErrorMessage(
-          "No product ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"
-        )
-      );
-    }
-
-    const messageObtain = "To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md";
-
-    if (!options.clientId) {
-      throw new Error(getErrorMessage(`No client ID is provided. ${messageObtain}`));
-    }
-
-    if (!options.clientSecret) {
-      throw new Error(getErrorMessage(`No client secret is provided. ${messageObtain}`));
-    }
-
-    if (!options.accessTokenUrl) {
-      throw new Error(getErrorMessage(`No access token URL is provided. ${messageObtain}`));
-    }
-
-    if (!options.accessToken) {
-      throw new Error(getErrorMessage(`No access token is provided. ${messageObtain}`));
-    }
-
-    // Zip checking
-    if (!options.zip) {
-      throw new Error(getErrorMessage("No zip is provided"));
-    }
-
-    if (!getIsFileExists(options.zip)) {
-      throw new Error(getErrorMessage(`Zip doesn't exist: ${getFullPath(options.zip)}`));
-    }
+    Object.assign(this, EdgeOptionsPublishApiSchema.parse(options));
   }
 }
 
@@ -88,13 +96,5 @@ function getErrorMessage(message: string): string {
 }
 
 export async function prepareToDeployEdgePublishApi(options: EdgeOptionsPublishApi): Promise<boolean> {
-  options.zip = getCorrectZip(options.zip);
-
-  if (options.devChangelog) {
-    options.devChangelog = options.devChangelog.replace(/\/\n/g, "\n");
-  }
-
-  // Validate the options
-  new EdgeOptionsPublishApi(options);
-  return deployToEdgePublishApi(options);
+  return deployToEdgePublishApi(new EdgeOptionsPublishApi(options));
 }
