@@ -59,7 +59,7 @@
     "clean": "rimraf dist-esm",
     "prepare": "pnpm clean && pnpm build",
     "build": "pnpm build:esm",
-    "build:esm": "tsc --target ESNext --module ESNext --outDir dist-esm",
+    "build:esm": "tsc --target ESNext --module NodeNext --outDir dist-esm",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
     "format": "prettier --write \"{src,test,examples}/**/*.ts\"",
