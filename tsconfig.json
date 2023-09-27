@@ -3,7 +3,7 @@
     "declaration": true,
     "esModuleInterop": true,
     "lib": ["esnext", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
+    "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
