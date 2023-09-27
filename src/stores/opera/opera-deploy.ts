@@ -211,7 +211,7 @@ async function addChangelogIfNeeded({
     await page.evaluate(SELECTORS.inputChangelog, (elInput: HTMLInputElement) => {
       elInput.value = "";
     });
-    await page.type(SELECTORS.inputChangelog, changelog);
+    await page.fill(SELECTORS.inputChangelog, changelog);
     await page.click(SELECTORS.buttonSubmitChangelog);
 
     if (isVerbose) {
