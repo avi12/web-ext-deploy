@@ -1,5 +1,5 @@
-import { camelCase } from "camel-case";
 import chalk from "chalk";
+import { camelCase } from "change-case";
 import dotenv from "dotenv";
 import yargs from "yargs";
 import { getSignInCookie } from "./get-sign-in-cookie.js";
