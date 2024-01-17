@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import dotenv from "dotenv";
 
 import { chromium, Page } from "playwright";
@@ -89,9 +90,7 @@ export async function getSignInCookie(siteNames: SupportedGetCookies[]): Promise
     appendToEnv(getFilename(siteName), headersTotal);
   }
 
-  await browser.close();
-
   createGitIgnoreIfNeeded(siteNames);
 
-  console.log(`Info: Saved the login cookies of: ${siteNames.join(", ")}`);
+  console.log(chalk.blue(`Info: Saved the login cookies of: ${siteNames.join(", ")}`));
 }
