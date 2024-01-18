@@ -33,6 +33,7 @@ export async function deployToChrome({
     const { uploadState, itemError } = await client.uploadExisting(fs.createReadStream(zip));
 
     if (uploadState === "FAILURE") {
+      // @ts-ignore
       const errors = itemError.map(({ error_detail }) => error_detail);
       reject(
         getVerboseMessage({
