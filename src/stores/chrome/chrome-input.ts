@@ -22,7 +22,7 @@ export class ChromeOptions {
   zip: string;
 
   /** If `true`, it will be logged to the console when the uploading has begun. */
-  verbose: false;
+  verbose?: boolean;
 
   constructor(options: ChromeOptions) {
     if (!options.extId) {
