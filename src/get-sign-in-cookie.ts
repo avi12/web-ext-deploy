@@ -14,7 +14,10 @@ function extractCookies({ cookiesInput, cookiesToLogin }: { cookiesInput: string
   return cookiesInput
     .split("; ")
     .filter(cookieName => cookieName.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
-    .map(cookieName => cookieName.toUpperCase())
+    .map(cookieNameValuePair => {
+      const [name, value] = cookieNameValuePair.split("=");
+      return `${name.toUpperCase()}=${value}`;
+    })
     .join("\n");
 }
 
