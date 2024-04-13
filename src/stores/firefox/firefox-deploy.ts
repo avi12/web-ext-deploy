@@ -98,7 +98,7 @@ async function validateUpload({ uuid }: { uuid: string }): Promise<FirefoxUpload
     // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#upload-detail
     let delayInSeconds = 1;
     const maxDelayInSeconds = 60;
-    let timeout;
+    let timeout: ReturnType<typeof setTimeout>;
 
     function clearTimer(): void {
       clearTimeout(timeout);
