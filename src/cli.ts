@@ -103,7 +103,7 @@ const StoreObjects: {
 } as const;
 
 /**
- * Used for fallbacks, e.g. `--zip="some-ext.zip" --chrome-zip="chrome-ext.zip" --firefox-ext-id="EXT_ID" --edge-ext-id="EXT_ID"`<br>So the ZIP of Firefox and Edge will be `some-ext.zip`
+ * Used for fallbacks, e.g. in the case of `--zip="some-ext.zip" --chrome-zip="chrome-ext.zip" --firefox-ext-id="EXT_ID" --edge-ext-id="EXT_ID"`, the ZIP of Firefox and Edge will be `some-ext.zip`
  */
 function fillMissing(jsonStoresRaw: typeof StoreObjects): typeof StoreObjects {
   const jsonStores = { ...jsonStoresRaw };
