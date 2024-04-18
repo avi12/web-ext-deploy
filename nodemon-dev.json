@@ -1,5 +1,5 @@
 {
   "watch": ["src"],
   "ext": "ts",
-  "exec": "node --loader ts-node/esm src/index.ts --env --verbose"
+  "exec": "vite-node src/index.ts --env --verbose"
 }

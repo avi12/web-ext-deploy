@@ -8,8 +8,10 @@ import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/e
 import { FirefoxOptionsSubmissionApi, prepareToDeployFirefox } from "./stores/firefox/firefox-input.js";
 import { OperaOptions, prepareToDeployOpera } from "./stores/opera/opera-input.js";
 import { Stores, SupportedGetCookies, SupportedStores } from "./types.js";
+import { fileURLToPath } from "url";
 
-const isUseCli = Boolean(process.argv[1].match(/web-ext-deploy(?:[\\/](?:dist-esm|src)[\\/]index\.(?:ts|js))?$/));
+const __filename = fileURLToPath(import.meta.url);
+const isUseCli = Boolean(__filename.match(/web-ext-deploy(?:[\\/](?:dist-esm|src)[\\/]index\.(?:ts|js))?$/));
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -79,7 +81,6 @@ async function initCli(): Promise<void> {
   if (argv.getCookies) {
     await getCookies(argv.getCookies as SupportedGetCookies[]);
     process.exit();
-    return;
   }
 
   if (checkIfIntendingToCreateEdgeCredentials()) {
@@ -89,7 +90,6 @@ async function initCli(): Promise<void> {
       accessTokenUrl: argv.edgeAccessTokenUrl
     });
     process.exit();
-    return;
   }
 
   if (!verifySelectiveDeployments(argv.publishOnly as SupportedStores[])) {
