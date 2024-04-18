@@ -63,13 +63,16 @@ devDependencies:
     version: 9.0.0
   eslint-config-avi12:
     specifier: github:avi12/eslint-config-avi12
-    version: github.com/avi12/eslint-config-avi12/8434507839b01888bf192b93b41cb8241bb2b643(eslint@9.0.0)(ts-node@10.9.2)(typescript@5.4.5)
+    version: github.com/avi12/eslint-config-avi12/39baec109e5ecf72dfb0adddc5b1476011dd3de3(eslint@9.0.0)(typescript@5.4.5)
   eslint-config-prettier:
     specifier: ^9.1.0
     version: 9.1.0(eslint@9.0.0)
   globals:
     specifier: ^15.0.0
     version: 15.0.0
+  lint-staged:
+    specifier: ^15.2.2
+    version: 15.2.2
   nodemon:
     specifier: ^3.1.0
     version: 3.1.0

@@ -83,6 +83,7 @@
     "eslint-config-avi12": "github:avi12/eslint-config-avi12",
     "eslint-config-prettier": "^9.1.0",
     "globals": "^15.0.0",
+    "lint-staged": "^15.2.2",
     "nodemon": "^3.1.0",
     "prettier": "^3.2.5",
     "rimraf": "^5.0.5",
