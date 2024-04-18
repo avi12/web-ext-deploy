@@ -227,7 +227,7 @@ export default async function deployToFirefox({
         );
       }
     } catch ({ response: { data } }) {
-      const error: string = data.detail || data.error;
+      const error = Object.values(data).join(" ");
       const timeErrorMessage = (): string => {
         const secondsTotal = Number(error.match(/\d+/)[0]);
         const dateNext = new Date(Date.now() + secondsTotal * 1000);
