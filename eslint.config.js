@@ -26,7 +26,8 @@ export default [
       "@typescript-eslint/explicit-function-return-type": "warn",
       "@typescript-eslint/interface-name-prefix": "off",
       "@typescript-eslint/ban-types": "off",
-      "import/extensions": ["warn", "ignorePackages", { js: "always" }]
+      "import/extensions": ["warn", "ignorePackages", { js: "always" }],
+      "object-property-newline": "off"
     }
   }
 ];
