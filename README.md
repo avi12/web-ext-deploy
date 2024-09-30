@@ -50,7 +50,8 @@ pnpm i -g web-ext-deploy
 yarn global add web-ext-deploy
 ```
 
-Deployment to Chrome Web Store: [follow this guide](https://github.com/DrewML/chrome-webstore-upload/blob/main/How%20to%20generate%20Google%20API%20keys.md).
+Deployment to Chrome Web Store: [follow this guide](https://github.com/fregante/chrome-webstore-upload-keys).
+
 Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).
 
 # Usage
