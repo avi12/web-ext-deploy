@@ -230,7 +230,7 @@ Options:
 # Get it from https://chrome.google.com/webstore/detail/EXT_ID, e.g. https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone
 --chrome-ext-id: string
 
-# Get them by following https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md
+# Get them by following https://github.com/fregante/chrome-webstore-upload-keys
 --chrome-refresh-token: string
 --chrome-client-id: string
 --chrome-client-secret: string
