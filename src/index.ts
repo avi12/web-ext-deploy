@@ -2,7 +2,6 @@
 import chalk from "chalk";
 import yargs from "yargs/yargs";
 import { getCookies, getJsonStoresFromCli } from "./cli.js";
-import { getEdgePublishApiAccessToken } from "./get-edge-publish-api-access-token.js";
 import { ChromeOptions, prepareToDeployChrome } from "./stores/chrome/chrome-input.js";
 import { EdgeOptionsPublishApi, prepareToDeployEdgePublishApi } from "./stores/edge/edge-input.js";
 import { FirefoxOptionsSubmissionApi, prepareToDeployFirefox } from "./stores/firefox/firefox-input.js";
@@ -25,28 +24,14 @@ const argv = yargs(process.argv.slice(2))
     verbose: { type: "boolean" },
     // Edge Publish API parameters
     edgeClientId: { type: "string" },
-    edgeClientSecret: { type: "string" },
-    edgeAccessTokenUrl: { type: "string" }
+    edgeApiKey: { type: "string" },
+    edgeClientSecret: { type: "string", deprecated: true },
+    edgeAccessTokenUrl: { type: "string", deprecated: true }
   })
   .parseSync();
 
-function getIsIntendingToCreateEdgeCredentials(): boolean {
+function checkIfIntendingToCreateOldEdgeCredentials(): boolean {
   return Boolean(argv.edgeClientId || argv.edgeClientSecret || argv.edgeAccessTokenUrl);
-}
-
-function checkIfIntendingToCreateEdgeCredentials(): boolean {
-  if (getIsIntendingToCreateEdgeCredentials()) {
-    const isRetrievable = Boolean(argv.edgeClientId && argv.edgeClientSecret && argv.edgeAccessTokenUrl);
-    if (!isRetrievable) {
-      throw new Error(
-        `It appears you're trying to create an Edge Publish API access token, but you are missing some arguments.
-To do so, make sure you have all of the following: --edge-client-id, --edge-client-secret, --edge-access-token-url`
-      );
-    }
-    return isRetrievable;
-  }
-
-  return false;
 }
 
 function verifySelectiveDeployments(storesToInclude: SupportedStores[]): boolean {
@@ -83,13 +68,8 @@ async function initCli(): Promise<void> {
     process.exit();
   }
 
-  if (checkIfIntendingToCreateEdgeCredentials()) {
-    await getEdgePublishApiAccessToken({
-      clientId: argv.edgeClientId,
-      clientSecret: argv.edgeClientSecret,
-      accessTokenUrl: argv.edgeAccessTokenUrl
-    });
-    process.exit();
+  if (checkIfIntendingToCreateOldEdgeCredentials()) {
+    throw new Error(chalk.red("Edge Publish API v1 is/will be deprecated. To migrate to Edge Publish API v1.1, see https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"));
   }
 
   if (!verifySelectiveDeployments(argv.publishOnly as SupportedStores[])) {
@@ -99,16 +79,14 @@ async function initCli(): Promise<void> {
   const storeJsons = getJsonStoresFromCli();
   const storeEntries = Object.entries(storeJsons);
 
-  const storeFuncs: {
-    [store in SupportedStores]: (
-      deploy: ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions
-    ) => Promise<boolean>;
-  } = {
+  type StoreFunc = (deploy: ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions) => Promise<boolean>;
+
+  const storeFuncs: Record<SupportedStores, StoreFunc> = {
     chrome: deployChrome,
     firefox: deployFirefoxSubmissionApi,
     edge: deployEdgePublishApi,
     opera: deployOpera
-  } as const;
+  };
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
   try {
     await Promise.all(promises);

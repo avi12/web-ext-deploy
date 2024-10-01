@@ -1,7 +1,4 @@
-# How to generate Microsoft Edge Publish API credentials
+# How to setup Microsoft Edge Publish API credentials
 
-1. Follow the [Before you begin](https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#before-you-begin) part.
-2. Run
-   ```shell script
-   web-ext-deploy --edge-client-id="client_id" --edge-client-secret="client_secret" --edge-access-token-url="access_token_url"
-   ```
+1. Follow the [overview](https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api?tabs=v1-1#overview-of-using-the-update-rest-api) part
+2. Enable the new [Publish API experience](https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api?tabs=v1-1#enable-the-update-rest-api-at-partner-center)

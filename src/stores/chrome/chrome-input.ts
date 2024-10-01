@@ -2,18 +2,21 @@ import { deployToChrome } from "./chrome-deploy.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
 export class ChromeOptions {
-  /** The extension ID. `https://chrome.google.com/webstore/detail/EXT_ID`<br>
+  /** Get it from `https://chrome.google.com/webstore/detail/EXT_ID`<br>
    * E.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone` */
   extId: string;
 
-  /** The refresh token. If you don't have it, use [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md) */
-  refreshToken: string;
-
-  /** The client ID. If you don't have it, use [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md) */
+  /** The client ID<br>
+   * To obtain it, follow [this guide](https://github.com/fregante/chrome-webstore-upload-keys) */
   clientId: string;
 
-  /** The client secret. If you don't have it, use [this guide](https://github.com/DrewML/chrome-webstore-upload/blob/master/How%20to%20generate%20Google%20API%20keys.md) */
+  /** The client secret<br>
+   * To obtain it, follow [this guide](https://github.com/fregante/chrome-webstore-upload-keys) */
   clientSecret: string;
+
+  /** The refresh token<br>
+   * To obtain it, follow [this guide](https://github.com/fregante/chrome-webstore-upload-keys) */
+  refreshToken: string;
 
   /**
    * The path to the ZIP, relative from the current working directory (`process.cwd()`)<br>
@@ -21,7 +24,7 @@ export class ChromeOptions {
    */
   zip: string;
 
-  /** If `true`, it will be logged to the console when the uploading has begun. */
+  /** Setting to `true` will result in every step of the deployment to be logged to the console */
   verbose?: boolean;
 
   constructor(options: ChromeOptions) {

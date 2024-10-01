@@ -2,14 +2,22 @@ import deployToOpera from "./opera-deploy.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
 export class OperaOptions {
-  /** The `sessionid` cookie to login to the publisher's account. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
+  /** Get it from `https://addons.opera.com/developer/package/PACKAGE_ID` */
+  packageId: number;
+
+  /** If you have a hard time obtaining it, run:
+   *  ```shell
+   *  web-ext-deploy --get-cookies=opera
+   *  ```
+   *  */
   sessionid: string;
 
-  /** The `csrftoken` cookie to upload the ZIP. If you have a hard time obtaining it, run: `web-ext-deploy --get-cookies=opera` */
+  /** If you have a hard time obtaining it, run:
+   *  ```shell
+   *  web-ext-deploy --get-cookies=opera
+   *  ```
+   *  */
   csrftoken: string;
-
-  /** The extension ID. E.g. `https://addons.opera.com/developer/package/PACKAGE_ID` */
-  packageId: number;
 
   /**
    * The path to the ZIP, relative from the current working directory (`process.cwd()`)<br>
@@ -18,12 +26,12 @@ export class OperaOptions {
   zip: string;
 
   /**
-   * A description of the changes in this version, compared to the previous one.<br>
-   * It's recommended to use instead `--opera-changelog` , so it stays up to date.
+   * A description of the changes in this version, compared to the previous one<br>
+   * It's recommended to use instead `--opera-changelog`, so it stays up to date
    */
   changelog?: string;
 
-  /** If `true`, every step of uploading to the Opera Add-ons will be logged to the console. */
+  /** Setting to `true` will result in every step of the deployment to be logged to the console */
   verbose?: boolean;
 
   constructor(options: OperaOptions) {

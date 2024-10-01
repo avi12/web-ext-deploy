@@ -31,7 +31,7 @@ function getExtJson(zip: string): JSON {
   return JSON.parse(manifest);
 }
 
-export function getExtInfo(zip: string, info: string): any {
+export function getExtInfo(zip: string, info: string): unknown {
   return getExtJson(zip)[info];
 }
 

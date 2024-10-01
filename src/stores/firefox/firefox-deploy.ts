@@ -1,4 +1,5 @@
 import Axios, { AxiosInstance, AxiosResponse } from "axios";
+import { backOff } from "exponential-backoff";
 import FormData from "form-data";
 import jwt from "jsonwebtoken";
 import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
@@ -94,54 +95,23 @@ async function createNewVersion({
 }
 
 async function validateUpload({ uuid }: { uuid: string }): Promise<FirefoxUploadDetail> {
-  return new Promise((resolve, reject) => {
-    // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#upload-detail
-    let delayInSeconds = 1;
-    const maxDelayInSeconds = 60;
-    let timeout: ReturnType<typeof setTimeout>;
+  return backOff(async () => {
+    const { data } = await axios<FirefoxUploadDetail>(`upload/${uuid}/`);
 
-    function clearTimer(): void {
-      clearTimeout(timeout);
+    if (!data.processed) {
+      throw new Error("Processing not complete");
     }
 
-    async function retry(): Promise<void> {
-      axios(`upload/${uuid}/`)
-        .then(({ data }: { data: FirefoxUploadDetail }) => {
-          if (!data.processed) {
-            return false;
-          }
-          clearTimer();
-          if (data.valid) {
-            resolve(data);
-            return true;
-          }
-
-          const errors = data.validation.messages.filter(({ type }) => type === "error").map(({ message }) => message);
-          reject({
-            response: {
-              data: {
-                error: errors.length === 1 ? errors[0] : "\n" + errors.join("\n")
-              }
-            }
-          });
-          return true;
-        })
-        .then(isProcessed => {
-          if (isProcessed) {
-            clearTimer();
-            return;
-          }
-          if (delayInSeconds < maxDelayInSeconds) {
-            delayInSeconds *= 2;
-          }
-          clearTimer();
-          timeout = setTimeout(retry, delayInSeconds * 1000);
-        })
-        .catch(reject);
+    if (data.valid) {
+      return data;
     }
 
-    retry();
-  });
+    const errors = data.validation.messages
+      .filter(({ type }) => type === "error")
+      .map(({ message }) => message);
+
+    throw new Error(errors.length === 1 ? errors[0] : "\n" + errors.join("\n"));
+  }, { maxDelay: 60_000 });
 }
 
 async function uploadSourceCodeIfNeeded({

@@ -3,14 +3,14 @@ import deployToFirefox from "./firefox-deploy.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
 export class FirefoxOptionsSubmissionApi {
-  /** The JWT issuer. Get it from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/). */
+  /** Get it from `https://addons.mozilla.org/addon/EXT_ID` */
+  extId: string;
+
+  /** Get it from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/) */
   jwtIssuer: string;
 
-  /** The JWT secret. Get it from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/). */
+  /** Get it from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/) */
   jwtSecret: string;
-
-  /** The extension ID. E.g. `https://addons.mozilla.org/addon/EXT_ID` */
-  extId: string;
 
   /**
    * The path to the ZIP, relative from the current working directory (`process.cwd()`)<br>
@@ -25,19 +25,19 @@ export class FirefoxOptionsSubmissionApi {
   zipSource?: string;
 
   /**
-   * A description of the changes in this version, compared to the previous one.<br>
-   * It's recommended to use instead `--firefox-changelog` , so it stays up to date.
+   * A description of the changes in this version, compared to the previous one<br>
+   * It's recommended to use instead `--firefox-changelog`, so it stays up to date
    */
   changelog?: string;
 
   /**
-   * A description of the technical changes made in this version, compared to the previous one.<br>
-   * This will only be seen by the Firefox Addons reviewers.<br>
-   * It's recommended to use instead `--firefox-dev-changelog` , so it stays up to date.
+   * A description of the technical changes made in this version, compared to the previous one<br>
+   * This will only be seen by the Firefox Addons reviewers<br>
+   * It's recommended to use instead `--firefox-dev-changelog`, so it stays up to date
    */
   devChangelog?: string;
 
-  /** If `true`, every step of uploading to the Firefox Add-ons will be logged to the console. */
+  /** Setting to `true` will result in every step of the deployment to be logged to the console */
   verbose?: boolean;
 
   constructor(options: FirefoxOptionsSubmissionApi) {

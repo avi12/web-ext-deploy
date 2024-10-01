@@ -2,32 +2,21 @@ import { deployToEdgePublishApi } from "./edge-deploy.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
 export class EdgeOptionsPublishApi {
+  /** Get it from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID`<br>
+ * E.g. `https://microsoftedge.microsoft.com/addons/detail/ggnepcoiimddpmjaoejhdfppjbcnfaom` */
+  productId: string;
+
   /**
-   * The client ID.<br>
-   * To obtain it, follow [these steps](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).
+   * The client ID<br>
+   * To obtain it, follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)
    */
   clientId: string;
 
   /**
-   * The client secret.<br>
-   * To obtain it, follow [these steps](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).
+   * The API key<br>
+   * To obtain it, follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)
    */
-  clientSecret: string;
-
-  /**
-   * The access token URL.<br>
-   * To obtain it, follow [these steps](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).
-   */
-  accessTokenUrl: string;
-
-  /**
-   * The access token.<br>
-   * To obtain it, follow [these steps](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md).
-   */
-  accessToken: string;
-
-  /** The extension ID. E.g. `https://partner.microsoft.com/en-us/dashboard/microsoftedge/EXT_ID` */
-  productId: string;
+  apiKey: string;
 
   /**
    * The path to the ZIP, relative from the current working directory (`process.cwd()`)<br>
@@ -36,13 +25,13 @@ export class EdgeOptionsPublishApi {
   zip: string;
 
   /**
-   * A description of the technical changes made in this version, compared to the previous one.<br>
-   * This will only be seen by the Edge Extensions reviewers.<br>
-   * It's recommended to use instead `--edge-dev-changelog` , so it stays up to date.
+   * A description of the technical changes made in this version, compared to the previous one<br>
+   * This will only be seen by the Edge Extensions reviewers<br>
+   * It's recommended to use instead `--edge-dev-changelog`, so it stays up to date
    */
   devChangelog?: string;
 
-  /** If `true`, every step of uploading to the Edge Add-ons will be logged to the console. */
+  /** Setting to `true` will result in every step of the deployment to be logged to the console */
   verbose?: boolean;
 
   constructor(options: EdgeOptionsPublishApi) {
@@ -60,16 +49,8 @@ export class EdgeOptionsPublishApi {
       throw new Error(getErrorMessage(`No client ID is provided. ${messageObtain}`));
     }
 
-    if (!options.clientSecret) {
-      throw new Error(getErrorMessage(`No client secret is provided. ${messageObtain}`));
-    }
-
-    if (!options.accessTokenUrl) {
-      throw new Error(getErrorMessage(`No access token URL is provided. ${messageObtain}`));
-    }
-
-    if (!options.accessToken) {
-      throw new Error(getErrorMessage(`No access token is provided. ${messageObtain}`));
+    if (!options.apiKey) {
+      throw new Error(getErrorMessage(`No API key is provided. ${messageObtain}`));
     }
 
     // Zip checking

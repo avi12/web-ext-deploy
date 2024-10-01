@@ -1,6 +1,6 @@
 import Axios, { AxiosInstance, AxiosResponse } from "axios";
+import { backOff } from "exponential-backoff";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
-import { getEdgePublishApiAccessToken } from "../../get-edge-publish-api-access-token.js";
 import { getErrorMessage, getExtInfo, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
 import fs from "fs";
 
@@ -38,7 +38,7 @@ async function upload({
       error: getErrorMessage({
         store: STORE,
         zip,
-        error: e.response.data.message,
+        error: e.response.statusText,
         actionName: "upload"
       })
     }));
@@ -54,20 +54,16 @@ async function loopProgress({
   zip: string;
 }): Promise<{ error?: string }> {
   let data;
-  do {
-    try {
-      ({ data } = await getUploadStatus({
-        productID: productId,
-        operationID: location
-      }));
-    } catch (error) {
-      return {
-        error: getErrorMessage({ store: STORE, zip, error, actionName: "upload" })
-      };
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  } while (data.status === "InProgress");
+  try {
+    data = await backOff(() => getUploadStatus({
+      productID: productId,
+      operationID: location
+    }));
+  } catch (e) {
+    return {
+      error: getErrorMessage({ store: STORE, zip, error: e, actionName: "upload" })
+    };
+  }
 
   if (data.status === "Failed") {
     return {
@@ -121,9 +117,7 @@ async function checkPublishStatus({
 export async function deployToEdgePublishApi({
   productId,
   clientId,
-  clientSecret,
-  accessTokenUrl,
-  accessToken,
+  apiKey,
   zip,
   verbose: isVerbose,
   devChangelog
@@ -132,7 +126,8 @@ export async function deployToEdgePublishApi({
     axios = Axios.create({
       baseURL: "https://api.addons.microsoftedge.microsoft.com/v1",
       headers: {
-        Authorization: `Bearer ${accessToken}`
+        Authorization: `ApiKey ${apiKey}`,
+        "X-ClientID": clientId
       }
     });
 
@@ -155,19 +150,12 @@ export async function deployToEdgePublishApi({
         return;
       }
 
-      const { accessToken } = await getEdgePublishApiAccessToken({
-        clientId,
-        clientSecret,
-        accessTokenUrl
-      });
       await deployToEdgePublishApi({
         productId,
         zip,
         verbose: isVerbose,
         devChangelog,
-        accessToken,
-        accessTokenUrl,
-        clientSecret,
+        apiKey,
         clientId
       });
       return;

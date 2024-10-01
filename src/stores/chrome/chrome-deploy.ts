@@ -33,8 +33,7 @@ export async function deployToChrome({
     const { uploadState, itemError } = await client.uploadExisting(fs.createReadStream(zip));
 
     if (uploadState === "FAILURE") {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
+      // @ts-expect-error `itemError` is an array of https://developer.chrome.com/docs/webstore/api#resource
       const errors = itemError.map(({ error_detail }) => error_detail);
       reject(
         getVerboseMessage({
