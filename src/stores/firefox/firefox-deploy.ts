@@ -95,23 +95,24 @@ async function createNewVersion({
 }
 
 async function validateUpload({ uuid }: { uuid: string }): Promise<FirefoxUploadDetail> {
-  return backOff(async () => {
-    const { data } = await axios<FirefoxUploadDetail>(`upload/${uuid}/`);
+  return backOff(
+    async () => {
+      const { data } = await axios<FirefoxUploadDetail>(`upload/${uuid}/`);
 
-    if (!data.processed) {
-      throw new Error("Processing not complete");
-    }
+      if (data.valid) {
+        return data;
+      }
 
-    if (data.valid) {
-      return data;
-    }
+      if (data.detail) {
+        throw new Error(data.detail);
+      }
 
-    const errors = data.validation.messages
-      .filter(({ type }) => type === "error")
-      .map(({ message }) => message);
+      const errors = data.validation.messages.filter(({ type }) => type === "error").map(({ message }) => message);
 
-    throw new Error(errors.length === 1 ? errors[0] : "\n" + errors.join("\n"));
-  }, { maxDelay: 60_000 });
+      throw new Error(errors.length === 1 ? errors[0] : "\n" + errors.join("\n"));
+    },
+    { maxDelay: 60_000, jitter: "full" }
+  );
 }
 
 async function uploadSourceCodeIfNeeded({
@@ -196,8 +197,8 @@ export default async function deployToFirefox({
           })
         );
       }
-    } catch ({ response: { data } }) {
-      const error = Object.values(data).join(" ");
+    } catch ({ message }) {
+      const error = message;
       const timeErrorMessage = (): string => {
         const secondsTotal = Number(error.match(/\d+/)[0]);
         const dateNext = new Date(Date.now() + secondsTotal * 1000);

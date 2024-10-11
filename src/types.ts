@@ -58,4 +58,5 @@ export interface FirefoxUploadDetail {
   valid: boolean;
   validation: { messages?: FirefoxErrorMessage[] };
   version: string;
+  detail?: string;
 }
