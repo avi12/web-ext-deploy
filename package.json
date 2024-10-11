@@ -65,7 +65,7 @@
     "format": "prettier --write \"{src,test,examples}/**/*.ts\"",
     "lint": "eslint \"{src,test,examples}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test,examples}/**/*.ts\" --fix",
-    "reinstall-locally": "pnpm unlink -g && pnpm i &&  pnpm link -g"
+    "reinstall-locally": "pnpm unlink -g && pnpm i && pnpm link -g"
   },
   "lint-staged": {
     "*.ts": [
