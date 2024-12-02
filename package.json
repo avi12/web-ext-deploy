@@ -85,37 +85,36 @@
     ]
   },
   "devDependencies": {
-    "@eslint/js": "^9.11.1",
+    "@eslint/js": "^9.16.0",
     "@types/chrome-webstore-upload": "^1.0.0",
     "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "^22.7.4",
+    "@types/node": "^22.10.1",
     "@types/yargs": "^17.0.33",
-    "eslint": "^9.11.1",
+    "eslint": "^9.16.0",
     "eslint-config-avi12": "github:avi12/eslint-config-avi12",
     "eslint-config-prettier": "^9.1.0",
-    "globals": "^15.9.0",
+    "globals": "^15.13.0",
+    "http-status": "^2.0.0",
     "lint-staged": "^15.2.10",
     "nodemon": "^3.1.7",
-    "prettier": "^3.3.3",
+    "prettier": "^3.4.1",
     "rimraf": "^6.0.1",
-    "typescript": "^5.6.2",
-    "typescript-eslint": "^8.7.0",
-    "vite-node": "^2.1.1"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.16.0",
+    "vite-node": "^2.1.8"
   },
   "dependencies": {
-    "axios": "^1.7.7",
+    "axios": "^1.7.8",
     "chalk": "^5.3.0",
     "change-case": "^5.4.4",
     "chrome-webstore-upload": "^3.1.4",
-    "compare-versions": "6.1.1",
     "dotenv": "^16.4.5",
     "exponential-backoff": "^3.1.1",
-    "fetch-blob": "^4.0.0",
-    "form-data": "^4.0.0",
+    "form-data": "^4.0.1",
     "jsonwebtoken": "^9.0.2",
-    "playwright": "^1.47.2",
+    "playwright": "^1.49.0",
     "yargs": "^17.7.2",
     "zip-local": "^0.3.5"
   },
-  "packageManager": "pnpm@9.11.0+sha512.0a203ffaed5a3f63242cd064c8fb5892366c103e328079318f78062f24ea8c9d50bc6a47aa3567cabefd824d170e78fa2745ed1f16b132e16436146b7688f19b"
+  "packageManager": "pnpm@9.14.4"
 }
