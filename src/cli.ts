@@ -24,17 +24,16 @@ const argv = yargs(process.argv.slice(2))
     chromeClientSecret: { type: "string" },
     chromeZip: { type: "string" },
     // firefox
-    firefoxSessionid: { type: "string" },
+    firefoxJwtIssuer: { type: "string" },
+    firefoxJwtSecret: { type: "string" },
     firefoxExtId: { type: "string" },
     firefoxZip: { type: "string" },
     firefoxZipSource: { type: "string" },
     firefoxChangelog: { type: "string" },
     firefoxDevChangelog: { type: "string" },
     // edge
-    edgeAccessToken: { type: "string" },
     edgeClientId: { type: "string" },
-    edgeClientSecret: { type: "string" },
-    edgeAccessTokenUrl: { type: "string" },
+    edgeApiKey: { type: "string" },
     edgeProductId: { type: "string" },
     edgeZip: { type: "string" },
     edgeDevChangelog: { type: "string" },
@@ -47,11 +46,11 @@ const argv = yargs(process.argv.slice(2))
   })
   .parseSync();
 
-function getJsons(isUseEnv?: boolean): Record<string, any> {
+function getJsons(isUseEnv?: boolean): Record<SupportedStores, any> {
   if (isUseEnv) {
     console.log(chalk.blue("Using env mode"));
-    const stores = (argv.publishOnly || Stores) as SupportedStores[];
-    return stores.reduce((stores: Record<string, any>, store: string) => {
+    const stores = (argv.publishOnly || Stores) as Array<SupportedStores>;
+    return stores.reduce((stores: Record<string, any>, store: SupportedStores) => {
       const { parsed = {} } = dotenv.config({ path: `${store}.env` });
       if (!isObjectEmpty(parsed)) {
         const yargsStoreArgs = getJsons(false);
@@ -64,7 +63,7 @@ function getJsons(isUseEnv?: boolean): Record<string, any> {
   if (!argv.env) {
     console.log(chalk.blue("Using CLI mode"));
   }
-  const getFlagsArguments = (argv: any, store: SupportedStores): Record<string, any> => {
+  const getFlagsArguments = (argv: any, store: SupportedStores): Record<SupportedStores, unknown> => {
     const entries = Object.entries(argv)
       .filter(([key]) => key.startsWith(`${store}-`))
       .map(([key, value]) => [key.replace(`${store}-`, ""), value]);
@@ -72,16 +71,19 @@ function getJsons(isUseEnv?: boolean): Record<string, any> {
     return Object.fromEntries(entries);
   };
 
-  return Stores.reduce((stores, store: SupportedStores) => {
-    const jsonStore = getFlagsArguments(argv, store);
-    if (!isObjectEmpty(jsonStore)) {
-      stores[store] = jsonStore;
-    }
-    return stores;
-  }, {} as { [store in SupportedStores]: unknown });
+  return Stores.reduce(
+    (stores, store: SupportedStores) => {
+      const jsonStore = getFlagsArguments(argv, store);
+      if (!isObjectEmpty(jsonStore)) {
+        stores[store] = jsonStore;
+      }
+      return stores;
+    },
+    {} as Record<SupportedStores, any>
+  );
 }
 
-function jsonCamelCased(jsonStores: Record<string, any>): any {
+function jsonCamelCased(jsonStores: Record<SupportedStores, any>): any {
   const entriesStores = Object.entries(jsonStores);
 
   const entriesWithCamelCasedKeys = entriesStores.map(([store, values]) => {
@@ -93,37 +95,33 @@ function jsonCamelCased(jsonStores: Record<string, any>): any {
   return Object.fromEntries(entriesWithCamelCasedKeys);
 }
 
-const StoreObjects: {
-  [key in SupportedStores]: ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions;
-} = {
-  chrome: {} as ChromeOptions,
-  firefox: {} as FirefoxOptionsSubmissionApi,
-  edge: {} as EdgeOptionsPublishApi,
-  opera: {} as OperaOptions
-} as const;
+type StoreObjects = Record<
+  SupportedStores,
+  ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions
+>;
 
 /**
  * Used for fallbacks, e.g. in the case of `--zip="some-ext.zip" --chrome-zip="chrome-ext.zip" --firefox-ext-id="EXT_ID" --edge-ext-id="EXT_ID"`, the ZIP of Firefox and Edge will be `some-ext.zip`
  */
-function fillMissing(jsonStoresRaw: typeof StoreObjects): typeof StoreObjects {
+function fillMissing(jsonStoresRaw: StoreObjects): StoreObjects {
   const jsonStores = { ...jsonStoresRaw };
   const storeArgsMissing = ["zip", "devChangelog", "verbose"];
 
   const entries = Object.entries(jsonStoresRaw);
-  storeArgsMissing.forEach(argument => {
+  for (const argument of storeArgsMissing) {
     if (!argv[argument]) {
-      return;
+      continue;
     }
-    entries.forEach(([store, values]) => {
+    for (const [store, values] of entries) {
       values[argument] ||= argv[argument];
       jsonStores[store] = values;
-    });
-  });
+    }
+  }
 
   return jsonStores;
 }
 
-export function getJsonStoresFromCli(): typeof StoreObjects {
+export function getJsonStoresFromCli(): StoreObjects {
   const jsonStoresRaw = jsonCamelCased(getJsons(argv.env));
   if (isObjectEmpty(jsonStoresRaw)) {
     throw new Error(
@@ -134,6 +132,6 @@ export function getJsonStoresFromCli(): typeof StoreObjects {
   return fillMissing(jsonStoresRaw);
 }
 
-export async function getCookies(siteNames: SupportedGetCookies[]): Promise<void> {
+export async function getCookies(siteNames: Array<SupportedGetCookies>): Promise<void> {
   return getSignInCookie(siteNames);
 }
