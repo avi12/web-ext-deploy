@@ -34,7 +34,7 @@ function checkIfIntendingToCreateOldEdgeCredentials(): boolean {
   return Boolean(argv.edgeClientId || argv.edgeClientSecret || argv.edgeAccessTokenUrl);
 }
 
-function verifySelectiveDeployments(storesToInclude: SupportedStores[]): boolean {
+function verifySelectiveDeployments(storesToInclude: Array<SupportedStores>): boolean {
   if (!argv.env) {
     if (storesToInclude.length >= 0) {
       throw new Error(chalk.red(`You must use the --env flag to use --publish-only`));
@@ -64,22 +64,28 @@ async function initCli(): Promise<void> {
   }
 
   if (argv.getCookies) {
-    await getCookies(argv.getCookies as SupportedGetCookies[]);
+    await getCookies(argv.getCookies as Array<SupportedGetCookies>);
     process.exit();
   }
 
   if (checkIfIntendingToCreateOldEdgeCredentials()) {
-    throw new Error(chalk.red("Edge Publish API v1 is/will be deprecated. To migrate to Edge Publish API v1.1, see https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"));
+    throw new Error(
+      chalk.red(
+        "Edge Publish API v1 is/will be deprecated. To migrate to Edge Publish API v1.1, see https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
+      )
+    );
   }
 
-  if (!verifySelectiveDeployments(argv.publishOnly as SupportedStores[])) {
+  if (!verifySelectiveDeployments(argv.publishOnly as Array<SupportedStores>)) {
     return;
   }
 
   const storeJsons = getJsonStoresFromCli();
   const storeEntries = Object.entries(storeJsons);
 
-  type StoreFunc = (deploy: ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions) => Promise<boolean>;
+  type StoreFunc = (
+    deploy: ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions
+  ) => Promise<boolean>;
 
   const storeFuncs: Record<SupportedStores, StoreFunc> = {
     chrome: deployChrome,
@@ -88,10 +94,14 @@ async function initCli(): Promise<void> {
     opera: deployOpera
   };
   const promises = storeEntries.map(([store, json]) => storeFuncs[store](json));
-  try {
-    await Promise.all(promises);
-  } catch (e) {
-    throw new Error(chalk.red(e));
+  const errors: Array<string> = [];
+  for (const promise of await Promise.allSettled(promises)) {
+    if (promise.status === "rejected") {
+      errors.push(chalk.red(promise.reason));
+    }
+  }
+  if (errors.length > 0) {
+    throw errors.join("\n");
   }
 }
 
