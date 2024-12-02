@@ -21,18 +21,9 @@ const argv = yargs(process.argv.slice(2))
     firefoxDevChangelog: { type: "string" },
     edgeDevChangelog: { type: "string" },
     operaChangelog: { type: "string" },
-    verbose: { type: "boolean" },
-    // Edge Publish API parameters
-    edgeClientId: { type: "string" },
-    edgeApiKey: { type: "string" },
-    edgeClientSecret: { type: "string", deprecated: true },
-    edgeAccessTokenUrl: { type: "string", deprecated: true }
+    verbose: { type: "boolean" }
   })
   .parseSync();
-
-function checkIfIntendingToCreateOldEdgeCredentials(): boolean {
-  return Boolean(argv.edgeClientId || argv.edgeClientSecret || argv.edgeAccessTokenUrl);
-}
 
 function verifySelectiveDeployments(storesToInclude: Array<SupportedStores>): boolean {
   if (!argv.env) {
@@ -66,14 +57,6 @@ async function initCli(): Promise<void> {
   if (argv.getCookies) {
     await getCookies(argv.getCookies as Array<SupportedGetCookies>);
     process.exit();
-  }
-
-  if (checkIfIntendingToCreateOldEdgeCredentials()) {
-    throw new Error(
-      chalk.red(
-        "Edge Publish API v1 is/will be deprecated. To migrate to Edge Publish API v1.1, see https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
-      )
-    );
   }
 
   if (!verifySelectiveDeployments(argv.publishOnly as Array<SupportedStores>)) {
