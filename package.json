@@ -42,6 +42,16 @@
   "files": [
     "dist-esm/**/*"
   ],
+  "funding": [
+    {
+      "type": "PayPal",
+      "url": "https://paypal.me/avi12"
+    },
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/avi12"
+    }
+  ],
   "author": {
     "name": "Avi",
     "email": "avi6106@gmail.com",
@@ -62,9 +72,9 @@
     "build:esm": "tsc",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
-    "format": "prettier --write \"{src,test,examples}/**/*.ts\"",
-    "lint": "eslint \"{src,test,examples}/**/*.ts\"",
-    "lint:fix": "eslint \"{src,test,examples}/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "reinstall-locally": "pnpm unlink -g && pnpm i && pnpm link -g"
   },
   "lint-staged": {
