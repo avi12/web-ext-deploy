@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import zipper from "zip-local";
-import { Stores } from "./types.js";
+import type { SupportedStores, SupportedStoresCapitalized } from "./types.js";
 import fs from "fs";
 import path from "path";
 
@@ -25,14 +25,10 @@ export function getCorrectZip(zipName: string): string {
   return zipName.replace("{version}", version);
 }
 
-function getExtJson(zip: string): JSON {
+export function getExtJson(zip: string): Record<string, any> {
   const unzippedFs = zipper.sync.unzip(zip).memory();
   const manifest = unzippedFs.read("manifest.json", "text");
   return JSON.parse(manifest);
-}
-
-export function getExtInfo(zip: string, info: string): unknown {
-  return getExtJson(zip)[info];
 }
 
 export function logSuccessfullyPublished({
@@ -44,20 +40,18 @@ export function logSuccessfullyPublished({
   store: string;
   zip: string;
 }): void {
-  const storeNames: {
-    [store in typeof Stores[number]]: string;
-  } = {
+  const storeNames: Record<SupportedStores, string> = {
     chrome: "Chrome Web Store",
     edge: "Edge Add-ons",
     firefox: "Firefox Add-ons",
     opera: "Opera Add-ons"
   };
-  const { name, version } = getExtJson(zip) as JSON & { name: string; version: string };
+  const { name, version } = getExtJson(zip);
   const storeName = storeNames[store] || store;
   console.log(chalk.green(`Successfully updated "${extId}" (${name}) to version ${version} on ${storeName}! ✔`));
 }
 
-const gStepCounters = {};
+const stepCounter: Record<SupportedStoresCapitalized, number> = {};
 
 export function getErrorMessage({
   store,
@@ -65,7 +59,7 @@ export function getErrorMessage({
   error = "",
   actionName
 }: {
-  store: "Chrome" | "Edge" | "Firefox" | "Opera";
+  store: SupportedStoresCapitalized;
   zip: string;
   error?: number | string;
   actionName: string;
@@ -73,34 +67,29 @@ export function getErrorMessage({
   return getVerboseMessage({
     store,
     prefix: "Error",
-    message: `Failed to ${actionName} ${getExtInfo(zip, "name")}: ${error}`.trim()
+    message: `Failed to ${actionName} ${getExtJson(zip).name}: ${error}`.trim()
   });
 }
 
 export function getVerboseMessage({
   message,
-  prefix,
+  prefix = "Info",
   store
 }: {
   message: string;
-  prefix?: string;
-  store: string;
+  prefix?: "Info" | "Error" | "Warning";
+  store: SupportedStoresCapitalized;
 }): string {
-  gStepCounters[store] = 1 + (gStepCounters?.[store] ?? 0);
-  let msg = `${store}: Step ${gStepCounters[store]}) ${message}`;
-  if (prefix !== "Error") {
-    prefix = prefix || "Info";
-    msg = `${prefix} ${msg}`;
+  stepCounter[store] = 1 + (stepCounter?.[store] ?? 0);
+
+  const messageFull = `${prefix} ${store}: Step ${stepCounter[store]}) ${message}`;
+  if (prefix === "Error") {
+    return chalk.red(messageFull.trimStart());
   }
-  if (prefix === "Info") {
-    msg = msg.trim();
-  } else if (prefix === "Error") {
-    msg = chalk.red(msg.trimStart());
-  }
-  return msg;
+  return messageFull.trim();
 }
 
-export function createGitIgnoreIfNeeded(stores: string[]): void {
+export function createGitIgnoreIfNeeded(stores: Array<SupportedStores>): void {
   const filename = ".gitignore";
   if (!fs.existsSync(filename)) {
     fs.writeFileSync(filename, "*.env");
@@ -121,7 +110,7 @@ export function createGitIgnoreIfNeeded(stores: string[]): void {
   fs.appendFileSync(filename, "*.env");
 }
 
-export function headersToEnv(headersTotal: object): string {
+export function headersToEnv(headersTotal: Record<string, unknown>): string {
   return Object.entries(headersTotal)
     .map(([header, value]) => `${header}="${value}"`)
     .join("\n");
