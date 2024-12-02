@@ -25,10 +25,11 @@ Supported stores:
 
 # Core packages/APIs used
 
-- [Playwright](https://github.com/microsoft/playwright) - for updating extensions on Opera Add-ons store
+- [Playwright](https://github.com/microsoft/playwright) - for fetching the Opera cookies
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
 - [Microsoft Edge Publish API v1.1](https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api)
 - [Firefox Add-ons Store Submission API](https://blog.mozilla.org/addons/2022/03/17/new-api-for-submitting-and-updating-add-ons/)
+- Opera Store API
 
 # Installing
 
@@ -151,7 +152,7 @@ web-ext-deploy --env
     This can be done by doing **one** of the following:
     - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service (e.g. [Google Drive](https://drive.google.com))
     - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository
-- The keys are case-insensitive, as they will be [camel-cased](https://www.npmjs.com/package/camel-case) anyway
+- The keys are case-insensitive, as they will be [camel-cased](https://www.npmjs.com/package/change-case) anyway
 
 ### Possible `.env` files
 
