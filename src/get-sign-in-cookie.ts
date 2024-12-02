@@ -10,7 +10,13 @@ function getFilename(site: SupportedGetCookies): string {
   return `./${site}.env`;
 }
 
-function extractCookies({ cookiesInput, cookiesToLogin }: { cookiesInput: string; cookiesToLogin: string[] }): string {
+function extractCookies({
+  cookiesInput,
+  cookiesToLogin
+}: {
+  cookiesInput: string;
+  cookiesToLogin: Array<string>;
+}): string {
   return cookiesInput
     .split("; ")
     .filter(cookieName => cookieName.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
@@ -28,7 +34,7 @@ async function addNavigationListener({
   resolve
 }: {
   page: Page;
-  cookiesToLogin: string[];
+  cookiesToLogin: Array<string>;
   urlToEnd: string;
   resolve: (value: PromiseLike<unknown> | unknown) => void;
 }): Promise<void> {
@@ -53,7 +59,7 @@ async function saveOperaHeaders(page: Page): Promise<string> {
   });
 }
 
-const siteFuncs: { [key in SupportedGetCookies]: Function } = {
+const siteFuncs: Record<SupportedGetCookies, typeof saveOperaHeaders> = {
   opera: saveOperaHeaders
 } as const;
 
@@ -64,11 +70,11 @@ function appendToEnv(filename: string, headers: string): void {
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
-function getInvalidSIte(siteNames: SupportedGetCookies[]): string {
+function getInvalidSIte(siteNames: Array<SupportedGetCookies>): string {
   return siteNames.find(site => !siteFuncs[site]);
 }
 
-export async function getSignInCookie(siteNames: SupportedGetCookies[]): Promise<void> {
+export async function getSignInCookie(siteNames: Array<SupportedGetCookies>): Promise<void> {
   const invalidSIte = getInvalidSIte(siteNames);
   if (invalidSIte) {
     throw new Error(`Invalid site: ${invalidSIte}`);
