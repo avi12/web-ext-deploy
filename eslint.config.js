@@ -23,7 +23,6 @@ export default [
       quotes: ["warn", "double", { allowTemplateLiterals: true }],
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/explicit-function-return-type": "warn",
       "@typescript-eslint/interface-name-prefix": "off",
       "@typescript-eslint/ban-types": "off",
       "import/extensions": ["warn", "ignorePackages", { js: "always" }],
