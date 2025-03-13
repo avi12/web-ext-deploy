@@ -113,7 +113,7 @@ web-ext-deploy --env
   New lines (`\n`) are supported
 
 - `--firefox-changelog-lang` string?  
-- If specified and `firefox.env` exists, it will be used to dictate the language of the release notes.  
+  If specified and `firefox.env` exists, it will be used to dictate the language of the release notes.  
   Fallbacks to the Manifest's `default_locale` field, if applicable, or `en-US`
 
 - `--firefox-dev-changelog` string?  
