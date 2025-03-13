@@ -31,6 +31,12 @@ export class FirefoxOptionsSubmissionApi {
   changelog?: string;
 
   /**
+   * The language of the changelog, e.g. `en-US`<br>
+   * Fallback: `manifest.default_locale` or `en-US`
+   */
+  changelogLang = "en-US";
+
+  /**
    * A description of the technical changes made in this version, compared to the previous one<br>
    * This will only be seen by the Firefox Addons reviewers<br>
    * It's recommended to use instead `--firefox-dev-changelog`, so it stays up to date

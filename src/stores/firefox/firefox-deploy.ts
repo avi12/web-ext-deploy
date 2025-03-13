@@ -70,13 +70,17 @@ async function handleRequestWithBackOff<T>({
       }
 
       // Some sort of client error
+      let errorMessage = getErrorMessage({
+        store: STORE,
+        error: JSON.stringify(e.response.data),
+        actionName: errorActionOnFailure,
+        zip
+      });
+      if (errorMessage.match(/release_notes.+The language code.+is invalid/)) {
+        errorMessage += " Supported language codes: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py";
+      }
       return [
-        getErrorMessage({
-          store: STORE,
-          error: JSON.stringify(e.response.data),
-          actionName: errorActionOnFailure,
-          zip
-        })
+        errorMessage
       ];
     }
   }
@@ -106,7 +110,7 @@ async function uploadZip({
   formData.append("channel", "listed");
 
   const sendRequest = () =>
-    axios.post<FirefoxUploadDetail>(`upload/`, formData, {
+    axios.post<FirefoxUploadDetail>("upload/", formData, {
       headers: {
         "Content-Type": "multipart/form-data"
       }
@@ -128,6 +132,7 @@ async function createNewVersion({
   slug,
   uuid,
   changelog,
+  changelogLang,
   devChangelog,
   isVerbose,
   zip
@@ -135,18 +140,19 @@ async function createNewVersion({
   slug: string;
   uuid: string;
   changelog: string;
+  changelogLang: string;
   devChangelog: string;
   isVerbose: boolean;
   zip: string;
 }): Promise<[undefined, FirefoxCreateNewVersion] | [string]> {
   // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#version-create
-  const { default_locale = "en-US" } = getExtJson(zip);
+  const { default_locale = changelogLang } = getExtJson(zip);
   const sendRequest = async () =>
     axios.post(`addon/${slug}/versions/`, {
       upload: uuid,
       ...(changelog && {
         release_notes: {
-          [default_locale]: changelog
+          [default_locale.replaceAll("_", "-")]: changelog
         }
       }),
       ...(devChangelog && {
@@ -266,6 +272,7 @@ export default async function deployToFirefox({
   zip,
   zipSource = "",
   changelog = "",
+  changelogLang = "en-US",
   devChangelog = "",
   verbose: isVerbose
 }: FirefoxOptionsSubmissionApi): Promise<boolean> {
@@ -320,6 +327,7 @@ export default async function deployToFirefox({
     slug: extId,
     uuid,
     changelog,
+    changelogLang,
     devChangelog,
     isVerbose,
     zip

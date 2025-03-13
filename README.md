@@ -112,6 +112,10 @@ web-ext-deploy --env
   If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox users  
   New lines (`\n`) are supported
 
+- `--firefox-changelog-lang` string?  
+- If specified and `firefox.env` exists, it will be used to dictate the language of the release notes.  
+  Fallbacks to the Manifest's `default_locale` field, if applicable, or `en-US`
+
 - `--firefox-dev-changelog` string?  
   If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox Add-ons reviewers  
   New lines (`\n`) are supported
@@ -269,6 +273,10 @@ web-ext-deploy --chrome-ext-id="ExtensionID" --chrome-refresh-token="RefreshToke
 # A description of the changes in this version, compared to the previous one
 # It's recommended to use instead --firefox-changelog , so it stays up to date
 --firefox-changelog?: string
+
+# The language of the changelog
+# Fallbacks to the Manifest's `default_locale` field, if applicable, or `en-US`
+--firefox-changelog-lang?: string
   
 # A description of the technical changes made in this version, compared to the previous one
 # This will only be seen by the Firefox Addons reviewers
@@ -410,6 +418,10 @@ zipSource?: string;
 # It's recommended to use instead --firefox-changelog , so it stays up to date
 changelog?: string;
 
+# The language of the changelog
+# Fallbacks to the Manifest's `default_locale` field, if applicable, or `en-US`
+changelogLang?: string;
+
 # A description of the technical changes made in this version, compared to the previous one
 # This will only be seen by the Firefox Addons reviewers
 # It's recommended to use instead --firefox-dev-changelog , so it stays up to date
@@ -505,6 +517,7 @@ deployFirefoxSubmissionApi({
   zip: "dist/some-zip-v{version}.zip",
   zipSource: "dist/zip-source-v{version}.zip",
   changelog: "Some changes",
+  changelogLang: "en-US",
   devChangelog: "Changes for reviewers",
   verbose: false
 }).catch(console.error);

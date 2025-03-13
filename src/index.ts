@@ -19,6 +19,7 @@ const argv = yargs(process.argv.slice(2))
     publishOnly: { type: "array", default: [] },
     getCookies: { type: "array" },
     firefoxChangelog: { type: "string" },
+    firefoxChangelogLang: { default: "en-US" },
     firefoxDevChangelog: { type: "string" },
     edgeDevChangelog: { type: "string" },
     operaChangelog: { type: "string" },

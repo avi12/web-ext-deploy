@@ -30,6 +30,7 @@ const argv = yargs(process.argv.slice(2))
     firefoxZip: { type: "string" },
     firefoxZipSource: { type: "string" },
     firefoxChangelog: { type: "string" },
+    firefoxChangelogLang: { default: "en-US" },
     firefoxDevChangelog: { type: "string" },
     // edge
     edgeClientId: { type: "string" },
