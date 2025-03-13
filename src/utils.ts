@@ -67,7 +67,7 @@ export function getErrorMessage({
   return getVerboseMessage({
     store,
     prefix: "Error",
-    message: `Failed to ${actionName} ${getExtJson(zip).name}: ${error}`.trim()
+    message: `Failed to ${actionName} ${getExtJson(zip).name}: ${error}`
   });
 }
 
