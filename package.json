@@ -107,6 +107,7 @@
     "chalk": "^5.4.1",
     "change-case": "^5.4.4",
     "chrome-webstore-upload": "^3.1.4",
+    "dedent": "^1.5.3",
     "dotenv": "^16.4.7",
     "exponential-backoff": "^3.1.2",
     "form-data": "^4.0.2",

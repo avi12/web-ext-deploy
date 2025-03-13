@@ -20,6 +20,9 @@ importers:
       chrome-webstore-upload:
         specifier: ^3.1.4
         version: 3.1.4
+      dedent:
+        specifier: ^1.5.3
+        version: 1.5.3
       dotenv:
         specifier: ^16.4.7
         version: 16.4.7
@@ -710,6 +713,14 @@ packages:
       supports-color: '*'
     peerDependenciesMeta:
       supports-color:
+        optional: true
+
+  dedent@1.5.3:
+    resolution: {integrity: sha512-NHQtfOOW68WD8lgypbLA5oT+Bt0xXJhiYvoR6SmmNXZfpzOGXwdKWmcwG8N7PwVVWV3eF/68nmD9BaJSsTBhyQ==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
         optional: true
 
   deep-is@0.1.4:
@@ -2521,6 +2532,8 @@ snapshots:
       ms: 2.1.3
     optionalDependencies:
       supports-color: 5.5.0
+
+  dedent@1.5.3: {}
 
   deep-is@0.1.4: {}
 

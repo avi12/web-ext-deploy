@@ -1,5 +1,6 @@
 import Axios, { type AxiosInstance, type AxiosResponse } from "axios";
 import chalk from "chalk";
+import dedent from "dedent";
 import { backOff } from "exponential-backoff";
 import FormData from "form-data";
 import status from "http-status";
@@ -45,10 +46,10 @@ async function handleRequestWithBackOff<T>({
               chalk.yellow(
                 getVerboseMessage({
                   store: STORE,
-                  message: `
-Too many requests. A retry will automatically be at ${newTime}
-Or, you can deploy manually: https://addons.mozilla.org/developers/addon/${extId}/versions/submit/
-               `.trim(),
+                  message: dedent(`
+                    Too many requests. A retry will automatically be at ${newTime}
+                    Or, you can deploy manually: https://addons.mozilla.org/developers/addon/${extId}/versions/submit/
+                  `),
                   prefix: "Warning"
                 })
               )

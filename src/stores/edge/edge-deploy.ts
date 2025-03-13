@@ -1,5 +1,6 @@
 import Axios, { type AxiosInstance, type AxiosResponse } from "axios";
 import chalk from "chalk";
+import dedent from "dedent";
 import { backOff } from "exponential-backoff";
 import status from "http-status";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
@@ -43,10 +44,10 @@ async function handleRequestWithBackOff<T>({
             chalk.yellow(
               getVerboseMessage({
                 store: STORE,
-                message: `
-Too many requests. A retry will automatically be at ${newTime}
-Or, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard
-             `.trim(),
+                message: dedent(`
+                  Too many requests. A retry will automatically be at ${newTime}
+                  Or, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard
+                `),
                 prefix: "Warning"
               })
             )

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import chalk from "chalk";
+import dedent from "dedent";
 import yargs from "yargs/yargs";
 import { getCookies, getJsonStoresFromCli } from "./cli.js";
 import { ChromeOptions, prepareToDeployChrome } from "./stores/chrome/chrome-input.js";
@@ -42,8 +43,12 @@ function verifySelectiveDeployments(storesToInclude: Array<SupportedStores>): bo
   if (storesUnsupported.length > 0) {
     const store = storesUnsupported.length === 1 ? "store" : "stores";
     throw new Error(
-      chalk.red(`Unsupported ${store}: ${storesUnsupported}
-Supported stores: ${Stores}`)
+      chalk.red(
+        dedent(`
+          Unsupported ${store}: ${storesUnsupported}
+          Supported stores: ${Stores}
+        `)
+      )
     );
   }
   return true;
