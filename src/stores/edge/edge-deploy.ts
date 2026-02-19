@@ -1,73 +1,91 @@
-import Axios, { type AxiosInstance, type AxiosResponse } from "axios";
-import chalk from "chalk";
-import dedent from "dedent";
-import { backOff } from "exponential-backoff";
-import status from "http-status";
+import { z } from "zod";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
-import type { PublishOperationStatus, StatusPackageUpload } from "./edge-types.js";
-import type { SupportedStoresCapitalized } from "../../types.js";
-import { getErrorMessage, getExtJson, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
-import fs from "fs";
+import { PublishOperationStatusSchema, StatusPackageUploadSchema, type StatusPackageUpload } from "./edge-types.js";
+import { createHttpClient, type HttpResponse } from "../../http-client.js";
+import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
+import { getErrorMessage, getExtJson } from "../../utils.js";
+import fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
 
-const STORE: SupportedStoresCapitalized = "Edge";
-let axios: AxiosInstance;
+const STORE = "Edge";
+let httpClient: ReturnType<typeof createHttpClient>;
+let logger: StoreLogger | undefined;
 
-async function handleRequestWithBackOff<T>({
+function handleError(e: unknown, errorActionOnFailure: string, zip: string, productId: string) {
+  const err = e instanceof Object ? e : {};
+  const status = "status" in err ? Number(err.status) : 0;
+  const statusText = "statusText" in err && typeof err.statusText === "string" ? err.statusText : String(e);
+
+  if (status === 429) {
+    const responseData =
+      "response" in err && err.response instanceof Object && "data" in err.response ? err.response.data : undefined;
+    const message =
+      responseData instanceof Object && "message" in responseData && typeof responseData.message === "string"
+        ? responseData.message
+        : "";
+    const secondsToWait = Number(message.match(/\d+/)?.[0] || "60");
+    if (secondsToWait >= 60) {
+      const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
+      logger?.warning(
+        `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard`
+      );
+    }
+    return undefined; // Signal to retry
+  }
+
+  return getErrorMessage({
+    store: STORE,
+    error: statusText,
+    actionName: errorActionOnFailure,
+    zip
+  });
+}
+
+async function requestWithBackOff<T>({
   sendRequest,
+  parseResponse,
   errorActionOnFailure,
   zip,
-  productId,
-  isGetLocation
+  productId
 }: {
-  sendRequest: () => Promise<AxiosResponse<T>>;
+  sendRequest: () => Promise<HttpResponse<unknown>>;
+  parseResponse: (response: HttpResponse<unknown>) => T;
   errorActionOnFailure: string;
   zip: string;
   productId: string;
-  isGetLocation?: boolean;
 }): Promise<[string] | [undefined, T]> {
-  while (true) {
+  const maxRetries = 5;
+  const maxBackOffMs = 30_000;
+  const rateLimitRetryMs = 60_000;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const { data, headers } = await sendRequest();
-      return [undefined, isGetLocation ? headers.location : data];
-    } catch (e) {
-      const isServerError = e.response.status >= 500;
-      if (isServerError) {
-        await backOff(Promise.resolve, { maxDelay: 30_000, delayFirstAttempt: true, jitter: "full" });
+      const response = await sendRequest();
+      return [undefined, parseResponse(response)];
+    } catch (e: unknown) {
+      const err = e instanceof Object ? e : {};
+      const status = "status" in err ? Number(err.status) : 0;
+      if (status >= 500 && attempt < maxRetries) {
+        const exponentialDelay = Math.min(1000 * Math.pow(2, attempt - 1), maxBackOffMs);
+        await setTimeout(exponentialDelay);
         continue;
       }
 
-      if (e.response.status === status.TOO_MANY_REQUESTS) {
-        const secondsToWait = Number(e.response.data.message.match(/\d+/)[0]);
-        if (secondsToWait >= 60) {
-          const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
-          console.log(
-            chalk.yellow(
-              getVerboseMessage({
-                store: STORE,
-                message: dedent(`
-                  Too many requests. A retry will automatically be at ${newTime}
-                  Or, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard
-                `),
-                prefix: "Warning"
-              })
-            )
-          );
-        }
-        await new Promise(resolve => setTimeout(resolve, secondsToWait * 1000));
+      const errorMsg = handleError(e, errorActionOnFailure, zip, productId);
+      if (errorMsg === undefined) {
+        await setTimeout(rateLimitRetryMs);
         continue;
       }
-
-      // Some sort of client error
-      return [
-        getErrorMessage({
-          store: STORE,
-          error: e.response.statusText,
-          actionName: errorActionOnFailure,
-          zip
-        })
-      ];
+      return [errorMsg];
     }
   }
+
+  return [
+    getErrorMessage({ store: STORE,
+      error: "Max retries exceeded",
+      actionName: errorActionOnFailure,
+      zip })
+  ];
 }
 
 async function checkStatusOfPackageUpload({
@@ -78,15 +96,15 @@ async function checkStatusOfPackageUpload({
   productId: string;
   operationId: string;
   zip: string;
-}): Promise<[undefined, StatusPackageUpload] | [string]> {
-  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#checking-the-status-of-a-package-upload
+}) {
   const sendRequest = () =>
-    axios<StatusPackageUpload>(`/products/${productId}/submissions/draft/package/operations/${operationId}`);
+    httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`);
   let data: StatusPackageUpload;
   let error: string;
   do {
-    [error, data] = await handleRequestWithBackOff<StatusPackageUpload>({
+    [error, data] = await requestWithBackOff({
       sendRequest,
+      parseResponse: r => StatusPackageUploadSchema.parse(r.data),
       errorActionOnFailure: "verify upload of",
       zip,
       productId
@@ -96,10 +114,14 @@ async function checkStatusOfPackageUpload({
     }
   } while (data.status === "InProgress");
   if (data.status === "Failed") {
-    const errors = data.errors.map(({ message }) => message).join("\n");
+    const errors = (data.errors || []).map(({ message }) => message).join("\n");
     return [errors];
   }
   return [undefined, data];
+}
+
+function parseLocation(r: HttpResponse<unknown>) {
+  return z.string().parse(r.headers?.location);
 }
 
 async function uploadZip({
@@ -108,26 +130,17 @@ async function uploadZip({
 }: {
   zip: string;
   productId: string;
-}): Promise<[undefined, string] | [string]> {
-  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#uploading-a-package-to-update-an-existing-submission
+}) {
   const sendRequest = () =>
-    axios.post(`/products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
-      headers: {
-        "Content-Type": "application/zip"
-      }
+    httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
+      headers: { "Content-Type": "application/zip" }
     });
 
-  const [error, location] = await handleRequestWithBackOff<string>({
-    sendRequest,
+  return requestWithBackOff({ sendRequest,
+    parseResponse: parseLocation,
     errorActionOnFailure: "upload",
     zip,
-    productId,
-    isGetLocation: true
-  });
-  if (error) {
-    return [error];
-  }
-  return [undefined, location];
+    productId });
 }
 
 async function publishSubmission({
@@ -138,21 +151,17 @@ async function publishSubmission({
   zip: string;
   productId: string;
   devChangelog: string;
-}): Promise<[undefined, string] | [string]> {
-  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#publishing-the-submission
-  const sendRequest = () => axios.post(`/products/${productId}/submissions`, { notes: devChangelog });
+}) {
+  const sendRequest = () =>
+    httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
+      headers: { "Content-Type": "application/json" }
+    });
 
-  const [error, location] = await handleRequestWithBackOff<string>({
-    sendRequest,
+  return requestWithBackOff({ sendRequest,
+    parseResponse: parseLocation,
     errorActionOnFailure: "publish",
-    productId,
     zip,
-    isGetLocation: true
-  });
-  if (error) {
-    return [error];
-  }
-  return [undefined, location];
+    productId });
 }
 
 async function checkPublishStatus({
@@ -163,13 +172,13 @@ async function checkPublishStatus({
   zip: string;
   productId: string;
   operationId: string;
-}): Promise<[undefined, PublishOperationStatus] | [string]> {
-  // https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api#checking-the-status-of-a-package-upload
+}) {
   const sendRequest = () =>
-    axios<PublishOperationStatus>(`/products/${productId}/submissions/operations/${operationId}`);
+    httpClient.get(`products/${productId}/submissions/operations/${operationId}`);
 
-  const [error, data] = await handleRequestWithBackOff<PublishOperationStatus>({
+  const [error, data] = await requestWithBackOff({
     sendRequest,
+    parseResponse: r => PublishOperationStatusSchema.parse(r.data),
     errorActionOnFailure: "check the submission status of",
     zip,
     productId
@@ -177,76 +186,78 @@ async function checkPublishStatus({
   if (error) {
     return [error];
   }
-  if (!("status" in data)) {
+  if (!data.status) {
     return [data.message];
   }
-  if (data.status === "Failed") {
-    const errors: Array<string> = [];
-    for (const error of data.errors || []) {
-      errors.push(error.message);
-    }
-    if (errors.length === 0) {
-      errors.push(data.message);
-    }
-    return [errors.join("\n")];
+  if (data.status !== "Failed") {
+    return [undefined, data];
   }
-  return [undefined, data];
+
+  const errors = (data.errors || []).map(err => err.message);
+  if (errors.length === 0) {
+    errors.push(data.message);
+  }
+  return [errors.join("\n")];
 }
 
-export async function deployToEdgePublishApi({
-  productId,
-  clientId,
-  apiKey,
-  zip,
-  verbose: isVerbose,
-  devChangelog
-}: EdgeOptionsPublishApi) {
-  axios = Axios.create({
-    baseURL: "https://api.addons.microsoftedge.microsoft.com/v1",
-    headers: {
-      Authorization: `ApiKey ${apiKey}`,
-      "X-ClientID": clientId
-    }
+export async function deployToEdgePublishApi(
+  { productId, clientId, apiKey, zip, devChangelog }: EdgeOptionsPublishApi,
+  storeLogger?: StoreLogger,
+  _onCookieExpired?: CookieRefreshCallback,
+  verbose?: boolean
+) {
+  logger = storeLogger;
+
+  httpClient = createHttpClient("https://api.addons.microsoftedge.microsoft.com/v1", {
+    Authorization: `ApiKey ${apiKey}`,
+    "X-ClientID": clientId
   });
 
-  const { name } = getExtJson(zip);
+  const { name } = await getExtJson(zip);
 
-  if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: `Uploading zip of ${name} with product ID ${productId}` }));
+  if (verbose) {
+    logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
   }
 
-  let [error, operationId] = await uploadZip({ zip, productId });
-  if (error) {
-    throw error;
+  const [uploadError, uploadOperationId] = await uploadZip({ zip,
+    productId });
+  if (uploadError) {
+    throw uploadError;
   }
 
-  if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: `Verifying upload` }));
+  if (verbose) {
+    logger?.info("Verifying upload");
   }
 
-  [error] = await checkStatusOfPackageUpload({ zip, productId, operationId });
-  if (error) {
-    throw error;
+  const [verifyError] = await checkStatusOfPackageUpload({ zip,
+    productId,
+    operationId: uploadOperationId });
+  if (verifyError) {
+    throw verifyError;
   }
 
-  if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: `Publishing submission` }));
+  if (verbose) {
+    logger?.info("Publishing submission");
   }
 
-  [error, operationId] = await publishSubmission({ zip, productId, devChangelog });
-  if (error) {
-    throw error;
+  const [publishError, publishOperationId] = await publishSubmission({ zip,
+    productId,
+    devChangelog });
+  if (publishError) {
+    throw publishError;
   }
 
-  if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: `Checking the submission status` }));
+  if (verbose) {
+    logger?.info("Checking the submission status");
   }
 
-  [error] = await checkPublishStatus({ zip, productId, operationId });
-  if (error) {
-    throw error;
+  const [statusError] = await checkPublishStatus({ zip,
+    productId,
+    operationId: publishOperationId });
+  if (statusError) {
+    throw statusError;
   }
 
-  logSuccessfullyPublished({ store: STORE, extId: productId, zip });
+  logger?.info("Successfully published to Edge Add-ons!");
   return true;
 }

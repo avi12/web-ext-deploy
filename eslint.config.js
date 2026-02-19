@@ -1,32 +1,51 @@
 import eslint from "@eslint/js";
-import avi12 from "eslint-config-avi12";
 import globals from "globals";
 import tsEslint from "typescript-eslint";
+import stylistic from "@stylistic/eslint-plugin";
+import importPlugin from "eslint-plugin-import";
 
 export default [
   eslint.configs.recommended,
   ...tsEslint.configs.recommended,
-  ...avi12,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "eslint.config.js"],
     languageOptions: {
       parser: tsEslint.parser,
       globals: {
         ...globals.node
       }
+    },
+    plugins: {
+      "@stylistic": stylistic,
+      import: importPlugin
     }
   },
   {
     ignores: ["dist-esm/**/*", "node_modules"],
     rules: {
-      "prefer-const": "warn",
-      quotes: ["warn", "double", { allowTemplateLiterals: true }],
-      "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/interface-name-prefix": "off",
-      "@typescript-eslint/ban-types": "off",
-      "import/extensions": ["warn", "ignorePackages", { js: "always" }],
-      "object-property-newline": "off"
+      "prefer-const": "error",
+      "import/order": ["error", { groups: ["external", "internal"] }],
+      "@stylistic/quotes": ["error", "double", { allowTemplateLiterals: "always" }],
+      "@stylistic/quote-props": ["error", "as-needed"],
+      "@stylistic/semi": ["error"],
+      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/naming-convention": [
+        "error",
+        {
+          selector: "interface",
+          format: ["PascalCase"],
+          custom: {
+            regex: "^I[A-Z]",
+            match: false
+          }
+        }
+      ],
+      "object-property-newline": "error",
+      curly: ["error", "all"],
+      "@stylistic/indent": ["error", 2],
+      "@stylistic/arrow-parens": ["error", "as-needed"],
+      "@stylistic/brace-style": "error",
     }
   }
 ];

@@ -75,6 +75,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "reinstall-locally": "pnpm unlink -g && pnpm i && pnpm link -g"
   },
   "lint-staged": {
@@ -85,36 +87,30 @@
     ]
   },
   "devDependencies": {
-    "@eslint/js": "^9.22.0",
-    "@types/chrome-webstore-upload": "^1.0.0",
-    "@types/jsonwebtoken": "^9.0.9",
-    "@types/node": "^22.13.10",
-    "@types/yargs": "^17.0.33",
-    "eslint": "^9.22.0",
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.8.0",
+    "@types/node": "^25.2.3",
+    "@types/yargs": "^17.0.35",
+    "eslint": "^10.0.0",
     "eslint-config-avi12": "github:avi12/eslint-config-avi12",
-    "eslint-config-prettier": "^10.1.1",
-    "globals": "^16.0.0",
-    "lint-staged": "^15.5.0",
-    "nodemon": "^3.1.9",
-    "prettier": "^3.5.3",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.26.1",
-    "vite-node": "^3.0.8"
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^17.3.0",
+    "lint-staged": "^16.2.7",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.8.1",
+    "rimraf": "^6.1.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.0",
+    "vite-node": "^5.3.0",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
-    "axios": "^1.8.3",
-    "chalk": "^5.4.1",
-    "change-case": "^5.4.4",
-    "chrome-webstore-upload": "^3.1.4",
-    "dedent": "^1.5.3",
-    "dotenv": "^16.4.7",
-    "exponential-backoff": "^3.1.2",
-    "form-data": "^4.0.2",
-    "http-status": "^2.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "playwright": "^1.51.0",
-    "yargs": "^17.7.2",
-    "zip-local": "^0.3.5"
+    "@zip.js/zip.js": "^2.8.21",
+    "ink": "^6.7.0",
+    "playwright": "^1.58.2",
+    "react": "^19.2.4",
+    "yargs": "^18.0.0",
+    "zod": "^4.3.6"
   }
 }

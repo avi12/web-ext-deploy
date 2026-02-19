@@ -1,28 +1,19 @@
-import chalk from "chalk";
-import dotenv from "dotenv";
-
 import { chromium, Page } from "playwright";
-import { SupportedGetCookies } from "./types.js";
+import { config, parse } from "./dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "./utils.js";
-import fs from "fs";
+import fs from "node:fs";
 
-function getFilename(site: SupportedGetCookies): string {
+function getFilename(site: string) {
   return `./${site}.env`;
 }
 
-function extractCookies({
-  cookiesInput,
-  cookiesToLogin
-}: {
-  cookiesInput: string;
-  cookiesToLogin: Array<string>;
-}): string {
+function extractCookies(cookiesInput: string, cookiesToLogin: Array<string>) {
   return cookiesInput
     .split("; ")
     .filter(cookieName => cookieName.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
     .map(cookieNameValuePair => {
       const [name, value] = cookieNameValuePair.split("=");
-      return `${name.toUpperCase()}=${value}`;
+      return `${name}=${value}`;
     })
     .join("\n");
 }
@@ -37,7 +28,7 @@ async function addNavigationListener({
   cookiesToLogin: Array<string>;
   urlToEnd: string;
   resolve: (value: PromiseLike<unknown> | unknown) => void;
-}): Promise<void> {
+}) {
   page.on("request", async data => {
     const { cookie } = await data.allHeaders();
     if (!cookie) {
@@ -45,39 +36,44 @@ async function addNavigationListener({
     }
     const isRequiredCookiesExist = cookiesToLogin.every(cookieName => cookie.includes(` ${cookieName}=`));
     if (isRequiredCookiesExist && data.url() === urlToEnd) {
-      resolve(extractCookies({ cookiesInput: cookie, cookiesToLogin }));
+      resolve(extractCookies(cookie, cookiesToLogin));
     }
   });
 }
 
 async function saveOperaHeaders(page: Page): Promise<string> {
-  return new Promise(async resolve => {
-    const cookiesToLogin = ["sessionid", "csrftoken"];
-    const url = "https://addons.opera.com/developer/";
-    await addNavigationListener({ page, cookiesToLogin, resolve, urlToEnd: url });
-    await page.goto(url);
+  const cookiesToLogin = ["sessionid", "csrftoken"];
+  const url = "https://addons.opera.com/developer/";
+  const cookiePromise = new Promise<string>(resolve => {
+    void addNavigationListener({ page,
+      cookiesToLogin,
+      resolve,
+      urlToEnd: url });
   });
+  await page.goto(url);
+  return cookiePromise;
 }
 
-const siteFuncs: Record<SupportedGetCookies, typeof saveOperaHeaders> = {
+const siteFuncs: Record<string, typeof saveOperaHeaders> = {
   opera: saveOperaHeaders
 } as const;
 
-function appendToEnv(filename: string, headers: string): void {
-  const { parsed: envCurrent = {} } = dotenv.config({ path: filename });
-  const envHeaders = dotenv.parse(headers);
-  const envNew = { ...envCurrent, ...envHeaders };
+function appendToEnv(filename: string, headers: string) {
+  const { parsed: envCurrent = {} } = config({ path: filename });
+  const envHeaders = parse(headers);
+  const envNew = { ...envCurrent,
+    ...envHeaders };
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
-function getInvalidSIte(siteNames: Array<SupportedGetCookies>): string {
+function getInvalidSite(siteNames: Array<string>) {
   return siteNames.find(site => !siteFuncs[site]);
 }
 
-export async function getSignInCookie(siteNames: Array<SupportedGetCookies>): Promise<void> {
-  const invalidSIte = getInvalidSIte(siteNames);
-  if (invalidSIte) {
-    throw new Error(`Invalid site: ${invalidSIte}`);
+export async function getSignInCookie(siteNames: Array<string>) {
+  const invalidSite = getInvalidSite(siteNames);
+  if (invalidSite) {
+    throw new Error(`Invalid site: ${invalidSite}`);
   }
 
   const [width, height] = [1280, 720];
@@ -86,7 +82,8 @@ export async function getSignInCookie(siteNames: Array<SupportedGetCookies>): Pr
     args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
   });
   const context = await browser.newContext({
-    viewport: { width, height }
+    viewport: { width,
+      height }
   });
 
   for (const siteName of siteNames) {
@@ -99,7 +96,6 @@ export async function getSignInCookie(siteNames: Array<SupportedGetCookies>): Pr
     appendToEnv(getFilename(siteName), headersTotal);
   }
 
+  await browser.close();
   createGitIgnoreIfNeeded(siteNames);
-
-  console.log(chalk.blue(`Info: Saved the login cookies of: ${siteNames.join(", ")}`));
 }

@@ -1,9 +1,12 @@
-node_modules
-dist
-dist-esm
+node_modules/
+dist-esm/
 *.log
 *.tgz
 *.env
 .DS_Store
-.idea
+.idea/
 dist-pack-ext
+.ralph/
+.gemini/
+.copilot/
+CLAUDE.md

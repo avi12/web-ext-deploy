@@ -1,7 +1,43 @@
-import { capitalCase } from "change-case";
+import { z } from "zod";
 
-export const Stores = ["chrome", "firefox", "edge", "opera"] as const;
-export const StoresCapitalized = Stores.map(stores => capitalCase(stores));
-export type SupportedStores = typeof Stores[number];
-export type SupportedStoresCapitalized = typeof StoresCapitalized[number];
-export type SupportedGetCookies = "opera";
+export type StoreLogger = {
+  info: (message: string) => void;
+  warning: (message: string) => void;
+  error: (message: string) => void;
+};
+
+export type StoreOptionsBase = {
+  zip?: string;
+};
+
+export type CookieRefreshCallback = () => Promise<Record<string, string>>;
+
+export type StoreDefinition = {
+  name: string;
+  schema: z.ZodType;
+  prepare: (options: unknown) => unknown;
+  deploy: (
+    options: unknown,
+    logger?: StoreLogger,
+    onCookieExpired?: CookieRefreshCallback,
+    verbose?: boolean
+  ) => Promise<boolean>;
+  cookieFields?: string[];
+};
+
+export function defineStore<T>(config: {
+  name: string;
+  schema: z.ZodType<T>;
+  prepare: (options: T) => T;
+  deploy: (options: T, logger?: StoreLogger, onCookieExpired?: CookieRefreshCallback, verbose?: boolean) => Promise<boolean>;
+  cookieFields?: string[];
+}) {
+  return {
+    name: config.name,
+    schema: config.schema,
+    prepare: (options: unknown) => config.prepare(config.schema.parse(options)),
+    deploy: (options: unknown, logger?: StoreLogger, onCookieExpired?: CookieRefreshCallback, verbose?: boolean) =>
+      config.deploy(config.schema.parse(options), logger, onCookieExpired, verbose),
+    cookieFields: config.cookieFields
+  };
+}
