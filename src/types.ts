@@ -6,10 +6,6 @@ export type StoreLogger = {
   error: (message: string) => void;
 };
 
-export type StoreOptionsBase = {
-  zip?: string;
-};
-
 export type CookieRefreshCallback = () => Promise<Record<string, string>>;
 
 export type DeployContext = {

@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 
 interface FormDataEntry {
   name: string;
@@ -60,13 +59,4 @@ export class FormData {
     }
     return Buffer.from(value);
   }
-}
-
-export function createFormDataStream(zipPath: string, channel?: string) {
-  const formData = new FormData();
-  formData.append("upload", zipPath, { filename: path.basename(zipPath) });
-  if (channel) {
-    formData.append("channel", channel);
-  }
-  return formData;
 }

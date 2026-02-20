@@ -50,8 +50,6 @@ export const ListingDetailSchema = z
   })
   .passthrough();
 
-export type ListingDetail = z.infer<typeof ListingDetailSchema>;
-
 const DidChangesSchema = z
   .object({
     version: z.string()
@@ -59,10 +57,8 @@ const DidChangesSchema = z
   .passthrough();
 
 export const SubmitChangesSchema = DidChangesSchema;
-export type SubmitChanges = z.infer<typeof SubmitChangesSchema>;
 
 export const CancelChangesSchema = DidChangesSchema;
-export type CancelChanges = z.infer<typeof CancelChangesSchema>;
 
 const UploadResultSuccessSchema = z.object({
   version: z.string(),
@@ -81,4 +77,3 @@ export const UploadResultSchema = z.union([UploadResultSuccessSchema, UploadResu
 export type UploadResult = z.infer<typeof UploadResultSchema>;
 
 export const FileUploadResponseSchema = z.object({}).passthrough();
-export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;

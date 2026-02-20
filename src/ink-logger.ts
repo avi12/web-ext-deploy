@@ -3,20 +3,14 @@ import { capitalCase, kebabCase, screamingSnakeCase } from "./case-conversion.js
 import { Colors } from "./logging.js";
 import type { StoreLogger } from "./types.js";
 
-export type StoreStatus = "pending" | "running" | "success" | "error";
+type StoreStatus = "pending" | "running" | "success" | "error";
 
-export interface LogEntry {
+interface LogEntry {
   store: string;
   level: "info" | "warning" | "error";
   message: string;
   timestamp: Date;
 }
-
-export type InkLogger = {
-  info: (store: string, message: string) => void;
-  warning: (store: string, message: string) => void;
-  error: (store: string, message: string) => void;
-};
 
 function createDeploymentUI(storeStatuses: Map<string, StoreStatus>, logEntries: LogEntry[]) {
   const completedCount = Array.from(storeStatuses.values()).filter(
@@ -85,11 +79,6 @@ function renderProgressBar(current: number, total: number) {
   return `[${"█".repeat(filled)}${"░".repeat(barWidth - filled)}] ${percentage}%`;
 }
 
-export type MonitorApi = {
-  updateStore: (store: string, status: StoreStatus, message?: string) => void;
-  setZipPath: (store: string, zipPath: string) => void;
-};
-
 export function createInkLogger(storeNames: string[]) {
   const storeStatuses = new Map<string, StoreStatus>();
   for (const store of storeNames) {
@@ -131,7 +120,7 @@ export function createInkLogger(storeNames: string[]) {
     }
   };
 
-  const monitor: MonitorApi = {
+  const monitor = {
     updateStore: (store: string, status: StoreStatus, message?: string) => {
       if (storeStatuses.get(store) === status) {
         return;

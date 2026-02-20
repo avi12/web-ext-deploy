@@ -62,7 +62,7 @@ async function requestWithBackOff<T>({
     try {
       const response = await sendRequest();
       return [undefined, parseResponse(response)] as const;
-    } catch (error: unknown) {
+    } catch(error: unknown) {
       const err = error instanceof Object ? error : {};
       const status = "status" in err ? Number(err.status) : 0;
       if (status >= 500 && attempt < maxRetries) {

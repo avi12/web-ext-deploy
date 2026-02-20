@@ -11,8 +11,6 @@ const ExtensionManifestSchema = z.object({
   default_locale: z.string().optional()
 });
 
-export type ExtensionManifest = z.infer<typeof ExtensionManifestSchema>;
-
 export function getFullPath(file: string) {
   return path.resolve(process.cwd(), file);
 }
@@ -56,7 +54,6 @@ export async function getExtJson(zip: string) {
   }
   return manifest.data;
 }
-
 
 export function getErrorMessage({
   store,

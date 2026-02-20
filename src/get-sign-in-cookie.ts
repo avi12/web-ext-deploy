@@ -79,7 +79,7 @@ export async function getSignInCookie(siteNames: Array<string>) {
   const [width, height] = [1280, 720];
   const browser = await chromium.launch({
     headless: false,
-    args: [`--window-size=${width},${height}`] //, "--window-position=0,0"]
+    args: [`--window-size=${width},${height}`] // , "--window-position=0,0"]
   });
   const context = await browser.newContext({
     viewport: { width,

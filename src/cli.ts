@@ -161,7 +161,6 @@ function getJsonsFromArgs(store: string, argv: Argv) {
   return mapStoreArgs(argv as Record<string, unknown>, store);
 }
 
-
 async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void) {
   for (const store of storeRegistry) {
     const fields = store.cookieFields;
@@ -189,7 +188,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
     log?.(`${capitalCase(store.name)}: Fetching cookies...`);
     try {
       await getCookies([store.name]);
-    } catch (error) {
+    } catch(error) {
       throw new Error(red(`Failed to fetch cookies: ${error}`), { cause: error });
     }
 
@@ -324,7 +323,7 @@ export function readCookiesFromEnv(storeName: string, cookieFields: string[]) {
 }
 
 export function createCookieRefreshCallback(store: string, cookieFields: string[]) {
-  return async () => {
+  return async() => {
     await getCookies([store]);
     return readCookiesFromEnv(store, cookieFields);
   };

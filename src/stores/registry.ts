@@ -8,7 +8,7 @@ import { opera } from "./opera/index.js";
 // To add a new store: import it and add it to this array.
 export const storeRegistry: StoreDefinition[] = [chrome, firefox, edge, opera];
 
-export const storeNames = storeRegistry.map(store => store.name);
+export const storeNames = ["chrome", "firefox", "edge", "opera"] as const;
 
 export function getStore(name: string) {
   return storeRegistry.find(store => store.name === name);
@@ -17,9 +17,4 @@ export function getStore(name: string) {
 export function isSupportedStore(value: unknown) {
   const result = z.string().safeParse(value);
   return result.success && storeNames.includes(result.data);
-}
-
-export function isSupportedGetCookies(value: unknown) {
-  const result = z.string().safeParse(value);
-  return result.success && storeRegistry.some(store => store.name === result.data && (store.cookieFields?.length ?? 0) > 0);
 }

@@ -80,7 +80,7 @@ async function fetchWithBackOff(url: string, options: RequestInit) {
       }
 
       throw new Error(response.statusText);
-    } catch (error) {
+    } catch(error) {
       const isRetryable = attempt < maxRetries;
       if (isRetryable) {
         const delay = Math.min(maxDelay, Math.pow(2, attempt) * 1000) * (1 + 0.5 * Math.random());
@@ -108,7 +108,7 @@ async function handleRequestWithBackOff<T>({
   try {
     const { data } = await sendRequest();
     return [undefined, parseResponse(data)] as const;
-  } catch (error: unknown) {
+  } catch(error: unknown) {
     if (error instanceof CookieAuthError) {
       throw error;
     }

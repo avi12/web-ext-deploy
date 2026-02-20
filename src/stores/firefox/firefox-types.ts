@@ -62,7 +62,4 @@ export const FirefoxCreateNewVersionSchema = z
   })
   .passthrough();
 
-export type FirefoxCreateNewVersion = z.infer<typeof FirefoxCreateNewVersionSchema>;
-export type FirefoxUploadSource = FirefoxCreateNewVersion;
-
 export const FirefoxUploadSourceSchema = FirefoxCreateNewVersionSchema;

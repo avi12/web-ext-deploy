@@ -61,7 +61,7 @@ async function fetchWithRetry(
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries())
       };
-    } catch (error) {
+    } catch(error) {
       lastError = toError(error);
       if (attempt === maxRetries) {
         throw lastError;
