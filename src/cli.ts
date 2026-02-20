@@ -9,7 +9,7 @@ import { getStore, isSupportedStore, storeNames, storeRegistry } from "./stores/
 import { isObjectEmpty, mapStoreArgs } from "./utils.js";
 
 const BaseOptionsSchema = z.object({
-  autoFetchCookies: z.boolean().optional().describe("Automatically fetch cookies for stores that support it"),
+  autoFetchCookies: z.boolean().optional().describe("Automatically fetch cookies for stores that require them"),
   dryRun: z.boolean().optional().describe("Validate inputs without deploying"),
   verbose: z.boolean().optional().describe("Log each deployment step")
 });
