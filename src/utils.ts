@@ -107,6 +107,10 @@ export function headersToEnv(headersTotal: Record<string, unknown>) {
     .join("\n");
 }
 
+export function toError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
+}
+
 export class CookieAuthError extends Error {
   constructor(store: string) {
     super(`${store}: Authentication failed — cookies may be expired`);

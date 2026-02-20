@@ -13,6 +13,7 @@ interface HttpResponse<T> {
 }
 
 import { ReadStream } from "node:fs";
+import { toError } from "./utils.js";
 
 async function streamToBuffer(stream: ReadStream) {
   return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
@@ -40,7 +41,7 @@ async function fetchWithRetry(
   maxRetries: number = 3,
   delayMs: number = 1000
 ) {
-  let lastError: unknown;
+  let lastError: Error;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -63,9 +64,9 @@ async function fetchWithRetry(
         headers: Object.fromEntries(response.headers.entries())
       };
     } catch (error) {
-      lastError = error;
+      lastError = toError(error);
       if (attempt === maxRetries) {
-        throw error;
+        throw lastError;
       }
       await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
     }

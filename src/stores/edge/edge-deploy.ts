@@ -232,7 +232,7 @@ export async function deployToEdgePublishApi(
   const [uploadError, uploadOperationId] = await uploadZip({ zip,
     productId });
   if (uploadError) {
-    throw uploadError;
+    throw new Error(uploadError);
   }
 
   if (verbose) {
@@ -243,7 +243,7 @@ export async function deployToEdgePublishApi(
     productId,
     operationId: uploadOperationId });
   if (verifyError) {
-    throw verifyError;
+    throw new Error(verifyError);
   }
 
   if (verbose) {
@@ -254,7 +254,7 @@ export async function deployToEdgePublishApi(
     productId,
     devChangelog });
   if (publishError) {
-    throw publishError;
+    throw new Error(publishError);
   }
 
   if (verbose) {
@@ -265,7 +265,7 @@ export async function deployToEdgePublishApi(
     productId,
     operationId: publishOperationId });
   if (statusError) {
-    throw statusError;
+    throw new Error(statusError);
   }
 
   logger?.info("Successfully published to Edge Add-ons!");

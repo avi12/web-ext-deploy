@@ -10,3 +10,4 @@ dist-pack-ext
 .gemini/
 .copilot/
 CLAUDE.md
+.claude/

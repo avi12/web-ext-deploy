@@ -10,7 +10,7 @@ import { FormData } from "../../form-data.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
 import { generateJwt } from "../../jwt.js";
 import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
-import { getErrorMessage, getExtJson } from "../../utils.js";
+import { getErrorMessage, getExtJson, toError } from "../../utils.js";
 import fs from "node:fs";
 
 const STORE = "Firefox";
@@ -31,14 +31,14 @@ async function handleRequestWithBackOff<T>({
   extId: string;
 }): Promise<readonly [string] | readonly [undefined, T]> {
   const maxRetries = 5;
-  let lastError: unknown;
+  let lastError: Error;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await sendRequest();
       return [undefined, parseResponse(response.data)] as const;
     } catch (error: unknown) {
-      lastError = error;
+      lastError = toError(error);
       const err = error instanceof Object ? error : {};
       const status = "status" in err ? Number(err.status) : 0;
 
@@ -292,7 +292,7 @@ export default async function deployToFirefox(
   const [uploadError, uploadData] = await uploadZip({ zip,
     extId });
   if (uploadError) {
-    throw uploadError;
+    throw new Error(uploadError);
   }
   const { uuid, version } = uploadData;
 
@@ -304,7 +304,7 @@ export default async function deployToFirefox(
     extId,
     uuid });
   if (validateError) {
-    throw validateError;
+    throw new Error(validateError);
   }
 
   if (verbose) {
@@ -320,7 +320,7 @@ export default async function deployToFirefox(
     zip
   });
   if (versionError) {
-    throw versionError;
+    throw new Error(versionError);
   }
 
   if (zipSource) {
@@ -334,7 +334,7 @@ export default async function deployToFirefox(
       zip
     });
     if (sourceError) {
-      throw sourceError;
+      throw new Error(sourceError);
     }
   }
 

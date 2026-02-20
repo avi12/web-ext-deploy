@@ -46,12 +46,14 @@ async function uploadZip({
     return;
   }
   const errors = data.itemError?.map(({ error_detail }) => error_detail) || ["Unknown upload error"];
-  throw getErrorMessage({
-    store: STORE,
-    error: errors.join("\n"),
-    actionName: "upload",
-    zip
-  });
+  throw new Error(
+    getErrorMessage({
+      store: STORE,
+      error: errors.join("\n"),
+      actionName: "upload",
+      zip
+    })
+  );
 }
 
 async function publishExtension({
@@ -81,12 +83,14 @@ async function publishExtension({
   if (data.state === "SUCCESS") {
     return;
   }
-  throw getErrorMessage({
-    store: STORE,
-    error: "Failed to publish extension",
-    actionName: "publish",
-    zip: ""
-  });
+  throw new Error(
+    getErrorMessage({
+      store: STORE,
+      error: "Failed to publish extension",
+      actionName: "publish",
+      zip: ""
+    })
+  );
 }
 
 export async function deployToChrome(

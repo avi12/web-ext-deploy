@@ -5,6 +5,7 @@ import { deployStore } from "./deploy-store.js";
 import { red } from "./logging.js";
 import { createInkLogger } from "./ink-logger.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
+import { toError } from "./utils.js";
 
 async function runStoreDeploy(
   store: string,
@@ -63,8 +64,7 @@ async function initCli() {
       inkLogger.monitor.updateStore(store, "success");
       successes++;
     } else {
-      const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
-      inkLogger.logger.error(store, message);
+      inkLogger.logger.error(store, toError(result.reason).message);
       inkLogger.monitor.updateStore(store, "error");
       failures++;
     }
@@ -78,8 +78,7 @@ async function initCli() {
   }
 }
 
-initCli().catch((err: unknown) => {
-  const message = err instanceof Error ? err.message : String(err);
-  process.stderr.write(message + "\n");
+initCli().catch((err: Error) => {
+  process.stderr.write(err.message + "\n");
   process.exitCode = 1;
 });

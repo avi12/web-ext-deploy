@@ -10,7 +10,7 @@ import {
   type ListVersions
 } from "./opera-types.js";
 import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
-import { CookieAuthError, getErrorMessage, getExtJson } from "../../utils.js";
+import { CookieAuthError, getErrorMessage, getExtJson, toError } from "../../utils.js";
 import fs from "node:fs";
 
 const STORE = "Opera";
@@ -86,7 +86,7 @@ async function fetchWithBackOff(url: string, options: RequestInit) {
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
-      throw error;
+      throw toError(error);
     }
   }
 
@@ -396,7 +396,7 @@ export default async function deployToOpera(
   const [versionsError, versionsData] = await getVersions({ zip,
     packageId });
   if (versionsError) {
-    throw versionsError;
+    throw new Error(versionsError);
   }
 
   if (verbose) {
@@ -407,14 +407,14 @@ export default async function deployToOpera(
     versionsListed: versionsData.versions,
     version });
   if (moderationError) {
-    throw moderationError;
+    throw new Error(moderationError);
   }
 
   const [cancelError] = await cancelLatestVersionIfNotSubmitted({ zip,
     packageId,
     versionsListed: versionsData.versions });
   if (cancelError) {
-    throw cancelError;
+    throw new Error(cancelError);
   }
 
   if (verbose) {
@@ -423,7 +423,7 @@ export default async function deployToOpera(
 
   const [uploadError] = await uploadZip({ zip });
   if (uploadError) {
-    throw uploadError;
+    throw new Error(uploadError);
   }
 
   if (verbose) {
@@ -435,7 +435,7 @@ export default async function deployToOpera(
     packageId,
     lastVersion });
   if (verifyUploadError) {
-    throw verifyUploadError;
+    throw new Error(verifyUploadError);
   }
 
   if (verbose) {
@@ -445,7 +445,7 @@ export default async function deployToOpera(
   const [sourceError] = await verifySourceCodeExistence({ zip,
     packageId });
   if (sourceError) {
-    throw sourceError;
+    throw new Error(sourceError);
   }
 
   if (changelog) {
@@ -456,7 +456,7 @@ export default async function deployToOpera(
       packageId,
       changelog });
     if (changelogError) {
-      throw changelogError;
+      throw new Error(changelogError);
     }
   }
 
@@ -467,7 +467,7 @@ export default async function deployToOpera(
   const [submitError] = await submitChanges({ zip,
     packageId });
   if (submitError) {
-    throw submitError;
+    throw new Error(submitError);
   }
 
   logger?.info("Successfully published to Opera Add-ons!");
