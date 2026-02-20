@@ -1,4 +1,5 @@
-type RequestMethod = "GET" | "POST" | "PATCH";
+import { ReadStream } from "node:fs";
+import { toError } from "./utils.js";
 
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
@@ -11,9 +12,6 @@ interface HttpResponse<T> {
   statusText: string;
   headers?: Record<string, string>;
 }
-
-import { ReadStream } from "node:fs";
-import { toError } from "./utils.js";
 
 async function streamToBuffer(stream: ReadStream) {
   return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
@@ -38,8 +36,8 @@ function stringifyParams(params: Record<string, string | number>) {
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
-  maxRetries: number = 3,
-  delayMs: number = 1000
+  maxRetries = 3,
+  delayMs = 1000
 ) {
   let lastError: Error;
 
@@ -76,32 +74,32 @@ async function fetchWithRetry(
 }
 
 export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
-  async function request(method: RequestMethod, endpoint: string, options: FetchOptions = {}) {
+  async function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
     let url = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
 
     if (options.params) {
       url += `?${stringifyParams(options.params)}`;
     }
 
-    const headers = { ...defaultHeaders,
-      ...options.headers };
+    const headers = {
+      ...defaultHeaders,
+      ...options.headers
+    };
 
     const fetchOptions: RequestInit = {
       method,
-      headers
+      headers,
+      ...options.body !== undefined && {
+        body: options.body
+      }
     };
-
-    if (options.body !== undefined) {
-      fetchOptions.body = options.body;
-    }
 
     return fetchWithRetry(url, fetchOptions);
   }
 
   async function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
     const finalBody = body instanceof ReadStream ? await streamToBuffer(body) : body;
-    return request("POST", endpoint, { ...options,
-      body: finalBody });
+    return request("POST", endpoint, { ...options, body: finalBody });
   }
 
   async function get(endpoint: string, options: FetchOptions = {}) {
@@ -109,15 +107,10 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
   }
 
   async function patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
-    return request("PATCH", endpoint, { ...options,
-      body });
+    return request("PATCH", endpoint, { ...options, body });
   }
 
-  return {
-    post,
-    get,
-    patch
-  };
+  return { post, get, patch };
 }
 
 export type { HttpResponse };

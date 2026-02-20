@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { ChromeOptions } from "./chrome-input.js";
+import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
 import { createHttpClient } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
 import { getErrorMessage } from "../../utils.js";
@@ -12,21 +12,7 @@ const BASE_URL = "https://chromewebstore.googleapis.com";
 let httpClient: ReturnType<typeof createHttpClient>;
 let uploadHttpClient: ReturnType<typeof createHttpClient>;
 
-const UploadResponseSchema = z.object({
-  state: z.string(),
-  itemError: z.array(z.object({ error_detail: z.string() })).optional()
-});
-
-const PublishResponseSchema = z.object({
-  state: z.string().optional()
-});
-
-const FetchStatusSchema = z.object({
-  publishedItemRevisionStatus: z.string().optional(),
-  submittedItemRevisionStatus: z.string().optional()
-});
-
-const PENDING_REVIEW_STATES = ["PENDING_REVIEW", "IN_REVIEW"];
+const PENDING_REVIEW_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED];
 
 async function fetchStatus({ extId, publisherId }: { extId: string; publisherId: string }) {
   const response = await httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`);
@@ -49,17 +35,48 @@ async function cancelSubmissionIfPending({
   verbose?: boolean;
 }) {
   const status = await fetchStatus({ extId, publisherId });
-  const submittedStatus = status.submittedItemRevisionStatus;
-  if (!submittedStatus || !PENDING_REVIEW_STATES.includes(submittedStatus)) {
+  const submittedState = status.submittedItemRevisionStatus?.state;
+  if (!submittedState || !PENDING_REVIEW_STATES.includes(submittedState)) {
     return;
   }
 
   if (verbose) {
-    logger?.info(`Canceling pending submission (status: ${submittedStatus})`);
+    logger?.info(`Canceling pending submission (state: ${submittedState})`);
   }
 
   await httpClient.post(`v2/publishers/${publisherId}/items/${extId}:cancelSubmission`);
   await setTimeout(60_000);
+}
+
+async function waitForUpload({
+  extId,
+  publisherId,
+  zip
+}: {
+  extId: string;
+  publisherId: string;
+  zip: string;
+}) {
+  const maxAttempts = 10;
+  const pollIntervalMs = 10_000;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await setTimeout(pollIntervalMs);
+    const status = await fetchStatus({ extId, publisherId });
+    const uploadState = status.lastAsyncUploadState;
+    if (uploadState === UploadState.SUCCEEDED) {
+      return;
+    }
+    if (uploadState !== UploadState.IN_PROGRESS) {
+      throw new Error(
+        getErrorMessage({ store: STORE, error: `Upload failed with state: ${uploadState}`, actionName: "upload", zip })
+      );
+    }
+  }
+
+  throw new Error(
+    getErrorMessage({ store: STORE, error: "Upload timed out (still IN_PROGRESS)", actionName: "upload", zip })
+  );
 }
 
 async function uploadZip({
@@ -85,20 +102,23 @@ async function uploadZip({
   if (!upload.success) {
     throw upload.error;
   }
-  const data = upload.data;
-  if (data.state === "SUCCESS") {
+  if (upload.data.uploadState === UploadState.SUCCEEDED) {
     return;
   }
-  const errors = data.itemError?.map(({ error_detail }) => error_detail) || ["Unknown upload error"];
+  if (upload.data.uploadState === UploadState.IN_PROGRESS) {
+    return waitForUpload({ extId, publisherId, zip });
+  }
   throw new Error(
     getErrorMessage({
       store: STORE,
-      error: errors.join("\n"),
+      error: `Upload failed with state: ${upload.data.uploadState}`,
       actionName: "upload",
       zip
     })
   );
 }
+
+const PUBLISH_SUCCESS_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED, ItemState.PUBLISHED, ItemState.PUBLISHED_TO_TESTERS];
 
 async function publishExtension({
   extId,
@@ -131,17 +151,34 @@ async function publishExtension({
   if (!publish.success) {
     throw publish.error;
   }
-  const data = publish.data;
-  if (data.state === "SUCCESS") {
+  const { state } = publish.data;
+  if (!PUBLISH_SUCCESS_STATES.includes(state)) {
+    throw new Error(
+      getErrorMessage({
+        store: STORE,
+        error: `Publish failed with state: ${state}`,
+        actionName: "publish",
+        zip: ""
+      })
+    );
+  }
+}
+
+async function verifySubmission({ extId, publisherId }: { extId: string; publisherId: string }) {
+  const status = await fetchStatus({ extId, publisherId });
+  const submittedState = status.submittedItemRevisionStatus?.state;
+  const publishedState = status.publishedItemRevisionStatus?.state;
+
+  if (publishedState === ItemState.PUBLISHED || publishedState === ItemState.PUBLISHED_TO_TESTERS) {
     return;
   }
+  if (submittedState && PUBLISH_SUCCESS_STATES.includes(submittedState)) {
+    return;
+  }
+
+  const state = submittedState || publishedState || "unknown";
   throw new Error(
-    getErrorMessage({
-      store: STORE,
-      error: "Failed to publish extension",
-      actionName: "publish",
-      zip: ""
-    })
+    getErrorMessage({ store: STORE, error: `Submission verification failed (state: ${state})`, actionName: "verify submission of", zip: "" })
   );
 }
 
@@ -168,6 +205,12 @@ export async function deployToChrome(
   }
 
   await publishExtension({ extId, publisherId, skipReview, deployPercentage });
+
+  if (verbose) {
+    logger?.info("Verifying submission");
+  }
+
+  await verifySubmission({ extId, publisherId });
 
   logger?.info("Successfully published to Chrome Web Store!");
   return true;
