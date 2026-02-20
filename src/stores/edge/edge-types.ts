@@ -11,7 +11,6 @@ const BasePublishStatusSchema = z.object({
 });
 
 export const PublishOperationStatusSchema = BasePublishStatusSchema;
-export type PublishOperationStatus = z.infer<typeof PublishOperationStatusSchema>;
 
 export const StatusPackageUploadSchema = z.object({
   id: z.string(),

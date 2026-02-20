@@ -14,11 +14,6 @@ async function runStoreDeploy(
   isDryRun?: boolean,
   isVerbose?: boolean
 ) {
-  const zip = z.string().safeParse(json["zip"]);
-  if (zip.success) {
-    inkLogger.monitor.setZipPath(store, zip.data);
-  }
-
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
@@ -30,7 +25,9 @@ async function runStoreDeploy(
     logger: inkLogger.forStore(store),
     onCookieExpired,
     isDryRun,
-    isVerbose
+    isVerbose,
+    setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
+    setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath)
   });
 }
 

@@ -27,8 +27,7 @@ export const ChromeOptionsSchema = z
 export type ChromeOptions = z.infer<typeof ChromeOptionsSchema>;
 
 export function prepareChromeOptions(options: ChromeOptions) {
-  const correctedOptions = { ...options,
-    zip: getCorrectZip(options.zip) };
+  const correctedOptions = { ...options, zip: getCorrectZip(options.zip) };
   const result = ChromeOptionsSchema.safeParse(correctedOptions);
   if (!result.success) {
     throw result.error;

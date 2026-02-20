@@ -22,6 +22,7 @@ export function deployStore(
   const prepared = store.prepare(parseResult.data);
   if (context?.isDryRun) {
     context.logger?.info("Dry run: validation passed");
+    context.setStatus?.("success");
     return Promise.resolve(true);
   }
   return store.deploy(prepared, context);

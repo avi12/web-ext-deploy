@@ -9,38 +9,43 @@ import {
 import { FormData } from "../../form-data.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
 import { generateJwt } from "../../jwt.js";
+import { red } from "../../logging.js";
 import type { DeployContext } from "../../types.js";
-import { getErrorMessage, getExtJson, toError } from "../../utils.js";
+import { getExtJson, toError } from "../../utils.js";
 import fs from "node:fs";
 
 const STORE = "Firefox";
-let httpClient: ReturnType<typeof createHttpClient>;
 const SECONDS_TO_TOKEN_EXPIRY = 60 * 3;
+
+function storeError(message: string) {
+  return red(`${STORE}: ${message}`);
+}
+
+let httpClient: ReturnType<typeof createHttpClient>;
 
 async function handleRequestWithBackOff<T>({
   sendRequest,
   parseResponse,
-  errorActionOnFailure,
-  zip,
-  extId
+  errorContext,
+  extId,
+  logger
 }: {
   sendRequest: () => Promise<HttpResponse<unknown>>;
   parseResponse: (data: unknown) => T;
-  errorActionOnFailure: string;
-  zip: string;
+  errorContext: string;
   extId: string;
-}): Promise<readonly [string] | readonly [undefined, T]> {
+  logger?: DeployContext["logger"];
+}): Promise<T> {
   const maxRetries = 5;
   let lastError: Error;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await sendRequest();
-      return [undefined, parseResponse(response.data)] as const;
+      return parseResponse(response.data);
     } catch(error: unknown) {
       lastError = toError(error);
-      const err = error instanceof Object ? error : {};
-      const status = "status" in err ? Number(err.status) : 0;
+      const status = z.object({ status: z.coerce.number() }).safeParse(error).data?.status ?? 0;
 
       if (status >= 500 && attempt < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 30_000)));
@@ -48,21 +53,15 @@ async function handleRequestWithBackOff<T>({
       }
 
       if (status === 429) {
-        const errData = "data" in err ? err.data : undefined;
-        const detail =
-          errData instanceof Object && "detail" in errData && typeof errData.detail === "string"
-            ? errData.detail
-            : "";
+        const detail = z.object({
+          data: z.object({ detail: z.string() })
+        }).safeParse(error).data?.data.detail ?? "";
         const secondsToWait = Number(detail.match(/\d+/)?.[0] || "60");
         if (secondsToWait > 60) {
-          return [
-            getErrorMessage({
-              store: STORE,
-              error: `Too many API requests. Deploy manually at https://addons.mozilla.org/developers/addons/${extId}/versions/submit/`,
-              actionName: errorActionOnFailure,
-              zip
-            })
-          ] as const;
+          throw new Error(
+            storeError(`${errorContext}: Too many API requests. Deploy manually at https://addons.mozilla.org/developers/addons/${extId}/versions/submit/`),
+            { cause: error }
+          );
         }
         if (secondsToWait < SECONDS_TO_TOKEN_EXPIRY) {
           const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
@@ -74,34 +73,32 @@ async function handleRequestWithBackOff<T>({
         continue;
       }
 
-      const errData = "data" in err ? err.data : undefined;
-      let errorMessage = getErrorMessage({
-        store: STORE,
-        error: z.string().safeParse(errData).data ?? JSON.stringify(errData),
-        actionName: errorActionOnFailure,
-        zip
-      });
+      const errData = z.object({ data: z.unknown() }).safeParse(error).data?.data;
+      const errStr = z.string().safeParse(errData).data ?? JSON.stringify(errData);
+      let errorMessage = storeError(`${errorContext}: ${errStr}`);
       if (errorMessage.match(/release_notes.+The language code.+is invalid/)) {
         errorMessage +=
           " Supported language codes: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py";
       }
-      return [errorMessage] as const;
+      throw new Error(errorMessage, { cause: error });
     }
   }
 
   throw lastError;
 }
 
-let jwtIssuer: string;
-let jwtSecret: string;
-let logger: DeployContext["logger"];
-
 async function uploadZip({
   zip,
-  extId
+  extId,
+  jwtIssuer,
+  jwtSecret,
+  logger
 }: {
   zip: string;
   extId: string;
+  jwtIssuer: string;
+  jwtSecret: string;
+  logger?: DeployContext["logger"];
 }) {
   const formData = new FormData();
   formData.append("upload", fs.createReadStream(zip));
@@ -118,7 +115,6 @@ async function uploadZip({
   }
 
   return handleRequestWithBackOff({
-    zip,
     sendRequest,
     parseResponse: data => {
       const result = FirefoxUploadDetailSchema.safeParse(data);
@@ -127,8 +123,9 @@ async function uploadZip({
       }
       return result.data;
     },
-    errorActionOnFailure: "upload zip for",
-    extId
+    errorContext: "Upload failed",
+    extId,
+    logger
   });
 }
 
@@ -138,7 +135,8 @@ async function createNewVersion({
   changelog,
   changelogLang,
   devChangelog,
-  zip
+  zip,
+  logger
 }: {
   slug: string;
   uuid: string;
@@ -146,6 +144,7 @@ async function createNewVersion({
   changelogLang: string;
   devChangelog: string;
   zip: string;
+  logger?: DeployContext["logger"];
 }) {
   const { default_locale = changelogLang } = await getExtJson(zip);
   async function sendRequest() {
@@ -175,7 +174,6 @@ async function createNewVersion({
   }
 
   return handleRequestWithBackOff({
-    zip,
     sendRequest,
     parseResponse: data => {
       const result = FirefoxCreateNewVersionSchema.safeParse(data);
@@ -184,29 +182,27 @@ async function createNewVersion({
       }
       return result.data;
     },
-    errorActionOnFailure: "create new version of",
-    extId: slug
+    errorContext: "Version creation failed",
+    extId: slug,
+    logger
   });
 }
 
 async function validateUpload({
-  zip,
   extId,
-  uuid
+  uuid,
+  logger
 }: {
-  zip: string;
   extId: string;
   uuid: string;
-}): Promise<[string] | [undefined, FirefoxUploadDetail]> {
+  logger?: DeployContext["logger"];
+}) {
   let data: FirefoxUploadDetail;
-  let error: string;
-
   do {
     function sendRequest() {
       return httpClient.get(`upload/${uuid}/`);
     }
-    [error, data] = await handleRequestWithBackOff({
-      zip,
+    data = await handleRequestWithBackOff({
       sendRequest,
       parseResponse: response => {
         const result = FirefoxUploadDetailSchema.safeParse(response);
@@ -215,12 +211,10 @@ async function validateUpload({
         }
         return result.data;
       },
-      errorActionOnFailure: "verify upload of",
-      extId
+      errorContext: "Upload verification failed",
+      extId,
+      logger
     });
-    if (error) {
-      return [error];
-    }
   } while (!data.processed);
 
   const errors: Array<string> = [];
@@ -231,22 +225,22 @@ async function validateUpload({
   }
 
   if (errors.length > 0) {
-    return [errors.join("\n")];
+    throw new Error(storeError(errors.join("\n")));
   }
 
-  return [undefined, data];
+  return data;
 }
 
 async function uploadSourceCodeIfNeeded({
   slug,
   zipSource,
   version,
-  zip
+  logger
 }: {
   slug: string;
   zipSource: string;
   version: string;
-  zip: string;
+  logger?: DeployContext["logger"];
 }) {
   const formData = new FormData();
   formData.append("source", fs.createReadStream(zipSource));
@@ -258,7 +252,6 @@ async function uploadSourceCodeIfNeeded({
   }
 
   return handleRequestWithBackOff({
-    zip,
     sendRequest,
     parseResponse: data => {
       const result = FirefoxUploadSourceSchema.safeParse(data);
@@ -267,88 +260,79 @@ async function uploadSourceCodeIfNeeded({
       }
       return result.data;
     },
-    errorActionOnFailure: "upload source code of",
-    extId: slug
+    errorContext: "Source upload failed",
+    extId: slug,
+    logger
   });
 }
 
-export default async function deployToFirefox(
+export async function deployToFirefox(
   {
     extId,
-    jwtIssuer: issuer,
-    jwtSecret: secret,
+    jwtIssuer,
+    jwtSecret,
     zip,
     zipSource = "",
     changelog = "",
     changelogLang = "en-US",
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
-  { logger: storeLogger, isVerbose }: DeployContext = {}
+  { logger, isVerbose, setStatus, setZipPath }: DeployContext = {}
 ) {
-  jwtIssuer = issuer;
-  jwtSecret = secret;
-  logger = storeLogger;
-
   httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/", {
     Authorization: `JWT ${generateJwt({ jwtIssuer,
       jwtSecret })}`
   });
 
+  setZipPath?.(zip);
   const { name } = await getExtJson(zip);
 
   if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
   }
 
-  const [uploadError, uploadData] = await uploadZip({ zip,
-    extId });
-  if (uploadError) {
-    throw new Error(uploadError);
-  }
+  const uploadData = await uploadZip({ zip,
+    extId,
+    jwtIssuer,
+    jwtSecret,
+    logger });
   const { uuid, version } = uploadData;
 
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
-  const [validateError] = await validateUpload({ zip,
-    extId,
-    uuid });
-  if (validateError) {
-    throw new Error(validateError);
-  }
+  await validateUpload({ extId,
+    uuid,
+    logger });
 
   if (isVerbose) {
     logger?.info(`Creating a new version: ${version}`);
   }
 
-  const [versionError] = await createNewVersion({
+  await createNewVersion({
     slug: extId,
     uuid,
     changelog,
     changelogLang,
     devChangelog,
-    zip
+    zip,
+    logger
   });
-  if (versionError) {
-    throw new Error(versionError);
-  }
 
   if (zipSource) {
     if (isVerbose) {
       logger?.info(`Uploading source ZIP: ${zipSource}`);
     }
-    const [sourceError] = await uploadSourceCodeIfNeeded({
+    await uploadSourceCodeIfNeeded({
       slug: extId,
       zipSource,
       version,
-      zip
+      logger
     });
-    if (sourceError) {
-      throw new Error(sourceError);
-    }
   }
 
   logger?.info("Successfully published to Firefox Add-ons!");
+  setStatus?.("success");
   return true;
 }

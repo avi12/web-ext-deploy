@@ -165,8 +165,9 @@ async function verifySubmission({ extId, publisherId }: { extId: string; publish
 
 export async function deployToChrome(
   { extId, publisherId, refreshToken, zip, skipReview, deployPercentage }: ChromeOptions,
-  { logger, isVerbose }: DeployContext = {}
+  { logger, isVerbose, setStatus, setZipPath }: DeployContext = {}
 ) {
+  setZipPath?.(zip);
   const authHeaders = { Authorization: `Bearer ${refreshToken}` };
   httpClient = createHttpClient(BASE_URL, authHeaders);
   uploadHttpClient = createHttpClient(BASE_URL, authHeaders);
@@ -194,5 +195,6 @@ export async function deployToChrome(
   await verifySubmission({ extId, publisherId });
 
   logger?.info("Successfully published to Chrome Web Store!");
+  setStatus?.("success");
   return true;
 }

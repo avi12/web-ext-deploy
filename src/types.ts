@@ -12,6 +12,8 @@ export type DeployContext = {
   logger?: StoreLogger;
   onCookieExpired?: CookieRefreshCallback;
   isVerbose?: boolean;
+  setStatus?: (status: "running" | "success" | "error", message?: string) => void;
+  setZipPath?: (zipPath: string) => void;
 };
 
 export type StoreDefinition = {

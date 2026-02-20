@@ -1,4 +1,4 @@
-import deployToFirefox from "./firefox-deploy.js";
+import { deployToFirefox } from "./firefox-deploy.js";
 import { FirefoxOptionsSubmissionApiSchema, prepareFirefoxOptions } from "./firefox-input.js";
 import { defineStore } from "../../types.js";
 

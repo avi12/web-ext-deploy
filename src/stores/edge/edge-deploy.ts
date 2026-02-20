@@ -1,59 +1,34 @@
 import { z } from "zod";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
-import { PublishOperationStatusSchema, StatusPackageUploadSchema, type PublishOperationStatus, type StatusPackageUpload } from "./edge-types.js";
+import { PublishOperationStatusSchema, StatusPackageUploadSchema, type StatusPackageUpload } from "./edge-types.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
-import { getErrorMessage, getExtJson } from "../../utils.js";
+import { getExtJson } from "../../utils.js";
+import { red } from "../../logging.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 
 const STORE = "Edge";
-let httpClient: ReturnType<typeof createHttpClient>;
-let logger: DeployContext["logger"];
 
-function handleError(error: unknown, errorActionOnFailure: string, zip: string, productId: string) {
-  const err = error instanceof Object ? error : {};
-  const status = "status" in err ? Number(err.status) : 0;
-  const statusText = "statusText" in err && typeof err.statusText === "string" ? err.statusText : String(error);
-
-  if (status === 429) {
-    const responseData =
-      "response" in err && err.response instanceof Object && "data" in err.response ? err.response.data : undefined;
-    const message =
-      responseData instanceof Object && "message" in responseData && typeof responseData.message === "string"
-        ? responseData.message
-        : "";
-    const secondsToWait = Number(message.match(/\d+/)?.[0] || "60");
-    if (secondsToWait >= 60) {
-      const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
-      logger?.warning(
-        `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard`
-      );
-    }
-    return undefined; // Signal to retry
-  }
-
-  return getErrorMessage({
-    store: STORE,
-    error: statusText,
-    actionName: errorActionOnFailure,
-    zip
-  });
+function storeError(message: string) {
+  return red(`${STORE}: ${message}`);
 }
+
+let httpClient: ReturnType<typeof createHttpClient>;
 
 async function requestWithBackOff<T>({
   sendRequest,
   parseResponse,
-  errorActionOnFailure,
-  zip,
-  productId
+  errorContext,
+  productId,
+  logger
 }: {
   sendRequest: () => Promise<HttpResponse<unknown>>;
   parseResponse: (response: HttpResponse<unknown>) => T;
-  errorActionOnFailure: string;
-  zip: string;
+  errorContext: string;
   productId: string;
-}): Promise<readonly [string] | readonly [undefined, T]> {
+  logger?: DeployContext["logger"];
+}): Promise<T> {
   const maxRetries = 5;
   const maxBackOffMs = 30_000;
   const rateLimitRetryMs = 60_000;
@@ -61,49 +36,54 @@ async function requestWithBackOff<T>({
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await sendRequest();
-      return [undefined, parseResponse(response)] as const;
+      return parseResponse(response);
     } catch(error: unknown) {
-      const err = error instanceof Object ? error : {};
-      const status = "status" in err ? Number(err.status) : 0;
+      const status = z.object({ status: z.coerce.number() }).safeParse(error).data?.status ?? 0;
+
       if (status >= 500 && attempt < maxRetries) {
         const exponentialDelay = Math.min(1000 * Math.pow(2, attempt - 1), maxBackOffMs);
         await setTimeout(exponentialDelay);
         continue;
       }
 
-      const errorMsg = handleError(error, errorActionOnFailure, zip, productId);
-      if (errorMsg === undefined) {
+      if (status === 429) {
+        const message = z.object({
+          response: z.object({ data: z.object({ message: z.string() }) })
+        }).safeParse(error).data?.response.data.message ?? "";
+        const secondsToWait = Number(message.match(/\d+/)?.[0] || "60");
+        if (secondsToWait >= 60) {
+          const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
+          logger?.warning(
+            `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard`
+          );
+        }
         await setTimeout(rateLimitRetryMs);
         continue;
       }
-      return [errorMsg] as const;
+
+      const statusText = z.object({ statusText: z.string() }).safeParse(error).data?.statusText ?? String(error);
+      throw new Error(storeError(`${errorContext}: ${statusText}`), { cause: error });
     }
   }
 
-  return [
-    getErrorMessage({ store: STORE,
-      error: "Max retries exceeded",
-      actionName: errorActionOnFailure,
-      zip })
-  ] as const;
+  throw new Error(storeError(`${errorContext}: Max retries exceeded`));
 }
 
 async function checkStatusOfPackageUpload({
   productId,
   operationId,
-  zip
+  logger
 }: {
   productId: string;
   operationId: string;
-  zip: string;
-}): Promise<[string] | [undefined, StatusPackageUpload]> {
+  logger?: DeployContext["logger"];
+}) {
   function sendRequest() {
     return httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`);
   }
   let data: StatusPackageUpload;
-  let error: string;
   do {
-    [error, data] = await requestWithBackOff({
+    data = await requestWithBackOff({
       sendRequest,
       parseResponse: response => {
         const result = StatusPackageUploadSchema.safeParse(response.data);
@@ -112,19 +92,17 @@ async function checkStatusOfPackageUpload({
         }
         return result.data;
       },
-      errorActionOnFailure: "verify upload of",
-      zip,
-      productId
+      errorContext: "Upload verification failed",
+      productId,
+      logger
     });
-    if (error) {
-      return [error];
-    }
   } while (data.status === "InProgress");
+
   if (data.status === "Failed") {
     const errors = (data.errors || []).map(({ message }) => message).join("\n");
-    return [errors];
+    throw new Error(storeError(errors));
   }
-  return [undefined, data];
+  return data;
 }
 
 function parseLocation(response: HttpResponse<unknown>) {
@@ -137,10 +115,12 @@ function parseLocation(response: HttpResponse<unknown>) {
 
 async function uploadZip({
   zip,
-  productId
+  productId,
+  logger
 }: {
   zip: string;
   productId: string;
+  logger?: DeployContext["logger"];
 }) {
   function sendRequest() {
     return httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
@@ -148,21 +128,23 @@ async function uploadZip({
     });
   }
 
-  return requestWithBackOff({ sendRequest,
+  return requestWithBackOff({
+    sendRequest,
     parseResponse: parseLocation,
-    errorActionOnFailure: "upload",
-    zip,
-    productId });
+    errorContext: "Upload failed",
+    productId,
+    logger
+  });
 }
 
 async function publishSubmission({
-  zip,
   productId,
-  devChangelog
+  devChangelog,
+  logger
 }: {
-  zip: string;
   productId: string;
   devChangelog: string;
+  logger?: DeployContext["logger"];
 }) {
   function sendRequest() {
     return httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
@@ -170,27 +152,29 @@ async function publishSubmission({
     });
   }
 
-  return requestWithBackOff({ sendRequest,
+  return requestWithBackOff({
+    sendRequest,
     parseResponse: parseLocation,
-    errorActionOnFailure: "publish",
-    zip,
-    productId });
+    errorContext: "Publish failed",
+    productId,
+    logger
+  });
 }
 
 async function checkPublishStatus({
-  zip,
   productId,
-  operationId
+  operationId,
+  logger
 }: {
-  zip: string;
   productId: string;
   operationId: string;
-}): Promise<[string] | [undefined, PublishOperationStatus]> {
+  logger?: DeployContext["logger"];
+}) {
   function sendRequest() {
     return httpClient.get(`products/${productId}/submissions/operations/${operationId}`);
   }
 
-  const [error, data] = await requestWithBackOff({
+  const data = await requestWithBackOff({
     sendRequest,
     parseResponse: response => {
       const result = PublishOperationStatusSchema.safeParse(response.data);
@@ -199,83 +183,69 @@ async function checkPublishStatus({
       }
       return result.data;
     },
-    errorActionOnFailure: "check the submission status of",
-    zip,
-    productId
+    errorContext: "Submission status check failed",
+    productId,
+    logger
   });
-  if (error) {
-    return [error];
-  }
-  if (!data.status) {
-    return [data.message];
-  }
-  if (data.status !== "Failed") {
-    return [undefined, data];
-  }
 
-  const errors = (data.errors || []).map(err => err.message);
-  if (errors.length === 0) {
-    errors.push(data.message);
+  if (!data.status) {
+    throw new Error(storeError(data.message));
   }
-  return [errors.join("\n")];
+  if (data.status === "Failed") {
+    const errors = (data.errors || []).map(err => err.message);
+    if (errors.length === 0) {
+      errors.push(data.message);
+    }
+    throw new Error(storeError(errors.join("\n")));
+  }
+  return data;
 }
 
 export async function deployToEdgePublishApi(
   { productId, clientId, apiKey, zip, devChangelog }: EdgeOptionsPublishApi,
-  { logger: storeLogger, isVerbose }: DeployContext = {}
+  { logger, isVerbose, setStatus, setZipPath }: DeployContext = {}
 ) {
-  logger = storeLogger;
-
   httpClient = createHttpClient("https://api.addons.microsoftedge.microsoft.com/v1", {
     Authorization: `ApiKey ${apiKey}`,
     "X-ClientID": clientId
   });
 
+  setZipPath?.(zip);
   const { name } = await getExtJson(zip);
 
   if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
   }
 
-  const [uploadError, uploadOperationId] = await uploadZip({ zip,
-    productId });
-  if (uploadError) {
-    throw new Error(uploadError);
-  }
+  const uploadOperationId = await uploadZip({ zip,
+    productId,
+    logger });
 
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
-  const [verifyError] = await checkStatusOfPackageUpload({ zip,
-    productId,
-    operationId: uploadOperationId });
-  if (verifyError) {
-    throw new Error(verifyError);
-  }
+  await checkStatusOfPackageUpload({ productId,
+    operationId: uploadOperationId,
+    logger });
 
   if (isVerbose) {
     logger?.info("Publishing submission");
   }
 
-  const [publishError, publishOperationId] = await publishSubmission({ zip,
-    productId,
-    devChangelog });
-  if (publishError) {
-    throw new Error(publishError);
-  }
+  const publishOperationId = await publishSubmission({ productId,
+    devChangelog,
+    logger });
 
   if (isVerbose) {
     logger?.info("Checking the submission status");
   }
 
-  const [statusError] = await checkPublishStatus({ zip,
-    productId,
-    operationId: publishOperationId });
-  if (statusError) {
-    throw new Error(statusError);
-  }
+  await checkPublishStatus({ productId,
+    operationId: publishOperationId,
+    logger });
 
   logger?.info("Successfully published to Edge Add-ons!");
+  setStatus?.("success");
   return true;
 }
