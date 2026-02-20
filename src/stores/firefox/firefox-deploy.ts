@@ -13,6 +13,7 @@ import { red } from "../../logging.js";
 import type { DeployContext } from "../../types.js";
 import { getExtJson, toError } from "../../utils.js";
 import fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
 
 const STORE = "Firefox";
 const SECONDS_TO_TOKEN_EXPIRY = 60 * 3;
@@ -69,7 +70,7 @@ async function handleRequestWithBackOff<T>({
             `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://addons.mozilla.org/developers/addon/${extId}/versions/submit/`
           );
         }
-        await new Promise(resolve => setTimeout(resolve, secondsToWait * 1000));
+        await setTimeout(secondsToWait * 1000);
         continue;
       }
 
