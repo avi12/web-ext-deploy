@@ -283,7 +283,7 @@ export default async function deployToFirefox(
     changelogLang = "en-US",
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
-  { logger: storeLogger, verbose }: DeployContext = {}
+  { logger: storeLogger, isVerbose }: DeployContext = {}
 ) {
   jwtIssuer = issuer;
   jwtSecret = secret;
@@ -296,7 +296,7 @@ export default async function deployToFirefox(
 
   const { name } = await getExtJson(zip);
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
   }
 
@@ -307,7 +307,7 @@ export default async function deployToFirefox(
   }
   const { uuid, version } = uploadData;
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
@@ -318,7 +318,7 @@ export default async function deployToFirefox(
     throw new Error(validateError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info(`Creating a new version: ${version}`);
   }
 
@@ -335,7 +335,7 @@ export default async function deployToFirefox(
   }
 
   if (zipSource) {
-    if (verbose) {
+    if (isVerbose) {
       logger?.info(`Uploading source ZIP: ${zipSource}`);
     }
     const [sourceError] = await uploadSourceCodeIfNeeded({

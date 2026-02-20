@@ -395,7 +395,7 @@ async function getVersions({ zip, packageId }: { zip: string; packageId: number 
 
 export default async function deployToOpera(
   { sessionid, csrftoken, packageId, zip, changelog = "" }: OperaOptions,
-  { logger: storeLogger, onCookieExpired, verbose }: DeployContext = {}
+  { logger: storeLogger, onCookieExpired, isVerbose }: DeployContext = {}
 ) {
   logger = storeLogger;
   cookieRefreshCallback = onCookieExpired;
@@ -410,7 +410,7 @@ export default async function deployToOpera(
 
   const { name, version } = await getExtJson(zip);
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info(`Retrieving listed versions of ${name} with package ID ${packageId}`);
   }
 
@@ -420,7 +420,7 @@ export default async function deployToOpera(
     throw new Error(versionsError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info(`Verifying version ${version}`);
   }
 
@@ -438,7 +438,7 @@ export default async function deployToOpera(
     throw new Error(cancelError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Uploading zip");
   }
 
@@ -447,7 +447,7 @@ export default async function deployToOpera(
     throw new Error(uploadError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
@@ -459,7 +459,7 @@ export default async function deployToOpera(
     throw new Error(verifyUploadError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Verifying source code existence");
   }
 
@@ -470,7 +470,7 @@ export default async function deployToOpera(
   }
 
   if (changelog) {
-    if (verbose) {
+    if (isVerbose) {
       logger?.info("Updating changelog");
     }
     const [changelogError] = await updateChangelog({ zip,
@@ -481,7 +481,7 @@ export default async function deployToOpera(
     }
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Submitting changes");
   }
 

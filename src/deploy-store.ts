@@ -6,7 +6,7 @@ import type { DeployContext } from "./types.js";
 export function deployStore(
   options: unknown,
   storeName: string,
-  context?: DeployContext & { dryRun?: boolean }
+  context?: DeployContext & { isDryRun?: boolean }
 ) {
   const store = storeRegistry.find(store => store.name === storeName);
   if (!store) {
@@ -20,7 +20,7 @@ export function deployStore(
   }
 
   const prepared = store.prepare(parseResult.data);
-  if (context?.dryRun) {
+  if (context?.isDryRun) {
     context.logger?.info("Dry run: validation passed");
     return Promise.resolve(true);
   }

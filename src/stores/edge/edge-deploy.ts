@@ -222,7 +222,7 @@ async function checkPublishStatus({
 
 export async function deployToEdgePublishApi(
   { productId, clientId, apiKey, zip, devChangelog }: EdgeOptionsPublishApi,
-  { logger: storeLogger, verbose }: DeployContext = {}
+  { logger: storeLogger, isVerbose }: DeployContext = {}
 ) {
   logger = storeLogger;
 
@@ -233,7 +233,7 @@ export async function deployToEdgePublishApi(
 
   const { name } = await getExtJson(zip);
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
   }
 
@@ -243,7 +243,7 @@ export async function deployToEdgePublishApi(
     throw new Error(uploadError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
@@ -254,7 +254,7 @@ export async function deployToEdgePublishApi(
     throw new Error(verifyError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Publishing submission");
   }
 
@@ -265,7 +265,7 @@ export async function deployToEdgePublishApi(
     throw new Error(publishError);
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Checking the submission status");
   }
 

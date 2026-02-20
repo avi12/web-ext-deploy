@@ -33,7 +33,7 @@ const validInputs: Record<string, Record<string, unknown>> = {
 
 function tryDeployStore(options: unknown, store: string): Promise<boolean> {
   try {
-    return deployStore(options, store, { dryRun: true });
+    return deployStore(options, store, { isDryRun: true });
   } catch (error) {
     return Promise.reject(error);
   }
@@ -44,13 +44,13 @@ describe("dry-run mode", () => {
     for (const [store,
       options] of Object.entries(validInputs)) {
       it(`validates ${store} options without deploying`, async () => {
-        const result = await deployStore(options, store, { dryRun: true });
+        const result = await deployStore(options, store, { isDryRun: true });
         expect(result).toBe(true);
       });
     }
 
     it("throws for unknown store", () => {
-      expect(() => deployStore({}, "unknown-store", { dryRun: true })).toThrow("Unknown store");
+      expect(() => deployStore({}, "unknown-store", { isDryRun: true })).toThrow("Unknown store");
     });
   });
 
@@ -71,8 +71,8 @@ describe("dry-run mode", () => {
     it("validates chrome + firefox together", async () => {
       const [chrome,
         firefox] = await Promise.all([
-        deployStore(validInputs.chrome, "chrome", { dryRun: true }),
-        deployStore(validInputs.firefox, "firefox", { dryRun: true })
+        deployStore(validInputs.chrome, "chrome", { isDryRun: true }),
+        deployStore(validInputs.firefox, "firefox", { isDryRun: true })
       ]);
       expect(chrome).toBe(true);
       expect(firefox).toBe(true);
@@ -81,8 +81,8 @@ describe("dry-run mode", () => {
     it("validates edge + opera together", async () => {
       const [edge,
         opera] = await Promise.all([
-        deployStore(validInputs.edge, "edge", { dryRun: true }),
-        deployStore(validInputs.opera, "opera", { dryRun: true })
+        deployStore(validInputs.edge, "edge", { isDryRun: true }),
+        deployStore(validInputs.opera, "opera", { isDryRun: true })
       ]);
       expect(edge).toBe(true);
       expect(opera).toBe(true);
@@ -91,47 +91,47 @@ describe("dry-run mode", () => {
 
   describe("partial config errors", () => {
     it("rejects chrome with only extId (missing refreshToken, zip)", () => {
-      expect(() => deployStore({ extId: "abc123" }, "chrome", { dryRun: true })).toThrow();
+      expect(() => deployStore({ extId: "abc123" }, "chrome", { isDryRun: true })).toThrow();
     });
 
     it("rejects chrome with extId + refreshToken but no zip", () => {
       expect(() =>
         deployStore({ extId: "abc123",
           publisherId: "pub",
-          refreshToken: "tok" }, "chrome", { dryRun: true })
+          refreshToken: "tok" }, "chrome", { isDryRun: true })
       ).toThrow();
     });
 
     it("rejects firefox with only extId (missing jwtIssuer, jwtSecret, zip)", () => {
-      expect(() => deployStore({ extId: "addon@test" }, "firefox", { dryRun: true })).toThrow();
+      expect(() => deployStore({ extId: "addon@test" }, "firefox", { isDryRun: true })).toThrow();
     });
 
     it("rejects firefox with extId + jwtIssuer but no jwtSecret", () => {
       expect(() =>
         deployStore({ extId: "addon@test",
-          jwtIssuer: "iss" }, "firefox", { dryRun: true })
+          jwtIssuer: "iss" }, "firefox", { isDryRun: true })
       ).toThrow();
     });
 
     it("rejects edge with only productId (missing clientId, apiKey, zip)", () => {
-      expect(() => deployStore({ productId: "prod" }, "edge", { dryRun: true })).toThrow();
+      expect(() => deployStore({ productId: "prod" }, "edge", { isDryRun: true })).toThrow();
     });
 
     it("rejects edge with productId + clientId but no apiKey", () => {
       expect(() =>
         deployStore({ productId: "prod",
-          clientId: "cli" }, "edge", { dryRun: true })
+          clientId: "cli" }, "edge", { isDryRun: true })
       ).toThrow();
     });
 
     it("rejects opera with only packageId (missing sessionid, csrftoken, zip)", () => {
-      expect(() => deployStore({ packageId: 123 }, "opera", { dryRun: true })).toThrow();
+      expect(() => deployStore({ packageId: 123 }, "opera", { isDryRun: true })).toThrow();
     });
 
     it("rejects opera with packageId + sessionid but no csrftoken", () => {
       expect(() =>
         deployStore({ packageId: 123,
-          sessionid: "sess" }, "opera", { dryRun: true })
+          sessionid: "sess" }, "opera", { isDryRun: true })
       ).toThrow();
     });
   });
@@ -139,7 +139,7 @@ describe("dry-run mode", () => {
   describe("missing required fields with empty strings", () => {
     it("rejects chrome with empty extId", () => {
       expect(() => deployStore({ ...validInputs.chrome,
-        extId: "" }, "chrome", { dryRun: true })).toThrow(
+        extId: "" }, "chrome", { isDryRun: true })).toThrow(
         /No extension ID/
       );
     });
@@ -147,27 +147,27 @@ describe("dry-run mode", () => {
     it("rejects chrome with empty refreshToken", () => {
       expect(() =>
         deployStore({ ...validInputs.chrome,
-          refreshToken: "" }, "chrome", { dryRun: true })
+          refreshToken: "" }, "chrome", { isDryRun: true })
       ).toThrow(/No refresh token/);
     });
 
     it("rejects firefox with empty jwtIssuer", () => {
       expect(() =>
         deployStore({ ...validInputs.firefox,
-          jwtIssuer: "" }, "firefox", { dryRun: true })
+          jwtIssuer: "" }, "firefox", { isDryRun: true })
       ).toThrow(/No JWT issuer/);
     });
 
     it("rejects firefox with empty jwtSecret", () => {
       expect(() =>
         deployStore({ ...validInputs.firefox,
-          jwtSecret: "" }, "firefox", { dryRun: true })
+          jwtSecret: "" }, "firefox", { isDryRun: true })
       ).toThrow(/No JWT secret/);
     });
 
     it("rejects edge with empty apiKey", () => {
       expect(() => deployStore({ ...validInputs.edge,
-        apiKey: "" }, "edge", { dryRun: true })).toThrow(
+        apiKey: "" }, "edge", { isDryRun: true })).toThrow(
         /No API key/
       );
     });
@@ -175,14 +175,14 @@ describe("dry-run mode", () => {
     it("rejects opera with empty sessionid", () => {
       expect(() =>
         deployStore({ ...validInputs.opera,
-          sessionid: "" }, "opera", { dryRun: true })
+          sessionid: "" }, "opera", { isDryRun: true })
       ).toThrow(/No sessionid/);
     });
 
     it("rejects non-existent zip path", () => {
       expect(() =>
         deployStore({ ...validInputs.chrome,
-          zip: "nonexistent.zip" }, "chrome", { dryRun: true })
+          zip: "nonexistent.zip" }, "chrome", { isDryRun: true })
       ).toThrow(/Zip doesn't exist/);
     });
   });

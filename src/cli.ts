@@ -201,7 +201,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
   }
 }
 
-function collectMissingArgs(jsonStoresRaw: StoreConfigMap, autoFetchCookies?: boolean) {
+function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: boolean) {
   const missingArgs: Record<string, { required: string[]; optional?: string[] }> = {};
 
   for (const store of storeRegistry) {
@@ -226,7 +226,7 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, autoFetchCookies?: bo
     const missingRequired = requiredFields.filter(field => !storeConfig[field]);
 
     const cookieFields = store.cookieFields || [];
-    if (autoFetchCookies && cookieFields.length > 0) {
+    if (isAutoFetchCookies && cookieFields.length > 0) {
       const missingCookieFields = cookieFields.filter(field => !storeConfig[field]);
       if (missingCookieFields.length === cookieFields.length) {
         continue;
@@ -257,14 +257,7 @@ function collectMissingGlobalArgs(argv: Argv) {
   for (const key in globalSchema) {
     const argValue = argv[key];
 
-    // Check if the arg was not provided (undefined, null, empty string, or empty array)
-    const isNotProvided =
-      argValue === undefined ||
-      argValue === null ||
-      argValue === "" ||
-      (Array.isArray(argValue) && argValue.length === 0);
-
-    if (isNotProvided) {
+    if (!z.coerce.string().nonempty().safeParse(argValue).success) {
       missingGlobal.push(key);
     }
   }
@@ -280,12 +273,12 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
     throw new Error(red("Supply arguments for at least one store."));
   }
 
-  const autoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
-  if (autoFetchCookies) {
+  const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
+  if (isAutoFetchCookies) {
     await fetchMissingCookies(jsonStoresRaw, log);
   }
 
-  const missingArgs = collectMissingArgs(jsonStoresRaw, autoFetchCookies);
+  const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCookies);
   if (Object.keys(missingArgs).length > 0) {
     const isCliMode = command === "cli";
     let errorContent = red("Missing required arguments:\n");

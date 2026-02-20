@@ -86,10 +86,10 @@ export function createInkLogger(storeNames: string[]) {
   }
 
   const logEntries: LogEntry[] = [];
-  let mounted = true;
+  let isMounted = true;
 
   function renderUI() {
-    if (!mounted) {
+    if (!isMounted) {
       return;
     }
 
@@ -149,7 +149,7 @@ export function createInkLogger(storeNames: string[]) {
       error: msg => logger.error(capitalCase(store), msg)
     } satisfies StoreLogger),
     unmount: () => {
-      mounted = false;
+      isMounted = false;
     }
   };
 }
@@ -170,7 +170,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     return key;
   }
 
-  type FieldInfo = { name: string; type: string; required: boolean; description: string };
+  type FieldInfo = { name: string; type: string; isRequired: boolean; description: string };
   const fields: FieldInfo[] = [];
 
   for (const key in shape) {
@@ -195,7 +195,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
 
     fields.push({ name: formatFieldName(key),
       type,
-      required: !isOptional,
+      isRequired: !isOptional,
       description: zodValue.description || "" });
   }
 
@@ -209,8 +209,8 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
 
   let rows = "";
   for (const field of fields) {
-    const reqMark = field.required ? `${Colors.Green}✔${Colors.Reset}` : "";
-    const nameStr = field.required ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
+    const reqMark = field.isRequired ? `${Colors.Green}✔${Colors.Reset}` : "";
+    const nameStr = field.isRequired ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
     // Pad based on raw name length since ANSI codes are invisible
     const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
     rows += `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark.padEnd(reqWidth + (reqMark.length - 1))}${field.description}\n`;

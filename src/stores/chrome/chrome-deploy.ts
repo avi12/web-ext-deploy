@@ -30,12 +30,12 @@ async function cancelSubmissionIfPending({
   extId,
   publisherId,
   logger,
-  verbose
+  isVerbose
 }: {
   extId: string;
   publisherId: string;
   logger?: DeployContext["logger"];
-  verbose?: boolean;
+  isVerbose?: boolean;
 }) {
   const status = await fetchStatus({ extId, publisherId });
   const submittedState = status.submittedItemRevisionStatus?.state;
@@ -43,7 +43,7 @@ async function cancelSubmissionIfPending({
     return;
   }
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info(`Canceling pending submission (state: ${submittedState})`);
   }
 
@@ -165,15 +165,15 @@ async function verifySubmission({ extId, publisherId }: { extId: string; publish
 
 export async function deployToChrome(
   { extId, publisherId, refreshToken, zip, skipReview, deployPercentage }: ChromeOptions,
-  { logger, verbose }: DeployContext = {}
+  { logger, isVerbose }: DeployContext = {}
 ) {
   const authHeaders = { Authorization: `Bearer ${refreshToken}` };
   httpClient = createHttpClient(BASE_URL, authHeaders);
   uploadHttpClient = createHttpClient(BASE_URL, authHeaders);
 
-  await cancelSubmissionIfPending({ extId, publisherId, logger, verbose });
+  await cancelSubmissionIfPending({ extId, publisherId, logger, isVerbose });
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info(`Uploading zip with extension ID ${extId}`);
   }
 
@@ -181,13 +181,13 @@ export async function deployToChrome(
     extId,
     publisherId });
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Publishing extension");
   }
 
   await publishExtension({ extId, publisherId, skipReview, deployPercentage });
 
-  if (verbose) {
+  if (isVerbose) {
     logger?.info("Verifying submission");
   }
 

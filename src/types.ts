@@ -11,7 +11,7 @@ export type CookieRefreshCallback = () => Promise<Record<string, string>>;
 export type DeployContext = {
   logger?: StoreLogger;
   onCookieExpired?: CookieRefreshCallback;
-  verbose?: boolean;
+  isVerbose?: boolean;
 };
 
 export type StoreDefinition = {

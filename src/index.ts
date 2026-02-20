@@ -11,15 +11,15 @@ async function runStoreDeploy(
   store: string,
   json: Record<string, unknown>,
   inkLogger: ReturnType<typeof createInkLogger>,
-  dryRun?: boolean,
-  verbose?: boolean
+  isDryRun?: boolean,
+  isVerbose?: boolean
 ) {
   const zip = z.string().safeParse(json["zip"]);
   if (zip.success) {
     inkLogger.monitor.setZipPath(store, zip.data);
   }
 
-  inkLogger.logger.info(store, dryRun ? "Validating inputs" : "Starting deployment");
+  inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
   const onCookieExpired = storeDef?.cookieFields
@@ -29,8 +29,8 @@ async function runStoreDeploy(
   return deployStore(json, store, {
     logger: inkLogger.forStore(store),
     onCookieExpired,
-    dryRun,
-    verbose
+    isDryRun,
+    isVerbose
   });
 }
 
@@ -54,11 +54,11 @@ async function initCli() {
   for (const msg of preDeployLogs) {
     inkLogger.logger.info("System", msg);
   }
-  const dryRun = z.boolean().safeParse(argv.dryRun).data;
-  const verbose = z.boolean().safeParse(argv.verbose).data;
+  const isDryRun = z.boolean().safeParse(argv.dryRun).data;
+  const isVerbose = z.boolean().safeParse(argv.verbose).data;
 
   const results = await Promise.allSettled(
-    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, dryRun, verbose))
+    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose))
   );
 
   let successes = 0;
