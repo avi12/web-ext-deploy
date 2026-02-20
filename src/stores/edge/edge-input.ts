@@ -59,6 +59,8 @@ export function prepareEdgeOptions(options: EdgeOptionsPublishApi) {
   };
 
   const result = EdgeOptionsPublishApiSchema.safeParse(correctedOptions);
-  if (!result.success) throw result.error;
+  if (!result.success) {
+    throw result.error;
+  }
   return result.data;
 }

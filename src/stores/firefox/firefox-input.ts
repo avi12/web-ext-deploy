@@ -66,6 +66,8 @@ export function prepareFirefoxOptions(options: FirefoxOptionsSubmissionApi) {
   };
 
   const result = FirefoxOptionsSubmissionApiSchema.safeParse(correctedOptions);
-  if (!result.success) throw result.error;
+  if (!result.success) {
+    throw result.error;
+  }
   return result.data;
 }

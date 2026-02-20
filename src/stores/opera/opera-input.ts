@@ -41,6 +41,8 @@ export function prepareOperaOptions(options: OperaOptions) {
   };
 
   const result = OperaOptionsSchema.safeParse(correctedOptions);
-  if (!result.success) throw result.error;
+  if (!result.success) {
+    throw result.error;
+  }
   return result.data;
 }

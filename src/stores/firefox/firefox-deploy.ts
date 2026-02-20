@@ -121,7 +121,9 @@ async function uploadZip({
     sendRequest,
     parseResponse: data => {
       const result = FirefoxUploadDetailSchema.safeParse(data);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "upload zip for",
@@ -175,7 +177,9 @@ async function createNewVersion({
     sendRequest,
     parseResponse: data => {
       const result = FirefoxCreateNewVersionSchema.safeParse(data);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "create new version of",
@@ -191,7 +195,7 @@ async function validateUpload({
   zip: string;
   extId: string;
   uuid: string;
-}) {
+}): Promise<[string] | [undefined, FirefoxUploadDetail]> {
   let data: FirefoxUploadDetail;
   let error: string;
 
@@ -202,7 +206,9 @@ async function validateUpload({
       sendRequest,
       parseResponse: response => {
         const result = FirefoxUploadDetailSchema.safeParse(response);
-        if (!result.success) throw result.error;
+        if (!result.success) {
+          throw result.error;
+        }
         return result.data;
       },
       errorActionOnFailure: "verify upload of",
@@ -251,7 +257,9 @@ async function uploadSourceCodeIfNeeded({
     sendRequest,
     parseResponse: data => {
       const result = FirefoxUploadSourceSchema.safeParse(data);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "upload source code of",

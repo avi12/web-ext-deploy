@@ -7,7 +7,8 @@ import {
   CancelChangesSchema,
   UploadResultSchema,
   FileUploadResponseSchema,
-  type ListVersions
+  type ListVersions,
+  type UploadResult
 } from "./opera-types.js";
 import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
 import { CookieAuthError, getErrorMessage, getExtJson, toError } from "../../utils.js";
@@ -130,7 +131,7 @@ async function verifySourceCodeExistence({
 }: {
   zip: string;
   packageId: number;
-}) {
+}): Promise<[string] | [undefined, true]> {
   const extJson = await getExtJson(zip);
   const { version, default_locale = "en" } = extJson;
   const sendRequest = async () =>
@@ -143,7 +144,9 @@ async function verifySourceCodeExistence({
     sendRequest,
     parseResponse: response => {
       const result = ListingDetailSchema.safeParse(response);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "verify source code existence of"
@@ -183,7 +186,9 @@ async function cancelLatestVersionIfNotSubmitted({
     sendRequest,
     parseResponse: response => {
       const result = CancelChangesSchema.safeParse(response);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "cancel unsubmitted changes of"
@@ -202,7 +207,9 @@ async function submitChanges({ zip, packageId }: { zip: string; packageId: numbe
     sendRequest,
     parseResponse: response => {
       const result = SubmitChangesSchema.safeParse(response);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "submit changes to"
@@ -212,7 +219,9 @@ async function submitChanges({ zip, packageId }: { zip: string; packageId: numbe
 function getFileMetadata(zipPath: string) {
   const sizeInBytes = fs.statSync(zipPath).size;
   const zipNameResult = z.string().safeParse(zipPath.split(/[\\/]/).pop());
-  if (!zipNameResult.success) throw new Error(`Invalid zip path: ${zipPath}`);
+  if (!zipNameResult.success) {
+    throw new Error(`Invalid zip path: ${zipPath}`);
+  }
   const zipName = zipNameResult.data;
   const zipNameWithoutForbiddenCharacters = zipName.replace(/[.]/g, "");
   const fileId = `${sizeInBytes}-${zipNameWithoutForbiddenCharacters}`;
@@ -256,7 +265,9 @@ async function uploadZip({ zip }: { zip: string }) {
     sendRequest,
     parseResponse: response => {
       const result = FileUploadResponseSchema.safeParse(response);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "upload zip for"
@@ -271,7 +282,7 @@ async function verifyUploadSuccessful({
   zipPath: string;
   packageId: number;
   lastVersion: string;
-}) {
+}): Promise<[string] | [undefined, UploadResult]> {
   const { zipName, fileId } = getFileMetadata(zipPath);
 
   const sendRequest = async () =>
@@ -290,7 +301,9 @@ async function verifyUploadSuccessful({
     sendRequest,
     parseResponse: response => {
       const result = UploadResultSchema.safeParse(response);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "verify upload of"
@@ -323,7 +336,9 @@ async function updateChangelog({ zip, packageId, changelog }: { zip: string; pac
     sendRequest,
     parseResponse: response => {
       const result = ListingDetailSchema.safeParse(response);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "update changelog of"
@@ -363,7 +378,9 @@ async function getVersions({ zip, packageId }: { zip: string; packageId: number 
     sendRequest,
     parseResponse: response => {
       const result = ListVersionsSchema.safeParse(response);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "get all package versions of"

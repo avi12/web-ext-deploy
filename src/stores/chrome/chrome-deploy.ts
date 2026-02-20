@@ -40,7 +40,9 @@ async function uploadZip({
   );
 
   const upload = UploadResponseSchema.safeParse(response.data);
-  if (!upload.success) throw upload.error;
+  if (!upload.success) {
+    throw upload.error;
+  }
   const data = upload.data;
   if (data.state === "SUCCESS") {
     return;
@@ -67,18 +69,26 @@ async function publishExtension({
   skipReview?: boolean;
   deployPercentage?: number;
 }) {
-  const body: Record<string, unknown> = {};
-  if (skipReview) body.skipReview = true;
-  if (deployPercentage !== undefined) body.deployPercentage = deployPercentage;
+  const body = {
+    ...skipReview && {
+      skipReview: true
+    },
+    ...deployPercentage !== undefined && {
+      deployPercentage
+    }
+  };
 
+  const hasBody = Object.keys(body).length > 0;
   const response = await httpClient.post(
     `v2/publishers/${publisherId}/items/${extId}:publish`,
-    Object.keys(body).length ? JSON.stringify(body) : undefined,
-    Object.keys(body).length ? { headers: { "Content-Type": "application/json" } } : {}
+    hasBody ? JSON.stringify(body) : undefined,
+    hasBody ? { headers: { "Content-Type": "application/json" } } : {}
   );
 
   const publish = PublishResponseSchema.safeParse(response.data);
-  if (!publish.success) throw publish.error;
+  if (!publish.success) {
+    throw publish.error;
+  }
   const data = publish.data;
   if (data.state === "SUCCESS") {
     return;

@@ -39,12 +39,16 @@ export function defineStore<T>(config: {
     schema: config.schema,
     prepare: (options: unknown) => {
       const result = config.schema.safeParse(options);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return config.prepare(result.data);
     },
     deploy: (options: unknown, logger?: StoreLogger, onCookieExpired?: CookieRefreshCallback, verbose?: boolean) => {
       const result = config.schema.safeParse(options);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return config.deploy(result.data, logger, onCookieExpired, verbose);
     },
     cookieFields: config.cookieFields,

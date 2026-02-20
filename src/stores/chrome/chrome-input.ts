@@ -28,6 +28,8 @@ export function prepareChromeOptions(options: ChromeOptions) {
   const correctedOptions = { ...options,
     zip: getCorrectZip(options.zip) };
   const result = ChromeOptionsSchema.safeParse(correctedOptions);
-  if (!result.success) throw result.error;
+  if (!result.success) {
+    throw result.error;
+  }
   return result.data;
 }

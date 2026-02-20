@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
-import { PublishOperationStatusSchema, StatusPackageUploadSchema, type StatusPackageUpload } from "./edge-types.js";
+import { PublishOperationStatusSchema, StatusPackageUploadSchema, type PublishOperationStatus, type StatusPackageUpload } from "./edge-types.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
 import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
 import { getErrorMessage, getExtJson } from "../../utils.js";
@@ -96,7 +96,7 @@ async function checkStatusOfPackageUpload({
   productId: string;
   operationId: string;
   zip: string;
-}) {
+}): Promise<[string] | [undefined, StatusPackageUpload]> {
   const sendRequest = () =>
     httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`);
   let data: StatusPackageUpload;
@@ -105,10 +105,12 @@ async function checkStatusOfPackageUpload({
     [error, data] = await requestWithBackOff({
       sendRequest,
       parseResponse: response => {
-      const result = StatusPackageUploadSchema.safeParse(response.data);
-      if (!result.success) throw result.error;
-      return result.data;
-    },
+        const result = StatusPackageUploadSchema.safeParse(response.data);
+        if (!result.success) {
+          throw result.error;
+        }
+        return result.data;
+      },
       errorActionOnFailure: "verify upload of",
       zip,
       productId
@@ -126,7 +128,9 @@ async function checkStatusOfPackageUpload({
 
 function parseLocation(response: HttpResponse<unknown>) {
   const result = z.string().safeParse(response.headers?.location);
-  if (!result.success) throw new Error("Missing or invalid location header");
+  if (!result.success) {
+    throw new Error("Missing or invalid location header");
+  }
   return result.data;
 }
 
@@ -178,7 +182,7 @@ async function checkPublishStatus({
   zip: string;
   productId: string;
   operationId: string;
-}) {
+}): Promise<[string] | [undefined, PublishOperationStatus]> {
   const sendRequest = () =>
     httpClient.get(`products/${productId}/submissions/operations/${operationId}`);
 
@@ -186,7 +190,9 @@ async function checkPublishStatus({
     sendRequest,
     parseResponse: response => {
       const result = PublishOperationStatusSchema.safeParse(response.data);
-      if (!result.success) throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
       return result.data;
     },
     errorActionOnFailure: "check the submission status of",
