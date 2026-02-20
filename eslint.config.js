@@ -2,7 +2,6 @@ import eslint from "@eslint/js";
 import globals from "globals";
 import tsEslint from "typescript-eslint";
 import stylistic from "@stylistic/eslint-plugin";
-import importPlugin from "eslint-plugin-import";
 import perfectionist from "eslint-plugin-perfectionist";
 
 export default [
@@ -18,7 +17,6 @@ export default [
     },
     plugins: {
       "@stylistic": stylistic,
-      import: importPlugin,
       perfectionist
     }
   },
