@@ -1,7 +1,6 @@
-import { z } from "zod";
-
 import { red } from "../../logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
+import { z } from "zod";
 
 export function storeError(message: string) {
   return red(`Edge: ${message}`);

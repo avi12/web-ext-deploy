@@ -1,7 +1,5 @@
-import { ReadStream } from "node:fs";
-
 import { toError } from "./utils.js";
-
+import { ReadStream } from "node:fs";
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
   params?: Record<string, string | number>;

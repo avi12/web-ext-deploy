@@ -1,8 +1,7 @@
-import fs from "node:fs";
-import { chromium, Page } from "playwright";
-
 import { config, parse } from "./dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "./utils.js";
+import fs from "node:fs";
+import { chromium, Page } from "playwright";
 
 function getFilename(site: string) {
   return `./${site}.env`;

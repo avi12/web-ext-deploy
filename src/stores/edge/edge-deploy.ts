@@ -1,13 +1,11 @@
-import fs from "node:fs";
-import { setTimeout } from "node:timers/promises";
-import { z } from "zod";
-
-import type { DeployContext } from "../../types.js";
-
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
+import type { DeployContext } from "../../types.js";
 import { getExtJson } from "../../utils.js";
 import { EdgeOptionsPublishApi, storeError } from "./edge-input.js";
 import { PublishOperationStatusSchema, StatusPackageUploadSchema, type StatusPackageUpload } from "./edge-types.js";
+import fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
+import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 

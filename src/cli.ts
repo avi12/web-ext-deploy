@@ -1,6 +1,3 @@
-import yargs, { type Options } from "yargs";
-import { z } from "zod";
-
 import { capitalCase, kebabCase } from "./case-conversion.js";
 import { config } from "./dotenv.js";
 import { getSignInCookie } from "./get-sign-in-cookie.js";
@@ -8,6 +5,8 @@ import { renderGlobalArgsHelp, renderStoreHelp } from "./ink-logger.js";
 import { red } from "./logging.js";
 import { getStore, isSupportedStore, storeNames, storeRegistry } from "./stores/registry.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils.js";
+import yargs, { type Options } from "yargs";
+import { z } from "zod";
 
 const BaseOptionsSchema = z.object({
   autoFetchCookies: z.boolean().optional().describe("Automatically fetch cookies as needed for stores that require them"),

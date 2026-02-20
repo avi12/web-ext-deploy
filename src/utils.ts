@@ -1,9 +1,8 @@
+import { camelCase } from "./case-conversion.js";
 import { ZipReader, BlobReader, TextWriter } from "@zip.js/zip.js";
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-
-import { camelCase } from "./case-conversion.js";
 
 const ExtensionManifestSchema = z.object({
   name: z.string(),

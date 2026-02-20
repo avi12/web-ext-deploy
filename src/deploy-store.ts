@@ -1,8 +1,7 @@
-import type { DeployContext } from "./types.js";
-
 import { renderStoreHelp } from "./ink-logger.js";
 import { red } from "./logging.js";
 import { storeRegistry } from "./stores/registry.js";
+import type { DeployContext } from "./types.js";
 
 export function deployStore(
   options: unknown,

@@ -24,7 +24,18 @@ export default [
     ignores: ["dist-esm/**/*", "node_modules"],
     rules: {
       "prefer-const": "error",
-      "perfectionist/sort-imports": ["error"],
+      "perfectionist/sort-imports": [
+        "error",
+        {
+          type: "alphabetical",
+          order: "asc",
+          newlinesBetween: "ignore",
+          sortSideEffects: true,
+          groups: [
+            ["side-effect", "builtin", "external", "internal", "parent", "sibling", "index", "unknown"]
+          ]
+        }
+      ],
       "@stylistic/quotes": ["error", "double", { allowTemplateLiterals: "always" }],
       "@stylistic/quote-props": ["error", "as-needed"],
       "@stylistic/semi": ["error"],
@@ -76,7 +87,11 @@ export default [
         { selector: "VariableDeclarator > ArrowFunctionExpression", message: "Do not assign arrow functions to variables. Use a named function declaration instead." },
         { selector: "ForOfStatement > CallExpression[callee.object.name='Object'][callee.property.name='keys']", message: "Use a for-in loop instead of for-of Object.keys()." }
       ],
-      "@stylistic/padding-line-between-statements": ["error", { "breakLine": "never", prev: "" }]
+      "@stylistic/padding-line-between-statements": [
+        "error",
+        { blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"] },
+        { blankLine: "any", prev: "import", next: "import" }
+      ]
     }
   }
 ];

@@ -1,12 +1,7 @@
-import fs from "node:fs";
-import { setTimeout } from "node:timers/promises";
-import { z } from "zod";
-
-import type { DeployContext } from "../../types.js";
-
 import { FormData } from "../../form-data.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
 import { generateJwt } from "../../jwt.js";
+import type { DeployContext } from "../../types.js";
 import { getExtJson, toError } from "../../utils.js";
 import { FirefoxOptionsSubmissionApi, storeError } from "./firefox-input.js";
 import {
@@ -15,6 +10,9 @@ import {
   FirefoxUploadSourceSchema,
   type FirefoxUploadDetail
 } from "./firefox-types.js";
+import fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
+import { z } from "zod";
 
 const SECONDS_TO_TOKEN_EXPIRY = 60 * 3;
 
