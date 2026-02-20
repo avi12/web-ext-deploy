@@ -91,7 +91,8 @@ export default [
         "error",
         { blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"] },
         { blankLine: "any", prev: "import", next: "import" }
-      ]
+      ],
+      "object-shorthand": ["error", "always", { avoidExplicitReturnArrows: true }]
     }
   }
 ];

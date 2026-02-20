@@ -1,6 +1,6 @@
-import { createHttpClient, type HttpResponse } from "../../http-client.js";
+import { createHttpClient } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
-import { getExtJson } from "../../utils.js";
+import { getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
 import { EdgeOptionsPublishApi, storeError } from "./edge-input.js";
 import { PublishOperationStatusSchema, StatusPackageUploadSchema, type StatusPackageUpload } from "./edge-types.js";
 import fs from "node:fs";
@@ -9,57 +9,18 @@ import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
-async function requestWithBackOff<T>({
-  sendRequest,
-  parseResponse,
-  errorContext,
-  productId,
-  logger
-}: {
-  sendRequest: () => Promise<HttpResponse<unknown>>;
-  parseResponse: (response: HttpResponse<unknown>) => T;
-  errorContext: string;
-  productId: string;
-  logger?: DeployContext["logger"];
-}): Promise<T> {
-  const maxRetries = 5;
-  const maxBackOffMs = 30_000;
-  const rateLimitRetryMs = 60_000;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await sendRequest();
-      return parseResponse(response);
-    } catch(error: unknown) {
-      const status = z.object({ status: z.coerce.number() }).safeParse(error).data?.status ?? 0;
-
-      if (status >= 500 && attempt < maxRetries) {
-        const exponentialDelay = Math.min(1000 * Math.pow(2, attempt - 1), maxBackOffMs);
-        await setTimeout(exponentialDelay);
-        continue;
-      }
-
-      if (status === 429) {
-        const message = z.object({
-          response: z.object({ data: z.object({ message: z.string() }) })
-        }).safeParse(error).data?.response.data.message ?? "";
-        const secondsToWait = Number(message.match(/\d+/)?.[0] || "60");
-        if (secondsToWait >= 60) {
-          const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
-          logger?.warning(
-            `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard`
-          );
-        }
-        await setTimeout(rateLimitRetryMs);
-        continue;
-      }
-
-      const statusText = z.object({ statusText: z.string() }).safeParse(error).data?.statusText ?? String(error);
-      throw new Error(storeError(`${errorContext}: ${statusText}`), { cause: error });
+function handleEdgeRateLimit(productId: string, logger?: DeployContext["logger"]) {
+  return async(response: HttpLikeResponse) => {
+    const message = z.object({ message: z.string() }).safeParse(response.data).data?.message ?? "";
+    const secondsToWait = Number(message.match(/\d+/)?.[0] || "60");
+    if (secondsToWait >= 60) {
+      const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
+      logger?.warning(
+        `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard`
+      );
     }
-  }
-
-  throw new Error(storeError(`${errorContext}: Max retries exceeded`));
+    await setTimeout(60_000);
+  };
 }
 
 async function checkStatusOfPackageUpload({
@@ -71,34 +32,35 @@ async function checkStatusOfPackageUpload({
   operationId: string;
   logger?: DeployContext["logger"];
 }) {
-  function sendRequest() {
-    return httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`);
-  }
+  const pollIntervalMs = 5_000;
+
   let data: StatusPackageUpload;
   do {
-    data = await requestWithBackOff({
-      sendRequest,
-      parseResponse: response => {
+    data = await requestWithRetry({
+      sendRequest: () => httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`),
+      parseResponse(response) {
         const result = StatusPackageUploadSchema.safeParse(response.data);
         if (!result.success) {
           throw result.error;
         }
         return result.data;
       },
+      formatError: storeError,
       errorContext: "Upload verification failed",
-      productId,
       logger
     });
+
+    if (data.status === "Failed") {
+      const errors = (data.errors || []).map(({ message }) => message).join("\n");
+      throw new Error(storeError(errors));
+    }
+    await setTimeout(pollIntervalMs);
   } while (data.status === "InProgress");
 
-  if (data.status === "Failed") {
-    const errors = (data.errors || []).map(({ message }) => message).join("\n");
-    throw new Error(storeError(errors));
-  }
   return data;
 }
 
-function parseLocation(response: HttpResponse<unknown>) {
+function parseLocation(response: HttpLikeResponse) {
   const result = z.string().safeParse(response.headers?.location);
   if (!result.success) {
     throw new Error("Missing or invalid location header");
@@ -115,18 +77,15 @@ async function uploadZip({
   productId: string;
   logger?: DeployContext["logger"];
 }) {
-  function sendRequest() {
-    return httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
+  return requestWithRetry({
+    sendRequest: () => httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
       headers: { "Content-Type": "application/zip" }
-    });
-  }
-
-  return requestWithBackOff({
-    sendRequest,
+    }),
     parseResponse: parseLocation,
+    formatError: storeError,
     errorContext: "Upload failed",
-    productId,
-    logger
+    logger,
+    onRateLimit: handleEdgeRateLimit(productId, logger)
   });
 }
 
@@ -139,18 +98,15 @@ async function publishSubmission({
   devChangelog: string;
   logger?: DeployContext["logger"];
 }) {
-  function sendRequest() {
-    return httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
+  return requestWithRetry({
+    sendRequest: () => httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
       headers: { "Content-Type": "application/json" }
-    });
-  }
-
-  return requestWithBackOff({
-    sendRequest,
+    }),
     parseResponse: parseLocation,
+    formatError: storeError,
     errorContext: "Publish failed",
-    productId,
-    logger
+    logger,
+    onRateLimit: handleEdgeRateLimit(productId, logger)
   });
 }
 
@@ -163,22 +119,19 @@ async function checkPublishStatus({
   operationId: string;
   logger?: DeployContext["logger"];
 }) {
-  function sendRequest() {
-    return httpClient.get(`products/${productId}/submissions/operations/${operationId}`);
-  }
-
-  const data = await requestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
+  const data = await requestWithRetry({
+    sendRequest: () => httpClient.get(`products/${productId}/submissions/operations/${operationId}`),
+    parseResponse(response) {
       const result = PublishOperationStatusSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
+    formatError: storeError,
     errorContext: "Submission status check failed",
-    productId,
-    logger
+    logger,
+    onRateLimit: handleEdgeRateLimit(productId, logger)
   });
 
   if (!data.status) {

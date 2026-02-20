@@ -99,21 +99,21 @@ export function createInkLogger(storeNames: string[]) {
   }
 
   const logger = {
-    info: (store: string, message: string) => {
+    info(store: string, message: string) {
       logEntries.push({ store, level: "info", message, timestamp: new Date() });
       if (storeStatuses.get(store) === "pending") {
         storeStatuses.set(store, "running");
       }
       renderUI();
     },
-    warning: (store: string, message: string) => {
+    warning(store: string, message: string) {
       logEntries.push({ store, level: "warning", message: `Warning: ${message}`, timestamp: new Date() });
       if (storeStatuses.get(store) === "pending") {
         storeStatuses.set(store, "running");
       }
       renderUI();
     },
-    error: (store: string, message: string) => {
+    error(store: string, message: string) {
       logEntries.push({ store, level: "error", message, timestamp: new Date() });
       storeStatuses.set(store, "error");
       renderUI();
@@ -121,7 +121,7 @@ export function createInkLogger(storeNames: string[]) {
   };
 
   const monitor = {
-    updateStore: (store: string, status: StoreStatus, message?: string) => {
+    updateStore(store: string, status: StoreStatus, message?: string) {
       if (storeStatuses.get(store) === status) {
         return;
       }
@@ -131,7 +131,7 @@ export function createInkLogger(storeNames: string[]) {
       }
       renderUI();
     },
-    setZipPath: (store: string, zipPath: string) => {
+    setZipPath(store: string, zipPath: string) {
       logEntries.push({ store, level: "info", message: `ZIP: ${zipPath}`, timestamp: new Date() });
       if (storeStatuses.get(store) === "pending") {
         storeStatuses.set(store, "running");
@@ -148,7 +148,7 @@ export function createInkLogger(storeNames: string[]) {
       warning: msg => logger.warning(capitalCase(store), msg),
       error: msg => logger.error(capitalCase(store), msg)
     } satisfies StoreLogger),
-    unmount: () => {
+    unmount() {
       isMounted = false;
     }
   };

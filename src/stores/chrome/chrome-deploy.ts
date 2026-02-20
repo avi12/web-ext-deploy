@@ -1,5 +1,6 @@
 import { createHttpClient } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
+import { requestWithRetry } from "../../utils.js";
 import { ChromeOptions, storeError } from "./chrome-input.js";
 import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
 import fs from "node:fs";
@@ -12,13 +13,28 @@ let uploadHttpClient: ReturnType<typeof createHttpClient>;
 
 const PENDING_REVIEW_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED];
 
-async function fetchStatus({ extId, publisherId }: { extId: string; publisherId: string }) {
-  const response = await httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`);
-  const result = FetchStatusSchema.safeParse(response.data);
-  if (!result.success) {
-    throw result.error;
-  }
-  return result.data;
+async function fetchStatus({
+  extId,
+  publisherId,
+  logger
+}: {
+  extId: string;
+  publisherId: string;
+  logger?: DeployContext["logger"];
+}) {
+  return requestWithRetry({
+    sendRequest: () => httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`),
+    parseResponse(response) {
+      const result = FetchStatusSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Fetch status failed",
+    logger
+  });
 }
 
 async function cancelSubmissionIfPending({
@@ -32,7 +48,7 @@ async function cancelSubmissionIfPending({
   logger?: DeployContext["logger"];
   isVerbose?: boolean;
 }) {
-  const status = await fetchStatus({ extId, publisherId });
+  const status = await fetchStatus({ extId, publisherId, logger });
   const submittedState = status.submittedItemRevisionStatus?.state;
   if (!submittedState || !PENDING_REVIEW_STATES.includes(submittedState)) {
     return;
@@ -42,65 +58,90 @@ async function cancelSubmissionIfPending({
     logger?.info(`Canceling pending submission (state: ${submittedState})`);
   }
 
-  await httpClient.post(`v2/publishers/${publisherId}/items/${extId}:cancelSubmission`);
+  await requestWithRetry({
+    sendRequest: () => httpClient.post(`v2/publishers/${publisherId}/items/${extId}:cancelSubmission`),
+    parseResponse: (): undefined => undefined,
+    formatError: storeError,
+    errorContext: "Cancel submission failed",
+    logger
+  });
   await setTimeout(60_000);
 }
 
 async function waitForUpload({
   extId,
-  publisherId
+  publisherId,
+  logger
 }: {
   extId: string;
   publisherId: string;
+  logger?: DeployContext["logger"];
 }) {
-  const maxAttempts = 10;
-  const pollIntervalMs = 10_000;
+  const pollIntervalMs = 5_000;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await setTimeout(pollIntervalMs);
-    const status = await fetchStatus({ extId, publisherId });
-    const uploadState = status.lastAsyncUploadState;
+  let uploadState;
+  do {
+    const data = await requestWithRetry({
+      sendRequest: () => httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`),
+      parseResponse(response) {
+        const result = FetchStatusSchema.safeParse(response.data);
+        if (!result.success) {
+          throw result.error;
+        }
+        return result.data;
+      },
+      formatError: storeError,
+      errorContext: "Upload status check failed",
+      logger
+    });
+
+    uploadState = data.lastAsyncUploadState;
     if (uploadState === UploadState.SUCCEEDED) {
       return;
     }
     if (uploadState !== UploadState.IN_PROGRESS) {
       throw new Error(storeError(`Upload failed with state: ${uploadState}`));
     }
-  }
-
-  throw new Error(storeError(`Upload timed out (still IN_PROGRESS)`));
+    await setTimeout(pollIntervalMs);
+  } while (uploadState === UploadState.IN_PROGRESS);
 }
 
 async function uploadZip({
   zip,
   extId,
-  publisherId
+  publisherId,
+  logger
 }: {
   zip: string;
   extId: string;
   publisherId: string;
+  logger?: DeployContext["logger"];
 }) {
-  const response = await uploadHttpClient.post(
-    `upload/v2/publishers/${publisherId}/items/${extId}:upload`,
-    fs.createReadStream(zip),
-    {
-      headers: {
-        "Content-Type": "application/zip"
+  const data = await requestWithRetry({
+    sendRequest: () => uploadHttpClient.post(
+      `upload/v2/publishers/${publisherId}/items/${extId}:upload`,
+      fs.createReadStream(zip),
+      { headers: { "Content-Type": "application/zip" } }
+    ),
+    parseResponse(response) {
+      const result = UploadResponseSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
       }
-    }
-  );
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Upload failed",
+    logger
+  });
 
-  const upload = UploadResponseSchema.safeParse(response.data);
-  if (!upload.success) {
-    throw upload.error;
-  }
-  if (upload.data.uploadState === UploadState.SUCCEEDED) {
+  if (data.uploadState === UploadState.SUCCEEDED) {
     return;
   }
-  if (upload.data.uploadState === UploadState.IN_PROGRESS) {
-    return waitForUpload({ extId, publisherId });
+  if (data.uploadState === UploadState.IN_PROGRESS) {
+    return waitForUpload({ extId, publisherId, logger });
   }
-  throw new Error(storeError(`Upload failed with state: ${upload.data.uploadState}`));
+  throw new Error(storeError(`Upload failed with state: ${data.uploadState}`));
 }
 
 const PUBLISH_SUCCESS_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED, ItemState.PUBLISHED, ItemState.PUBLISHED_TO_TESTERS];
@@ -109,12 +150,14 @@ async function publishExtension({
   extId,
   publisherId,
   skipReview,
-  deployPercentage
+  deployPercentage,
+  logger
 }: {
   extId: string;
   publisherId: string;
   skipReview?: boolean;
   deployPercentage?: number;
+  logger?: DeployContext["logger"];
 }) {
   const body = {
     ...skipReview && {
@@ -126,24 +169,40 @@ async function publishExtension({
   };
 
   const hasBody = Object.keys(body).length > 0;
-  const response = await httpClient.post(
-    `v2/publishers/${publisherId}/items/${extId}:publish`,
-    hasBody ? JSON.stringify(body) : undefined,
-    hasBody ? { headers: { "Content-Type": "application/json" } } : {}
-  );
+  const data = await requestWithRetry({
+    sendRequest: () => httpClient.post(
+      `v2/publishers/${publisherId}/items/${extId}:publish`,
+      hasBody ? JSON.stringify(body) : undefined,
+      hasBody ? { headers: { "Content-Type": "application/json" } } : {}
+    ),
+    parseResponse(response) {
+      const result = PublishResponseSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Publish failed",
+    logger
+  });
 
-  const publish = PublishResponseSchema.safeParse(response.data);
-  if (!publish.success) {
-    throw publish.error;
-  }
-  const { state } = publish.data;
+  const { state } = data;
   if (!PUBLISH_SUCCESS_STATES.includes(state)) {
     throw new Error(storeError(`Publish failed with state: ${state}`));
   }
 }
 
-async function verifySubmission({ extId, publisherId }: { extId: string; publisherId: string }) {
-  const status = await fetchStatus({ extId, publisherId });
+async function verifySubmission({
+  extId,
+  publisherId,
+  logger
+}: {
+  extId: string;
+  publisherId: string;
+  logger?: DeployContext["logger"];
+}) {
+  const status = await fetchStatus({ extId, publisherId, logger });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const publishedState = status.publishedItemRevisionStatus?.state;
 
@@ -175,19 +234,20 @@ export async function deployToChrome(
 
   await uploadZip({ zip,
     extId,
-    publisherId });
+    publisherId,
+    logger });
 
   if (isVerbose) {
     logger?.info("Publishing extension");
   }
 
-  await publishExtension({ extId, publisherId, skipReview, deployPercentage });
+  await publishExtension({ extId, publisherId, skipReview, deployPercentage, logger });
 
   if (isVerbose) {
     logger?.info("Verifying submission");
   }
 
-  await verifySubmission({ extId, publisherId });
+  await verifySubmission({ extId, publisherId, logger });
 
   logger?.info("Successfully published to Chrome Web Store!");
   setStatus?.("success");

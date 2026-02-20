@@ -1,15 +1,8 @@
-import { toError } from "./utils.js";
 import { ReadStream } from "node:fs";
+
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
   params?: Record<string, string | number>;
-}
-
-interface HttpResponse<T> {
-  data: T;
-  status: number;
-  statusText: string;
-  headers?: Record<string, string>;
 }
 
 async function streamToBuffer(stream: ReadStream) {
@@ -32,44 +25,18 @@ function stringifyParams(params: Record<string, string | number>) {
   return new URLSearchParams(entries).toString();
 }
 
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  maxRetries = 3,
-  delayMs = 1000
-) {
-  let lastError: Error;
+async function fetchResponse(url: string, options: RequestInit) {
+  const response = await fetch(url, options);
+  const contentType = response.headers.get("content-type");
+  const data: unknown =
+    contentType && contentType.includes("application/json") ? await response.json() : await response.text();
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-
-      if (response.status >= 500 && attempt < maxRetries) {
-        lastError = new Error(`Server error ${response.status}: ${response.statusText}`);
-        await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
-        continue;
-      }
-
-      const contentType = response.headers.get("content-type");
-      const data: unknown =
-        contentType && contentType.includes("application/json") ? await response.json() : await response.text();
-
-      return {
-        data,
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      };
-    } catch(error) {
-      lastError = toError(error);
-      if (attempt === maxRetries) {
-        throw lastError;
-      }
-      await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
-    }
-  }
-
-  throw lastError;
+  return {
+    data,
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries())
+  };
 }
 
 export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
@@ -93,7 +60,7 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
       }
     };
 
-    return fetchWithRetry(url, fetchOptions);
+    return fetchResponse(url, fetchOptions);
   }
 
   async function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
@@ -111,5 +78,3 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
 
   return { post, get, patch };
 }
-
-export type { HttpResponse };

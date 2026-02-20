@@ -1,5 +1,5 @@
 import type { DeployContext } from "../../types.js";
-import { CookieAuthError, getExtJson, toError } from "../../utils.js";
+import { CookieAuthError, getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
 import { OperaOptions, storeError } from "./opera-input.js";
 import {
   ListVersionsSchema,
@@ -29,93 +29,40 @@ function updateCookieHeaders(freshCookies: Record<string, string>) {
   };
 }
 
-async function fetchWithBackOff(
+async function fetchWithAuth(
   url: string,
   options: RequestInit,
   logger?: DeployContext["logger"],
   onCookieExpired?: DeployContext["onCookieExpired"]
-) {
-  const maxDelay = 30_000;
-  const maxRetries = 5;
+): Promise<HttpLikeResponse> {
+  let response = await fetch(url, {
+    ...options,
+    headers: { ...defaultHeaders,
+      ...options.headers }
+  });
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: { ...defaultHeaders,
-          ...options.headers }
-      });
-      if (response.ok) {
-        const data: unknown = await response.json();
-        return { data,
-          status: response.status };
-      }
+  const isAuthFailure = response.status === 401 || response.status === 403;
+  if (isAuthFailure && onCookieExpired && !hasCookieRefreshBeenAttempted) {
+    hasCookieRefreshBeenAttempted = true;
+    logger?.warning("Cookies expired, refreshing...");
+    const freshCookies = await onCookieExpired();
+    updateCookieHeaders(freshCookies);
 
-      const isAuthFailure = response.status === 401 || response.status === 403;
-      if (isAuthFailure && onCookieExpired && !hasCookieRefreshBeenAttempted) {
-        hasCookieRefreshBeenAttempted = true;
-        logger?.warning("Cookies expired, refreshing...");
-        const freshCookies = await onCookieExpired();
-        updateCookieHeaders(freshCookies);
-
-        const retryResponse = await fetch(url, {
-          ...options,
-          headers: { ...defaultHeaders,
-            ...options.headers }
-        });
-        if (retryResponse.ok) {
-          const data: unknown = await retryResponse.json();
-          return { data,
-            status: retryResponse.status };
-        }
-      }
-      if (isAuthFailure) {
-        throw new CookieAuthError("Opera");
-      }
-
-      const isServerError = response.status >= 500;
-      const isRetryable = attempt < maxRetries;
-      if (isServerError && isRetryable) {
-        const delay = Math.min(maxDelay, Math.pow(2, attempt) * 1000) * (1 + 0.5 * Math.random());
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-
-      throw new Error(response.statusText);
-    } catch(error) {
-      const isRetryable = attempt < maxRetries;
-      if (isRetryable) {
-        const delay = Math.min(maxDelay, Math.pow(2, attempt) * 1000) * (1 + 0.5 * Math.random());
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-      throw toError(error);
-    }
+    response = await fetch(url, {
+      ...options,
+      headers: { ...defaultHeaders,
+        ...options.headers }
+    });
   }
 
-  throw new Error("Max retries exceeded");
-}
-
-async function handleRequestWithBackOff<T>({
-  sendRequest,
-  parseResponse,
-  errorContext
-}: {
-  sendRequest: () => Promise<{ data: unknown; status: number }>;
-  parseResponse: (data: unknown) => T;
-  errorContext: string;
-}): Promise<T> {
-  try {
-    const { data } = await sendRequest();
-    return parseResponse(data);
-  } catch(error: unknown) {
-    if (error instanceof CookieAuthError) {
-      throw error;
-    }
-
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(storeError(`${errorContext}: ${errorMessage}`), { cause: error });
+  if (response.status === 401 || response.status === 403) {
+    throw new CookieAuthError("Opera");
   }
+
+  const data: unknown = await response.json();
+  return { data,
+    status: response.status,
+    statusText: response.statusText };
 }
 
 async function verifySourceCodeExistence({
@@ -131,27 +78,28 @@ async function verifySourceCodeExistence({
 }) {
   const extJson = await getExtJson(zip);
   const { version, default_locale = "en" } = extJson;
-  async function sendRequest() {
-    return fetchWithBackOff(
+  const params = new URLSearchParams({ language: default_locale });
+  const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${params}`;
+
+  const data = await requestWithRetry({
+    sendRequest: () => fetchWithAuth(
       `${BASE_URL}developer/package-versions/${packageId}-${version}/`,
       { method: "GET" },
       logger,
       onCookieExpired
-    );
-  }
-  const params = new URLSearchParams({ language: default_locale });
-  const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${params}`;
-  const data = await handleRequestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
-      const result = ListingDetailSchema.safeParse(response);
+    ),
+    parseResponse(response) {
+      const result = ListingDetailSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
-    errorContext: "Source code verification failed"
+    formatError: storeError,
+    errorContext: "Source code verification failed",
+    logger
   });
+
   if (!data.source_url && !data.source_for_moderators_url) {
     throw new Error(storeError(`No source code provided. Provide a URL in ${url} and submit the changes`));
   }
@@ -174,25 +122,23 @@ async function cancelLatestVersionIfNotSubmitted({
   const { version } = versionsListed[0];
   logger?.info(`Canceling unsubmitted version ${version}`);
 
-  async function sendRequest() {
-    return fetchWithBackOff(
+  await requestWithRetry({
+    sendRequest: () => fetchWithAuth(
       `${BASE_URL}developer/package-versions/${packageId}-${version}/cancel_changes/`,
       { method: "POST" },
       logger,
       onCookieExpired
-    );
-  }
-
-  await handleRequestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
-      const result = CancelChangesSchema.safeParse(response);
+    ),
+    parseResponse(response) {
+      const result = CancelChangesSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
-    errorContext: "Cancel changes failed"
+    formatError: storeError,
+    errorContext: "Cancel changes failed",
+    logger
   });
 }
 
@@ -209,24 +155,24 @@ async function submitChanges({
 }) {
   const extJson = await getExtJson(zip);
   const { version } = extJson;
-  async function sendRequest() {
-    return fetchWithBackOff(
+
+  return requestWithRetry({
+    sendRequest: () => fetchWithAuth(
       `${BASE_URL}developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
       { method: "POST" },
       logger,
       onCookieExpired
-    );
-  }
-  return handleRequestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
-      const result = SubmitChangesSchema.safeParse(response);
+    ),
+    parseResponse(response) {
+      const result = SubmitChangesSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
-    errorContext: "Submit changes failed"
+    formatError: storeError,
+    errorContext: "Submit changes failed",
+    logger
   });
 }
 
@@ -273,31 +219,29 @@ async function uploadZip({
 
   const body = Buffer.concat([filePart, fileBuffer, identifierPart, fileBuffer, closingPart]);
 
-  async function sendRequest() {
-    return fetchWithBackOff(
+  return requestWithRetry({
+    sendRequest: () => fetchWithAuth(
       `${BASE_URL}file-upload/`,
       {
         method: "POST",
         headers: {
           "Content-Type": `multipart/form-data; boundary=${boundary}`
         },
-        body: body
+        body
       },
       logger,
       onCookieExpired
-    );
-  }
-
-  return handleRequestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
-      const result = FileUploadResponseSchema.safeParse(response);
+    ),
+    parseResponse(response) {
+      const result = FileUploadResponseSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
-    errorContext: "Upload failed"
+    formatError: storeError,
+    errorContext: "Upload failed",
+    logger
   });
 }
 
@@ -316,8 +260,8 @@ async function verifyUploadSuccessful({
 }): Promise<UploadResult> {
   const { zipName, fileId } = getFileMetadata(zipPath);
 
-  async function sendRequest() {
-    return fetchWithBackOff(
+  const data = await requestWithRetry({
+    sendRequest: () => fetchWithAuth(
       `${BASE_URL}developer/package-versions/?package_id=${packageId}`,
       {
         method: "POST",
@@ -330,20 +274,19 @@ async function verifyUploadSuccessful({
       },
       logger,
       onCookieExpired
-    );
-  }
-
-  const data = await handleRequestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
-      const result = UploadResultSchema.safeParse(response);
+    ),
+    parseResponse(response) {
+      const result = UploadResultSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
-    errorContext: "Upload verification failed"
+    formatError: storeError,
+    errorContext: "Upload verification failed",
+    logger
   });
+
   if ("package_file" in data) {
     throw new Error(storeError(data.package_file));
   }
@@ -364,8 +307,9 @@ async function updateChangelog({
   onCookieExpired?: DeployContext["onCookieExpired"];
 }) {
   const { version, default_locale = "en" } = await getExtJson(zip);
-  async function sendRequest() {
-    return fetchWithBackOff(
+
+  return requestWithRetry({
+    sendRequest: () => fetchWithAuth(
       `${BASE_URL}developer/package-versions/${packageId}-${version}/`,
       {
         method: "PATCH",
@@ -380,18 +324,17 @@ async function updateChangelog({
       },
       logger,
       onCookieExpired
-    );
-  }
-  return handleRequestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
-      const result = ListingDetailSchema.safeParse(response);
+    ),
+    parseResponse(response) {
+      const result = ListingDetailSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
-    errorContext: "Changelog update failed"
+    formatError: storeError,
+    errorContext: "Changelog update failed",
+    logger
   });
 }
 
@@ -419,24 +362,23 @@ async function getVersions({
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
 }) {
-  async function sendRequest() {
-    return fetchWithBackOff(
+  return requestWithRetry({
+    sendRequest: () => fetchWithAuth(
       `${BASE_URL}developer/packages/${packageId}/`,
       { method: "GET" },
       logger,
       onCookieExpired
-    );
-  }
-  return handleRequestWithBackOff({
-    sendRequest,
-    parseResponse: response => {
-      const result = ListVersionsSchema.safeParse(response);
+    ),
+    parseResponse(response) {
+      const result = ListVersionsSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
       }
       return result.data;
     },
-    errorContext: "Get package versions failed"
+    formatError: storeError,
+    errorContext: "Get package versions failed",
+    logger
   });
 }
 

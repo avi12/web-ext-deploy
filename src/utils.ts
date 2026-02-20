@@ -1,7 +1,9 @@
 import { camelCase } from "./case-conversion.js";
+import type { StoreLogger } from "./types.js";
 import { ZipReader, BlobReader, TextWriter } from "@zip.js/zip.js";
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
 
 const ExtensionManifestSchema = z.object({
@@ -90,6 +92,10 @@ export function headersToEnv(headersTotal: Record<string, unknown>) {
     .join("\n");
 }
 
+function getBackoffDelayMs(attempt: number) {
+  return Math.min(2 ** attempt, 5) * 1000;
+}
+
 export function toError(value: unknown) {
   return value instanceof Error ? value : new Error(String(value));
 }
@@ -98,5 +104,68 @@ export class CookieAuthError extends Error {
   constructor(store: string) {
     super(`${store}: Authentication failed — cookies may be expired`);
     this.name = "CookieAuthError";
+  }
+}
+
+export type HttpLikeResponse = {
+  data: unknown;
+  status: number;
+  statusText: string;
+  headers?: Record<string, string>;
+};
+
+export async function requestWithRetry<T>({
+  sendRequest,
+  parseResponse,
+  formatError,
+  errorContext,
+  logger,
+  onRateLimit
+}: {
+  sendRequest: () => Promise<HttpLikeResponse>;
+  parseResponse: (response: HttpLikeResponse) => T;
+  formatError: (message: string) => string;
+  errorContext: string;
+  logger?: StoreLogger;
+  onRateLimit?: (response: HttpLikeResponse) => Promise<void>;
+}): Promise<T> {
+  let attempt = 0;
+
+  for (;;) {
+    let response: HttpLikeResponse;
+    try {
+      response = await sendRequest();
+    } catch(error) {
+      if (error instanceof CookieAuthError) {
+        throw error;
+      }
+      await setTimeout(getBackoffDelayMs(attempt));
+      attempt++;
+      continue;
+    }
+
+    if (response.status === 429) {
+      if (onRateLimit) {
+        await onRateLimit(response);
+      } else {
+        await setTimeout(getBackoffDelayMs(attempt));
+      }
+      attempt++;
+      continue;
+    }
+
+    if (response.status >= 400 && response.status < 500) {
+      const message = formatError(`${errorContext}: ${response.statusText}`);
+      logger?.error(message);
+      throw new Error(message);
+    }
+
+    if (response.status >= 500) {
+      await setTimeout(getBackoffDelayMs(attempt));
+      attempt++;
+      continue;
+    }
+
+    return parseResponse(response);
   }
 }
