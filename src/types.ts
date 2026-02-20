@@ -23,8 +23,8 @@ export type StoreDefinition = {
   dynamicFields?: string[];
 };
 
-export function defineStore<T>(config: {
-  name: string;
+export function defineStore<T, Name extends string>(config: {
+  name: Name;
   schema: z.ZodType<T>;
   prepare: (options: T) => T;
   deploy: (options: T, context?: DeployContext) => Promise<boolean>;

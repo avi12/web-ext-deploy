@@ -72,7 +72,12 @@ export default [
       "@stylistic/object-curly-newline": ["error", { consistent: true }],
       "id-length": ["error", { min: 3, exceptions: ["z", "_", "i", "fs", "id"] }],
       "func-style": ["error", "declaration", { allowArrowFunctions: false }],
-      "no-restricted-syntax": [ "error", { selector: "VariableDeclarator > ArrowFunctionExpression", message: "Do not assign arrow functions to variables. Use a named function declaration instead." } ],
+      "no-restricted-syntax": ["error",
+        { selector: "VariableDeclarator > ArrowFunctionExpression", message: "Do not assign arrow functions to variables. Use a named function declaration instead." },
+        { selector: "ForOfStatement > CallExpression[callee.object.name='Object'][callee.property.name='keys']", message: "Use a for-in loop instead of for-of Object.keys()." }
+      ],
+      "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }]
+
     }
   }
 ];

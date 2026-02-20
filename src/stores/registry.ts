@@ -6,15 +6,17 @@ import { firefox } from "./firefox/index.js";
 import { opera } from "./opera/index.js";
 
 // To add a new store: import it and add it to this array.
-export const storeRegistry: StoreDefinition[] = [chrome, firefox, edge, opera];
+const stores = [chrome, firefox, edge, opera] as const;
+export const storeRegistry: StoreDefinition[] = [...stores];
 
-export const storeNames = ["chrome", "firefox", "edge", "opera"] as const;
+export type StoreName = (typeof stores)[number]["name"];
+export const storeNames: StoreName[] = stores.map(store => store.name);
 
 export function getStore(name: string) {
   return storeRegistry.find(store => store.name === name);
 }
 
-export function isSupportedStore(value: unknown) {
+export function isSupportedStore(value: unknown): value is StoreName {
   const result = z.string().safeParse(value);
-  return result.success && storeNames.includes(result.data);
+  return result.success && storeNames.some(name => name === result.data);
 }

@@ -173,12 +173,12 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   type FieldInfo = { name: string; type: string; required: boolean; description: string };
   const fields: FieldInfo[] = [];
 
-  for (const [key, value] of Object.entries(shape)) {
+  for (const key in shape) {
     // verbose is a global flag, not per-store
     if (key === "verbose" && mode) {
       continue;
     }
-    const zodValue = value as z.ZodTypeAny;
+    const zodValue = shape[key];
     const isOptional =
       zodValue instanceof z.ZodOptional || zodValue instanceof z.ZodNullable || zodValue instanceof z.ZodDefault;
 

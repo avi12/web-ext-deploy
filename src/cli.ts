@@ -158,7 +158,7 @@ function getJsons(command: string, argv: Argv) {
 export { mapStoreArgs };
 
 function getJsonsFromArgs(store: string, argv: Argv) {
-  return mapStoreArgs(argv as Record<string, unknown>, store);
+  return mapStoreArgs(Object.fromEntries(Object.entries(argv)), store);
 }
 
 async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void) {
@@ -289,7 +289,7 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
   if (Object.keys(missingArgs).length > 0) {
     const isCliMode = command === "cli";
     let errorContent = red("Missing required arguments:\n");
-    for (const storeName of Object.keys(missingArgs)) {
+    for (const storeName in missingArgs) {
       const store = getStore(storeName);
       if (store) {
         errorContent += renderStoreHelp(storeName, store.schema, isCliMode ? "cli" : "env");
