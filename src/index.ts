@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { z } from "zod";
+
 import { createCookieRefreshCallback, getJsonStoresFromCli, parser } from "./cli.js";
 import { deployStore } from "./deploy-store.js";
-import { red } from "./logging.js";
 import { createInkLogger, renderFatalError } from "./ink-logger.js";
+import { red } from "./logging.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { toError } from "./utils.js";
 

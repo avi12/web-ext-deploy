@@ -1,9 +1,11 @@
-import { ChromeOptions, storeError } from "./chrome-input.js";
-import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
-import { createHttpClient } from "../../http-client.js";
-import type { DeployContext } from "../../types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
+
+import type { DeployContext } from "../../types.js";
+
+import { createHttpClient } from "../../http-client.js";
+import { ChromeOptions, storeError } from "./chrome-input.js";
+import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
 const BASE_URL = "https://chromewebstore.googleapis.com";
 
 let httpClient: ReturnType<typeof createHttpClient>;

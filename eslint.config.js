@@ -1,8 +1,8 @@
 import eslint from "@eslint/js";
-import globals from "globals";
-import tsEslint from "typescript-eslint";
 import stylistic from "@stylistic/eslint-plugin";
 import perfectionist from "eslint-plugin-perfectionist";
+import globals from "globals";
+import tsEslint from "typescript-eslint";
 
 export default [
   eslint.configs.recommended,
@@ -76,6 +76,7 @@ export default [
         { selector: "VariableDeclarator > ArrowFunctionExpression", message: "Do not assign arrow functions to variables. Use a named function declaration instead." },
         { selector: "ForOfStatement > CallExpression[callee.object.name='Object'][callee.property.name='keys']", message: "Use a for-in loop instead of for-of Object.keys()." }
       ],
+      "@stylistic/padding-line-between-statements": ["error", { "breakLine": "never", prev: "" }]
     }
   }
 ];

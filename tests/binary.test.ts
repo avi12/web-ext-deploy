@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import { spawnSync, execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { describe, it, expect, beforeAll } from "vitest";
 
 const ROOT = path.resolve(__dirname, "..");
 const BINARY = path.join(ROOT, "dist-esm/index.js");

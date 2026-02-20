@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
 import path from "node:path";
-import { mapStoreArgs } from "../src/utils.js";
+import { describe, it, expect } from "vitest";
+
 import { ChromeOptionsSchema } from "../src/stores/chrome/chrome-input.js";
-import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
 import { EdgeOptionsPublishApiSchema } from "../src/stores/edge/edge-input.js";
+import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
 import { OperaOptionsSchema } from "../src/stores/opera/opera-input.js";
+import { mapStoreArgs } from "../src/utils.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 

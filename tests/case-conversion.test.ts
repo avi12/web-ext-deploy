@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+
 import { camelCase, kebabCase, capitalCase } from "../src/case-conversion.js";
 
 describe("camelCase", () => {

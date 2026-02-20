@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
 import path from "node:path";
+import { describe, it, expect } from "vitest";
+
 import { getFullPath, isObjectEmpty, getCorrectZip, headersToEnv } from "../src/utils.js";
 
 describe("getFullPath", () => {

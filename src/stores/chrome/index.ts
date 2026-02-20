@@ -1,6 +1,6 @@
+import { defineStore } from "../../types.js";
 import { deployToChrome } from "./chrome-deploy.js";
 import { ChromeOptionsSchema, prepareChromeOptions } from "./chrome-input.js";
-import { defineStore } from "../../types.js";
 
 export const chrome = defineStore({
   name: "chrome",

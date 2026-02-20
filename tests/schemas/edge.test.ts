@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
 import path from "node:path";
+import { describe, it, expect } from "vitest";
+
 import { EdgeOptionsPublishApiSchema } from "../../src/stores/edge/edge-input.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "../fixtures/test.zip");

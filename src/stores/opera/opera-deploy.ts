@@ -1,4 +1,9 @@
+import fs from "node:fs";
 import { z } from "zod";
+
+import type { DeployContext } from "../../types.js";
+
+import { CookieAuthError, getExtJson, toError } from "../../utils.js";
 import { OperaOptions, storeError } from "./opera-input.js";
 import {
   ListVersionsSchema,
@@ -10,9 +15,6 @@ import {
   type ListVersions,
   type UploadResult
 } from "./opera-types.js";
-import type { DeployContext } from "../../types.js";
-import { CookieAuthError, getExtJson, toError } from "../../utils.js";
-import fs from "node:fs";
 
 const BASE_URL = "https://addons.opera.com/api/";
 

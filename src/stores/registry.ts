@@ -1,5 +1,7 @@
 import { z } from "zod";
+
 import type { StoreDefinition } from "../types.js";
+
 import { chrome } from "./chrome/index.js";
 import { edge } from "./edge/index.js";
 import { firefox } from "./firefox/index.js";
