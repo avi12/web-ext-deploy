@@ -107,7 +107,7 @@ export function headersToEnv(headersTotal: Record<string, unknown>) {
     .join("\n");
 }
 
-export function toError(value: unknown): Error {
+export function toError(value: unknown) {
   return value instanceof Error ? value : new Error(String(value));
 }
 

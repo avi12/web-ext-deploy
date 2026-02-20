@@ -107,14 +107,15 @@ async function uploadZip({
   formData.append("upload", fs.createReadStream(zip));
   formData.append("channel", "listed");
 
-  const sendRequest = () =>
-    httpClient.post("upload/", formData.getBody(), {
+  function sendRequest() {
+    return httpClient.post("upload/", formData.getBody(), {
       headers: {
         ...formData.getHeaders(),
         Authorization: `JWT ${generateJwt({ jwtIssuer,
           jwtSecret })}`
       }
     });
+  }
 
   return handleRequestWithBackOff({
     zip,
@@ -147,8 +148,8 @@ async function createNewVersion({
   zip: string;
 }) {
   const { default_locale = changelogLang } = await getExtJson(zip);
-  const sendRequest = async () =>
-    httpClient.post(
+  async function sendRequest() {
+    return httpClient.post(
       `addon/${slug}/versions/`,
       JSON.stringify({
         upload: uuid,
@@ -163,6 +164,7 @@ async function createNewVersion({
       }),
       { headers: { "Content-Type": "application/json" } }
     );
+  }
 
   if (changelog) {
     logger?.info(`Adding changelog: ${changelog}`);
@@ -200,7 +202,9 @@ async function validateUpload({
   let error: string;
 
   do {
-    const sendRequest = () => httpClient.get(`upload/${uuid}/`);
+    function sendRequest() {
+      return httpClient.get(`upload/${uuid}/`);
+    }
     [error, data] = await handleRequestWithBackOff({
       zip,
       sendRequest,
@@ -247,10 +251,11 @@ async function uploadSourceCodeIfNeeded({
   const formData = new FormData();
   formData.append("source", fs.createReadStream(zipSource));
 
-  const sendRequest = async () =>
-    httpClient.patch(`addon/${slug}/versions/${version}/`, formData.getBody(), {
+  async function sendRequest() {
+    return httpClient.patch(`addon/${slug}/versions/${version}/`, formData.getBody(), {
       headers: formData.getHeaders()
     });
+  }
 
   return handleRequestWithBackOff({
     zip,

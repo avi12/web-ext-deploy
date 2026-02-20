@@ -134,8 +134,9 @@ async function verifySourceCodeExistence({
 }): Promise<[string] | [undefined, true]> {
   const extJson = await getExtJson(zip);
   const { version, default_locale = "en" } = extJson;
-  const sendRequest = async () =>
-    fetchWithBackOff(`${BASE_URL}developer/package-versions/${packageId}-${version}/`, { method: "GET" });
+  async function sendRequest() {
+    return fetchWithBackOff(`${BASE_URL}developer/package-versions/${packageId}-${version}/`, { method: "GET" });
+  }
   const params = new URLSearchParams({ language: default_locale });
   const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${params}`;
   const errorMessage = `No source code provided. Provide a URL in ${url} and submit the changes`;
@@ -175,11 +176,11 @@ async function cancelLatestVersionIfNotSubmitted({
   const { version } = versionsListed[0];
   logger?.info(`Canceling unsubmitted version ${version}`);
 
-  const sendRequest = async () => {
+  async function sendRequest() {
     return fetchWithBackOff(`${BASE_URL}developer/package-versions/${packageId}-${version}/cancel_changes/`, {
       method: "POST"
     });
-  };
+  }
 
   return handleRequestWithBackOff({
     zip,
@@ -198,10 +199,11 @@ async function cancelLatestVersionIfNotSubmitted({
 async function submitChanges({ zip, packageId }: { zip: string; packageId: number }) {
   const extJson = await getExtJson(zip);
   const { version } = extJson;
-  const sendRequest = async () =>
-    fetchWithBackOff(`${BASE_URL}developer/package-versions/${packageId}-${version}/submit_for_moderation/`, {
+  async function sendRequest() {
+    return fetchWithBackOff(`${BASE_URL}developer/package-versions/${packageId}-${version}/submit_for_moderation/`, {
       method: "POST"
     });
+  }
   return handleRequestWithBackOff({
     zip,
     sendRequest,
@@ -251,14 +253,15 @@ async function uploadZip({ zip }: { zip: string }) {
 
   const body = Buffer.concat([filePart, fileBuffer, identifierPart, fileBuffer, closingPart]);
 
-  const sendRequest = async () =>
-    fetchWithBackOff(`${BASE_URL}file-upload/`, {
+  async function sendRequest() {
+    return fetchWithBackOff(`${BASE_URL}file-upload/`, {
       method: "POST",
       headers: {
         "Content-Type": `multipart/form-data; boundary=${boundary}`
       },
       body: body
     });
+  }
 
   return handleRequestWithBackOff({
     zip,
@@ -285,8 +288,8 @@ async function verifyUploadSuccessful({
 }): Promise<[string] | [undefined, UploadResult]> {
   const { zipName, fileId } = getFileMetadata(zipPath);
 
-  const sendRequest = async () =>
-    fetchWithBackOff(`${BASE_URL}developer/package-versions/?package_id=${packageId}`, {
+  async function sendRequest() {
+    return fetchWithBackOff(`${BASE_URL}developer/package-versions/?package_id=${packageId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -295,6 +298,7 @@ async function verifyUploadSuccessful({
         metadata_from: lastVersion
       })
     });
+  }
 
   const [error, data] = await handleRequestWithBackOff({
     zip: zipPath,
@@ -319,8 +323,8 @@ async function verifyUploadSuccessful({
 
 async function updateChangelog({ zip, packageId, changelog }: { zip: string; packageId: number; changelog: string }) {
   const { version, default_locale = "en" } = await getExtJson(zip);
-  const sendRequest = async () =>
-    fetchWithBackOff(`${BASE_URL}developer/package-versions/${packageId}-${version}/`, {
+  async function sendRequest() {
+    return fetchWithBackOff(`${BASE_URL}developer/package-versions/${packageId}-${version}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -331,6 +335,7 @@ async function updateChangelog({ zip, packageId, changelog }: { zip: string; pac
         }
       })
     });
+  }
   return handleRequestWithBackOff({
     zip,
     sendRequest,
@@ -371,8 +376,9 @@ function verifyVersionNotSubmittedForModeration({
 }
 
 async function getVersions({ zip, packageId }: { zip: string; packageId: number }) {
-  const sendRequest = async () =>
-    fetchWithBackOff(`${BASE_URL}developer/packages/${packageId}/`, { method: "GET" });
+  async function sendRequest() {
+    return fetchWithBackOff(`${BASE_URL}developer/packages/${packageId}/`, { method: "GET" });
+  }
   return handleRequestWithBackOff({
     zip,
     sendRequest,

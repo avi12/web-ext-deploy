@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
-const getErrorMessage = (message: string) => `Chrome: ${message}`;
+function getErrorMessage(message: string) {
+  return `Chrome: ${message}`;
+}
 
 export const ChromeOptionsSchema = z
   .object({

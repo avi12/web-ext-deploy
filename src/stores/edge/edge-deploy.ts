@@ -97,8 +97,9 @@ async function checkStatusOfPackageUpload({
   operationId: string;
   zip: string;
 }): Promise<[string] | [undefined, StatusPackageUpload]> {
-  const sendRequest = () =>
-    httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`);
+  function sendRequest() {
+    return httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`);
+  }
   let data: StatusPackageUpload;
   let error: string;
   do {
@@ -141,10 +142,11 @@ async function uploadZip({
   zip: string;
   productId: string;
 }) {
-  const sendRequest = () =>
-    httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
+  function sendRequest() {
+    return httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
       headers: { "Content-Type": "application/zip" }
     });
+  }
 
   return requestWithBackOff({ sendRequest,
     parseResponse: parseLocation,
@@ -162,10 +164,11 @@ async function publishSubmission({
   productId: string;
   devChangelog: string;
 }) {
-  const sendRequest = () =>
-    httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
+  function sendRequest() {
+    return httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
       headers: { "Content-Type": "application/json" }
     });
+  }
 
   return requestWithBackOff({ sendRequest,
     parseResponse: parseLocation,
@@ -183,8 +186,9 @@ async function checkPublishStatus({
   productId: string;
   operationId: string;
 }): Promise<[string] | [undefined, PublishOperationStatus]> {
-  const sendRequest = () =>
-    httpClient.get(`products/${productId}/submissions/operations/${operationId}`);
+  function sendRequest() {
+    return httpClient.get(`products/${productId}/submissions/operations/${operationId}`);
+  }
 
   const [error, data] = await requestWithBackOff({
     sendRequest,

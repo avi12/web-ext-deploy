@@ -162,7 +162,7 @@ function getJsonsFromArgs(store: string, argv: Argv) {
 }
 
 
-async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap) {
+async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void) {
   for (const store of storeRegistry) {
     const fields = store.cookieFields;
     if (!fields || fields.length === 0) {
@@ -186,7 +186,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap) {
       continue;
     }
 
-    process.stdout.write(`${capitalCase(store.name)}: Fetching cookies...\n`);
+    log?.(`${capitalCase(store.name)}: Fetching cookies...`);
     try {
       await getCookies([store.name]);
     } catch (error) {
@@ -273,7 +273,7 @@ function collectMissingGlobalArgs(argv: Argv) {
   return missingGlobal;
 }
 
-export async function getJsonStoresFromCli(argv: Argv) {
+export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) => void) {
   const command = z.string().safeParse(argv._[0]).data ?? "";
   const jsonStoresRaw = getJsons(command, argv);
 
@@ -283,7 +283,7 @@ export async function getJsonStoresFromCli(argv: Argv) {
 
   const autoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
   if (autoFetchCookies) {
-    await fetchMissingCookies(jsonStoresRaw);
+    await fetchMissingCookies(jsonStoresRaw, log);
   }
 
   const missingArgs = collectMissingArgs(jsonStoresRaw, autoFetchCookies);

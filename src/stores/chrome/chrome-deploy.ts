@@ -7,7 +7,9 @@ import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 
 const STORE = "Chrome";
-const storeError = (message: string): string => red(`${STORE}: ${message}`);
+function storeError(message: string) {
+  return red(`${STORE}: ${message}`);
+}
 const BASE_URL = "https://chromewebstore.googleapis.com";
 
 let httpClient: ReturnType<typeof createHttpClient>;

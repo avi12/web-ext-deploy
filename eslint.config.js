@@ -45,7 +45,9 @@ export default [
       "@stylistic/indent": ["error", 2],
       "@stylistic/arrow-parens": ["error", "as-needed"],
       "@stylistic/brace-style": "error",
-      "id-length": ["error", { min: 3, exceptions: ["z", "_", "i", "fs", "id"] }]
+      "id-length": ["error", { min: 3, exceptions: ["z", "_", "i", "fs", "id"] }],
+      "func-style": ["error", "declaration", { allowArrowFunctions: false }],
+      "no-restricted-syntax": [ "error", { selector: "VariableDeclarator > ArrowFunctionExpression", message: "Do not assign arrow functions to variables. Use a named function declaration instead." } ],
     }
   }
 ];

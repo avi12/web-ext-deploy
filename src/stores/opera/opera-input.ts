@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
-const getErrorMessage = (message: string) => `Opera: ${message}`;
+function getErrorMessage(message: string) {
+  return `Opera: ${message}`;
+}
 
 export const OperaOptionsSchema = z
   .object({

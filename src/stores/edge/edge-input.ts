@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
-const getErrorMessage = (message: string) => `Edge: ${message}`;
+function getErrorMessage(message: string) {
+  return `Edge: ${message}`;
+}
 
 export const EdgeOptionsPublishApiSchema = z
   .object({

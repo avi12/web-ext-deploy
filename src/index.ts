@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createCookieRefreshCallback, getJsonStoresFromCli, parser } from "./cli.js";
 import { deployStore } from "./deploy-store.js";
 import { red } from "./logging.js";
-import { createInkLogger } from "./ink-logger.js";
+import { createInkLogger, renderFatalError } from "./ink-logger.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { toError } from "./utils.js";
 
@@ -36,7 +36,8 @@ async function runStoreDeploy(
 
 async function initCli() {
   const argv = parser.parseSync();
-  const storeJsons = await getJsonStoresFromCli(argv);
+  const preDeployLogs: string[] = [];
+  const storeJsons = await getJsonStoresFromCli(argv, msg => preDeployLogs.push(msg));
 
   const storeEntries: [string, Record<string, unknown>][] = [];
   for (const [store, json] of Object.entries(storeJsons)) {
@@ -50,6 +51,9 @@ async function initCli() {
   }
 
   const inkLogger = createInkLogger(storeEntries.map(([store]) => store));
+  for (const msg of preDeployLogs) {
+    inkLogger.logger.info("System", msg);
+  }
   const dryRun = z.boolean().safeParse(argv.dryRun).data;
   const verbose = z.boolean().safeParse(argv.verbose).data;
 
@@ -83,6 +87,6 @@ async function initCli() {
 }
 
 initCli().catch((err: Error) => {
-  process.stderr.write(err.message + "\n");
+  renderFatalError(err.message);
   process.exitCode = 1;
 });

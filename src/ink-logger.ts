@@ -171,7 +171,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   }
 
   const shape = schema.shape;
-  const formatFieldName = (key: string) => {
+  function formatFieldName(key: string) {
     if (mode === "cli") {
       return `--${kebabCase(storeName)}-${kebabCase(key)}`;
     }
@@ -179,7 +179,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
       return screamingSnakeCase(key);
     }
     return key;
-  };
+  }
 
   type FieldInfo = { name: string; type: string; required: boolean; description: string };
   const fields: FieldInfo[] = [];
@@ -230,12 +230,16 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   return `\n${header}${colHeader}${separator}${rows}`;
 }
 
+export function renderFatalError(message: string) {
+  process.stdout.write(`\x1b[31m✖\x1b[0m ${message}\n`);
+}
+
 export function renderGlobalArgsHelp(missingArgs: string[], mode?: "cli" | "env") {
   if (missingArgs.length === 0) {
     return "";
   }
 
-  const formatFieldName = (key: string) => {
+  function formatFieldName(key: string) {
     if (mode === "cli") {
       return `--${kebabCase(key)}`;
     }
@@ -243,7 +247,7 @@ export function renderGlobalArgsHelp(missingArgs: string[], mode?: "cli" | "env"
       return screamingSnakeCase(key);
     }
     return key;
-  };
+  }
 
   const globalArgs: Array<{ name: string; key: string; description: string }> = [
     { name: formatFieldName("publishOnly"),
