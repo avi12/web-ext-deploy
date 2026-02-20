@@ -44,6 +44,7 @@ export default [
       curly: ["error", "all"],
       "@stylistic/indent": ["error", 2],
       "@stylistic/arrow-parens": ["error", "as-needed"],
+      "object-curly-spacing": ["error", "always"],
       "@stylistic/brace-style": "error",
       "id-length": ["error", { min: 3, exceptions: ["z", "_", "i", "fs", "id"] }],
       "func-style": ["error", "declaration", { allowArrowFunctions: false }],

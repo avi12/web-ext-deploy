@@ -14,7 +14,7 @@ describe("parse", () => {
   });
 
   it("parses double-quoted values", () => {
-    expect(parse('KEY="value"')).toEqual({ KEY: "value" });
+    expect(parse("KEY=\"value\"")).toEqual({ KEY: "value" });
   });
 
   it("parses single-quoted values", () => {
@@ -49,7 +49,7 @@ describe("config", () => {
 
   it("returns parsed content from a valid file", () => {
     const tmpFile = path.join(os.tmpdir(), `dotenv-test-${Date.now()}.env`);
-    fs.writeFileSync(tmpFile, 'FOO="bar"\nBAZ=qux');
+    fs.writeFileSync(tmpFile, "FOO=\"bar\"\nBAZ=qux");
 
     try {
       const result = config({ path: tmpFile });

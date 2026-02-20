@@ -35,15 +35,15 @@ describe("binary", () => {
   });
 
   it("cli with no store args exits non-zero", () => {
-    const { status, stderr } = runCli(["cli"]);
+    const { status, stdout } = runCli(["cli"]);
     expect(status).not.toBe(0);
-    expect(stderr).toContain("Supply arguments for at least one store");
+    expect(stdout).toContain("Supply arguments for at least one store");
   });
 
   it("env with no .env files exits non-zero", () => {
-    const { status, stderr } = runCli(["env"]);
+    const { status, stdout } = runCli(["env"]);
     expect(status).not.toBe(0);
-    expect(stderr).toContain("Supply arguments for at least one store");
+    expect(stdout).toContain("Supply arguments for at least one store");
   });
 
   it("cli --dry-run with valid chrome args exits 0", () => {

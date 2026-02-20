@@ -1,10 +1,10 @@
-import {describe, it, expect} from "vitest";
+import { describe, it, expect } from "vitest";
 import path from "node:path";
-import {mapStoreArgs} from "../src/utils.js";
-import {ChromeOptionsSchema} from "../src/stores/chrome/chrome-input.js";
-import {FirefoxOptionsSubmissionApiSchema} from "../src/stores/firefox/firefox-input.js";
-import {EdgeOptionsPublishApiSchema} from "../src/stores/edge/edge-input.js";
-import {OperaOptionsSchema} from "../src/stores/opera/opera-input.js";
+import { mapStoreArgs } from "../src/utils.js";
+import { ChromeOptionsSchema } from "../src/stores/chrome/chrome-input.js";
+import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
+import { EdgeOptionsPublishApiSchema } from "../src/stores/edge/edge-input.js";
+import { OperaOptionsSchema } from "../src/stores/opera/opera-input.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 
@@ -17,9 +17,9 @@ describe("CLI mode - arg mapping + validation", () => {
         "chrome-refresh-token": "token-xyz"
       };
       expect(mapStoreArgs(rawArgs, "chrome")).toEqual({
-        "extId": "abc123",
-        "publisherId": "pub-456",
-        "refreshToken": "token-xyz"
+        extId: "abc123",
+        publisherId: "pub-456",
+        refreshToken: "token-xyz"
       });
     });
 
@@ -61,9 +61,9 @@ describe("CLI mode - arg mapping + validation", () => {
         "firefox-ext-id": "addon-id"
       };
       expect(mapStoreArgs(rawArgs, "firefox")).toEqual({
-        "jwtIssuer": "issuer-id",
-        "jwtSecret": "secret-val",
-        "extId": "addon-id"
+        jwtIssuer: "issuer-id",
+        jwtSecret: "secret-val",
+        extId: "addon-id"
       });
     });
 
@@ -105,9 +105,9 @@ describe("CLI mode - arg mapping + validation", () => {
         "edge-api-key": "key-789"
       };
       expect(mapStoreArgs(rawArgs, "edge")).toEqual({
-        "productId": "prod-123",
-        "clientId": "client-456",
-        "apiKey": "key-789"
+        productId: "prod-123",
+        clientId: "client-456",
+        apiKey: "key-789"
       });
     });
 
@@ -149,9 +149,9 @@ describe("CLI mode - arg mapping + validation", () => {
         "opera-csrftoken": "csrf-xyz"
       };
       expect(mapStoreArgs(rawArgs, "opera")).toEqual({
-        "packageId": "100",
-        "sessionid": "sess-abc",
-        "csrftoken": "csrf-xyz"
+        packageId: "100",
+        sessionid: "sess-abc",
+        csrftoken: "csrf-xyz"
       });
     });
 

@@ -1,12 +1,12 @@
-import {describe, it, expect, afterEach} from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
-import {config} from "../src/dotenv.js";
-import {ChromeOptionsSchema} from "../src/stores/chrome/chrome-input.js";
-import {FirefoxOptionsSubmissionApiSchema} from "../src/stores/firefox/firefox-input.js";
-import {EdgeOptionsPublishApiSchema} from "../src/stores/edge/edge-input.js";
-import {OperaOptionsSchema} from "../src/stores/opera/opera-input.js";
+import { config } from "../src/dotenv.js";
+import { ChromeOptionsSchema } from "../src/stores/chrome/chrome-input.js";
+import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
+import { EdgeOptionsPublishApiSchema } from "../src/stores/edge/edge-input.js";
+import { OperaOptionsSchema } from "../src/stores/opera/opera-input.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 
@@ -17,7 +17,7 @@ describe("Env mode - .env parsing + validation", () => {
     const tmpFile = path.join(os.tmpdir(), `web-ext-test-${Date.now()}-${Math.random()}.env`);
     fs.writeFileSync(tmpFile, content, "utf8");
     tmpFiles.push(tmpFile);
-    const {parsed = {}} = config({"path": tmpFile});
+    const { parsed = {} } = config({ path: tmpFile });
     return parsed;
   }
 
