@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { ChromeOptions } from "./chrome-input.js";
 import { createHttpClient } from "../../http-client.js";
-import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
+import type { DeployContext } from "../../types.js";
 import { getErrorMessage } from "../../utils.js";
 import fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
 
 const STORE = "Chrome";
 const BASE_URL = "https://chromewebstore.googleapis.com";
@@ -19,6 +20,47 @@ const UploadResponseSchema = z.object({
 const PublishResponseSchema = z.object({
   state: z.string().optional()
 });
+
+const FetchStatusSchema = z.object({
+  publishedItemRevisionStatus: z.string().optional(),
+  submittedItemRevisionStatus: z.string().optional()
+});
+
+const PENDING_REVIEW_STATES = ["PENDING_REVIEW", "IN_REVIEW"];
+
+async function fetchStatus({ extId, publisherId }: { extId: string; publisherId: string }) {
+  const response = await httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`);
+  const result = FetchStatusSchema.safeParse(response.data);
+  if (!result.success) {
+    throw result.error;
+  }
+  return result.data;
+}
+
+async function cancelSubmissionIfPending({
+  extId,
+  publisherId,
+  logger,
+  verbose
+}: {
+  extId: string;
+  publisherId: string;
+  logger?: DeployContext["logger"];
+  verbose?: boolean;
+}) {
+  const status = await fetchStatus({ extId, publisherId });
+  const submittedStatus = status.submittedItemRevisionStatus;
+  if (!submittedStatus || !PENDING_REVIEW_STATES.includes(submittedStatus)) {
+    return;
+  }
+
+  if (verbose) {
+    logger?.info(`Canceling pending submission (status: ${submittedStatus})`);
+  }
+
+  await httpClient.post(`v2/publishers/${publisherId}/items/${extId}:cancelSubmission`);
+  await setTimeout(60_000);
+}
 
 async function uploadZip({
   zip,
@@ -105,13 +147,13 @@ async function publishExtension({
 
 export async function deployToChrome(
   { extId, publisherId, refreshToken, zip, skipReview, deployPercentage }: ChromeOptions,
-  logger?: StoreLogger,
-  _onCookieExpired?: CookieRefreshCallback,
-  verbose?: boolean
+  { logger, verbose }: DeployContext = {}
 ) {
   const authHeaders = { Authorization: `Bearer ${refreshToken}` };
   httpClient = createHttpClient(BASE_URL, authHeaders);
   uploadHttpClient = createHttpClient(BASE_URL, authHeaders);
+
+  await cancelSubmissionIfPending({ extId, publisherId, logger, verbose });
 
   if (verbose) {
     logger?.info(`Uploading zip with extension ID ${extId}`);

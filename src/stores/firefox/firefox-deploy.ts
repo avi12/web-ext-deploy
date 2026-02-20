@@ -9,7 +9,7 @@ import {
 import { FormData } from "../../form-data.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
 import { generateJwt } from "../../jwt.js";
-import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
+import type { DeployContext } from "../../types.js";
 import { getErrorMessage, getExtJson, toError } from "../../utils.js";
 import fs from "node:fs";
 
@@ -94,7 +94,7 @@ async function handleRequestWithBackOff<T>({
 
 let jwtIssuer: string;
 let jwtSecret: string;
-let logger: StoreLogger | undefined;
+let logger: DeployContext["logger"];
 
 async function uploadZip({
   zip,
@@ -278,9 +278,7 @@ export default async function deployToFirefox(
     changelogLang = "en-US",
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
-  storeLogger?: StoreLogger,
-  _onCookieExpired?: CookieRefreshCallback,
-  verbose?: boolean
+  { logger: storeLogger, verbose }: DeployContext = {}
 ) {
   jwtIssuer = issuer;
   jwtSecret = secret;

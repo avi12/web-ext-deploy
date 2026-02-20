@@ -12,16 +12,17 @@ export type StoreOptionsBase = {
 
 export type CookieRefreshCallback = () => Promise<Record<string, string>>;
 
+export type DeployContext = {
+  logger?: StoreLogger;
+  onCookieExpired?: CookieRefreshCallback;
+  verbose?: boolean;
+};
+
 export type StoreDefinition = {
   name: string;
   schema: z.ZodType;
   prepare: (options: unknown) => unknown;
-  deploy: (
-    options: unknown,
-    logger?: StoreLogger,
-    onCookieExpired?: CookieRefreshCallback,
-    verbose?: boolean
-  ) => Promise<boolean>;
+  deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
 };
@@ -30,7 +31,7 @@ export function defineStore<T>(config: {
   name: string;
   schema: z.ZodType<T>;
   prepare: (options: T) => T;
-  deploy: (options: T, logger?: StoreLogger, onCookieExpired?: CookieRefreshCallback, verbose?: boolean) => Promise<boolean>;
+  deploy: (options: T, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
 }) {
@@ -44,12 +45,12 @@ export function defineStore<T>(config: {
       }
       return config.prepare(result.data);
     },
-    deploy: (options: unknown, logger?: StoreLogger, onCookieExpired?: CookieRefreshCallback, verbose?: boolean) => {
+    deploy: (options: unknown, context?: DeployContext) => {
       const result = config.schema.safeParse(options);
       if (!result.success) {
         throw result.error;
       }
-      return config.deploy(result.data, logger, onCookieExpired, verbose);
+      return config.deploy(result.data, context);
     },
     cookieFields: config.cookieFields,
     dynamicFields: config.dynamicFields

@@ -2,14 +2,14 @@ import { z } from "zod";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
 import { PublishOperationStatusSchema, StatusPackageUploadSchema, type PublishOperationStatus, type StatusPackageUpload } from "./edge-types.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
-import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
+import type { DeployContext } from "../../types.js";
 import { getErrorMessage, getExtJson } from "../../utils.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 
 const STORE = "Edge";
 let httpClient: ReturnType<typeof createHttpClient>;
-let logger: StoreLogger | undefined;
+let logger: DeployContext["logger"];
 
 function handleError(error: unknown, errorActionOnFailure: string, zip: string, productId: string) {
   const err = error instanceof Object ? error : {};
@@ -218,9 +218,7 @@ async function checkPublishStatus({
 
 export async function deployToEdgePublishApi(
   { productId, clientId, apiKey, zip, devChangelog }: EdgeOptionsPublishApi,
-  storeLogger?: StoreLogger,
-  _onCookieExpired?: CookieRefreshCallback,
-  verbose?: boolean
+  { logger: storeLogger, verbose }: DeployContext = {}
 ) {
   logger = storeLogger;
 

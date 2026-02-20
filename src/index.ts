@@ -21,13 +21,17 @@ async function runStoreDeploy(
 
   inkLogger.logger.info(store, dryRun ? "Validating inputs" : "Starting deployment");
 
-  const storeLogger = inkLogger.forStore(store);
   const storeDef = getStore(store);
   const onCookieExpired = storeDef?.cookieFields
     ? createCookieRefreshCallback(store, storeDef.cookieFields)
     : undefined;
 
-  return deployStore(json, store, storeLogger, onCookieExpired, dryRun, verbose);
+  return deployStore(json, store, {
+    logger: inkLogger.forStore(store),
+    onCookieExpired,
+    dryRun,
+    verbose
+  });
 }
 
 async function initCli() {

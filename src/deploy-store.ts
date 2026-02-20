@@ -1,15 +1,12 @@
 import { renderStoreHelp } from "./ink-logger.js";
 import { red } from "./logging.js";
 import { storeRegistry } from "./stores/registry.js";
-import type { CookieRefreshCallback, StoreLogger } from "./types.js";
+import type { DeployContext } from "./types.js";
 
 export function deployStore(
   options: unknown,
   storeName: string,
-  logger?: StoreLogger,
-  onCookieExpired?: CookieRefreshCallback,
-  dryRun?: boolean,
-  verbose?: boolean
+  context?: DeployContext & { dryRun?: boolean }
 ) {
   const store = storeRegistry.find(store => store.name === storeName);
   if (!store) {
@@ -23,9 +20,9 @@ export function deployStore(
   }
 
   const prepared = store.prepare(parseResult.data);
-  if (dryRun) {
-    logger?.info("Dry run: validation passed");
+  if (context?.dryRun) {
+    context.logger?.info("Dry run: validation passed");
     return Promise.resolve(true);
   }
-  return store.deploy(prepared, logger, onCookieExpired, verbose);
+  return store.deploy(prepared, context);
 }

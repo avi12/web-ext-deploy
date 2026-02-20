@@ -10,7 +10,7 @@ import {
   type ListVersions,
   type UploadResult
 } from "./opera-types.js";
-import type { CookieRefreshCallback, StoreLogger } from "../../types.js";
+import type { DeployContext } from "../../types.js";
 import { CookieAuthError, getErrorMessage, getExtJson, toError } from "../../utils.js";
 import fs from "node:fs";
 
@@ -18,8 +18,8 @@ const STORE = "Opera";
 
 const BASE_URL = "https://addons.opera.com/api/";
 let defaultHeaders: Record<string, string> = {};
-let logger: StoreLogger | undefined;
-let cookieRefreshCallback: CookieRefreshCallback | undefined;
+let logger: DeployContext["logger"];
+let cookieRefreshCallback: DeployContext["onCookieExpired"];
 let hasCookieRefreshBeenAttempted = false;
 
 function updateCookieHeaders(freshCookies: Record<string, string>) {
@@ -389,9 +389,7 @@ async function getVersions({ zip, packageId }: { zip: string; packageId: number 
 
 export default async function deployToOpera(
   { sessionid, csrftoken, packageId, zip, changelog = "" }: OperaOptions,
-  storeLogger?: StoreLogger,
-  onCookieExpired?: CookieRefreshCallback,
-  verbose?: boolean
+  { logger: storeLogger, onCookieExpired, verbose }: DeployContext = {}
 ) {
   logger = storeLogger;
   cookieRefreshCallback = onCookieExpired;
