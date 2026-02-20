@@ -1,6 +1,5 @@
-import { describe, it, expect } from "vitest";
-
 import { generateJwt } from "../src/jwt.js";
+import { describe, it, expect } from "vitest";
 
 describe("generateJwt", () => {
   const baseArgs = { jwtIssuer: "test-issuer",

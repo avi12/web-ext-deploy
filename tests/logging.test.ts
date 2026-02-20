@@ -1,6 +1,5 @@
-import { describe, it, expect } from "vitest";
-
 import { red, green, blue, yellow } from "../src/logging.js";
+import { describe, it, expect } from "vitest";
 
 describe("color helpers", () => {
   it("red wraps with red ANSI codes", () => {

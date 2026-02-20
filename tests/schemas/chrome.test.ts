@@ -1,7 +1,6 @@
+import { ChromeOptionsSchema } from "../../src/stores/chrome/chrome-input.js";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
-
-import { ChromeOptionsSchema } from "../../src/stores/chrome/chrome-input.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "../fixtures/test.zip");
 

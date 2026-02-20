@@ -1,7 +1,6 @@
+import { getFullPath, isObjectEmpty, getCorrectZip, headersToEnv } from "../src/utils.js";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
-
-import { getFullPath, isObjectEmpty, getCorrectZip, headersToEnv } from "../src/utils.js";
 
 describe("getFullPath", () => {
   it("returns absolute path ending with the filename", () => {

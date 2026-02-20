@@ -1,7 +1,6 @@
+import { deployStore } from "../src/deploy-store.js";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
-
-import { deployStore } from "../src/deploy-store.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 

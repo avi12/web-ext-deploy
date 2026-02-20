@@ -1,7 +1,6 @@
+import { OperaOptionsSchema } from "../../src/stores/opera/opera-input.js";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
-
-import { OperaOptionsSchema } from "../../src/stores/opera/opera-input.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "../fixtures/test.zip");
 

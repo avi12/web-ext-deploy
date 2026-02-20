@@ -1,13 +1,12 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { describe, it, expect, afterEach } from "vitest";
-
 import { config } from "../src/dotenv.js";
 import { ChromeOptionsSchema } from "../src/stores/chrome/chrome-input.js";
 import { EdgeOptionsPublishApiSchema } from "../src/stores/edge/edge-input.js";
 import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
 import { OperaOptionsSchema } from "../src/stores/opera/opera-input.js";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { describe, it, expect, afterEach } from "vitest";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 

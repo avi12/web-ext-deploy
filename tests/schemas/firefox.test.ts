@@ -1,7 +1,6 @@
+import { FirefoxOptionsSubmissionApiSchema } from "../../src/stores/firefox/firefox-input.js";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
-
-import { FirefoxOptionsSubmissionApiSchema } from "../../src/stores/firefox/firefox-input.js";
 
 const FIXTURE_ZIP = path.resolve(__dirname, "../fixtures/test.zip");
 
