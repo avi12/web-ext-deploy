@@ -49,7 +49,8 @@ async function handleRequestWithBackOff<T>({
       const status = z.object({ status: z.coerce.number() }).safeParse(error).data?.status ?? 0;
 
       if (status >= 500 && attempt < maxRetries) {
-        await setTimeout(Math.min(1000 * Math.pow(2, attempt - 1), 30_000));
+        const delayInMs = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
+        await setTimeout(delayInMs);
         continue;
       }
 
