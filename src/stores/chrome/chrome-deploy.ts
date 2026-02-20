@@ -2,11 +2,12 @@ import { ChromeOptions } from "./chrome-input.js";
 import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
 import { createHttpClient } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
-import { getErrorMessage } from "../../utils.js";
+import { red } from "../../logging.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 
 const STORE = "Chrome";
+const storeError = (message: string): string => red(`${STORE}: ${message}`);
 const BASE_URL = "https://chromewebstore.googleapis.com";
 
 let httpClient: ReturnType<typeof createHttpClient>;
@@ -50,12 +51,10 @@ async function cancelSubmissionIfPending({
 
 async function waitForUpload({
   extId,
-  publisherId,
-  zip
+  publisherId
 }: {
   extId: string;
   publisherId: string;
-  zip: string;
 }) {
   const maxAttempts = 10;
   const pollIntervalMs = 10_000;
@@ -68,15 +67,11 @@ async function waitForUpload({
       return;
     }
     if (uploadState !== UploadState.IN_PROGRESS) {
-      throw new Error(
-        getErrorMessage({ store: STORE, error: `Upload failed with state: ${uploadState}`, actionName: "upload", zip })
-      );
+      throw new Error(storeError(`Upload failed with state: ${uploadState}`));
     }
   }
 
-  throw new Error(
-    getErrorMessage({ store: STORE, error: "Upload timed out (still IN_PROGRESS)", actionName: "upload", zip })
-  );
+  throw new Error(storeError(`Upload timed out (still IN_PROGRESS)`));
 }
 
 async function uploadZip({
@@ -106,16 +101,9 @@ async function uploadZip({
     return;
   }
   if (upload.data.uploadState === UploadState.IN_PROGRESS) {
-    return waitForUpload({ extId, publisherId, zip });
+    return waitForUpload({ extId, publisherId });
   }
-  throw new Error(
-    getErrorMessage({
-      store: STORE,
-      error: `Upload failed with state: ${upload.data.uploadState}`,
-      actionName: "upload",
-      zip
-    })
-  );
+  throw new Error(storeError(`Upload failed with state: ${upload.data.uploadState}`));
 }
 
 const PUBLISH_SUCCESS_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED, ItemState.PUBLISHED, ItemState.PUBLISHED_TO_TESTERS];
@@ -153,14 +141,7 @@ async function publishExtension({
   }
   const { state } = publish.data;
   if (!PUBLISH_SUCCESS_STATES.includes(state)) {
-    throw new Error(
-      getErrorMessage({
-        store: STORE,
-        error: `Publish failed with state: ${state}`,
-        actionName: "publish",
-        zip: ""
-      })
-    );
+    throw new Error(storeError(`Publish failed with state: ${state}`));
   }
 }
 
@@ -177,9 +158,7 @@ async function verifySubmission({ extId, publisherId }: { extId: string; publish
   }
 
   const state = submittedState || publishedState || "unknown";
-  throw new Error(
-    getErrorMessage({ store: STORE, error: `Submission verification failed (state: ${state})`, actionName: "verify submission of", zip: "" })
-  );
+  throw new Error(storeError(`Submission verification failed (state: ${state})`));
 }
 
 export async function deployToChrome(
