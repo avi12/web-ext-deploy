@@ -68,7 +68,7 @@ function parseLocation(response: HttpLikeResponse) {
   return result.data;
 }
 
-async function uploadZip({
+function uploadZip({
   zip,
   productId,
   logger
@@ -89,7 +89,7 @@ async function uploadZip({
   });
 }
 
-async function publishSubmission({
+function publishSubmission({
   productId,
   devChangelog,
   logger

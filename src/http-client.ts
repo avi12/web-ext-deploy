@@ -5,7 +5,7 @@ interface FetchOptions extends RequestInit {
   params?: Record<string, string | number>;
 }
 
-async function streamToBuffer(stream: ReadStream) {
+function streamToBuffer(stream: ReadStream) {
   return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
     const chunks: Buffer[] = [];
     stream.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -40,7 +40,7 @@ async function fetchResponse(url: string, options: RequestInit) {
 }
 
 export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
-  async function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
+  function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
     let url = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
 
     if (options.params) {
@@ -68,11 +68,11 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
     return request("POST", endpoint, { ...options, body: finalBody });
   }
 
-  async function get(endpoint: string, options: FetchOptions = {}) {
+  function get(endpoint: string, options: FetchOptions = {}) {
     return request("GET", endpoint, options);
   }
 
-  async function patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
+  function patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
     return request("PATCH", endpoint, { ...options, body });
   }
 

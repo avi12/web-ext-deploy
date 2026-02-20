@@ -353,7 +353,7 @@ function verifyVersionNotSubmittedForModeration({
   }
 }
 
-async function getVersions({
+function getVersions({
   packageId,
   logger,
   onCookieExpired

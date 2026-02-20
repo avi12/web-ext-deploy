@@ -37,7 +37,7 @@ function handleFirefoxRateLimit(extId: string, errorContext: string, logger?: De
   };
 }
 
-async function uploadZip({
+function uploadZip({
   zip,
   extId,
   jwtIssuer,
@@ -174,7 +174,7 @@ async function validateUpload({
   return data;
 }
 
-async function uploadSourceCodeIfNeeded({
+function uploadSourceCodeIfNeeded({
   slug,
   zipSource,
   version,

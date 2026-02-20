@@ -300,7 +300,7 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
 
 export type { StoreConfigMap };
 
-export async function getCookies(siteNames: Array<string>) {
+export function getCookies(siteNames: Array<string>) {
   return getSignInCookie(siteNames);
 }
 

@@ -13,7 +13,7 @@ let uploadHttpClient: ReturnType<typeof createHttpClient>;
 
 const PENDING_REVIEW_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED];
 
-async function fetchStatus({
+function fetchStatus({
   extId,
   publisherId,
   logger
