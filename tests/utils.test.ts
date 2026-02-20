@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import path from "node:path";
-import { getFullPath, isObjectEmpty, getErrorMessage, getCorrectZip, headersToEnv } from "../src/utils.js";
+import { getFullPath, isObjectEmpty, getCorrectZip, headersToEnv } from "../src/utils.js";
 
 describe("getFullPath", () => {
   it("returns absolute path ending with the filename", () => {
@@ -17,18 +17,6 @@ describe("isObjectEmpty", () => {
 
   it("returns false for non-empty object", () => {
     expect(isObjectEmpty({ a: 1 })).toBe(false);
-  });
-});
-
-describe("getErrorMessage", () => {
-  it("produces red-colored error string", () => {
-    const result = getErrorMessage({ store: "Chrome",
-      error: "oops",
-      actionName: "upload" });
-    expect(result).toContain("Chrome");
-    expect(result).toContain("Failed to upload");
-    expect(result).toContain("oops");
-    expect(result).toContain("\x1b[31m");
   });
 });
 

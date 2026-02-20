@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { red } from "../../logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
-function getErrorMessage(message: string) {
-  return `Edge: ${message}`;
+export function storeError(message: string) {
+  return red(`Edge: ${message}`);
 }
 
 export const EdgeOptionsPublishApiSchema = z
@@ -11,7 +12,7 @@ export const EdgeOptionsPublishApiSchema = z
       .string()
       .min(
         1,
-        getErrorMessage(
+        storeError(
           "No product ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"
         )
       )
@@ -21,7 +22,7 @@ export const EdgeOptionsPublishApiSchema = z
       .string()
       .min(
         1,
-        getErrorMessage(
+        storeError(
           "No client ID is provided. To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
         )
       )
@@ -31,13 +32,13 @@ export const EdgeOptionsPublishApiSchema = z
       .string()
       .min(
         1,
-        getErrorMessage(
+        storeError(
           "No API key is provided. To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
         )
       )
       .describe("Edge Publish API key"),
 
-    zip: z.string().min(1, getErrorMessage("No zip is provided")).describe("Path to the ZIP file"),
+    zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
 
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })
@@ -46,7 +47,7 @@ export const EdgeOptionsPublishApiSchema = z
       ctx.issues.push({
         code: "custom",
         input: ctx.value.zip,
-        message: getErrorMessage(`Zip doesn't exist: ${getFullPath(ctx.value.zip)}`)
+        message: storeError(`Zip doesn't exist: ${getFullPath(ctx.value.zip)}`)
       });
     }
   });

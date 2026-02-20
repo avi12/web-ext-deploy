@@ -1,16 +1,17 @@
 import { z } from "zod";
+import { red } from "../../logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
-function getErrorMessage(message: string) {
-  return `Chrome: ${message}`;
+export function storeError(message: string) {
+  return red(`Chrome: ${message}`);
 }
 
 export const ChromeOptionsSchema = z
   .object({
-    extId: z.string().nonempty(getErrorMessage("No extension ID is provided")).describe("Chrome Web Store extension ID"),
-    publisherId: z.string().nonempty(getErrorMessage("No publisher ID is provided")).describe("Chrome Web Store publisher ID"),
-    refreshToken: z.string().nonempty(getErrorMessage("No refresh token is provided")).describe("OAuth refresh token"),
-    zip: z.string().nonempty(getErrorMessage("No zip is provided")).describe("Path to the ZIP file"),
+    extId: z.string().nonempty(storeError("No extension ID is provided")).describe("Chrome Web Store extension ID"),
+    publisherId: z.string().nonempty(storeError("No publisher ID is provided")).describe("Chrome Web Store publisher ID"),
+    refreshToken: z.string().nonempty(storeError("No refresh token is provided")).describe("OAuth refresh token"),
+    zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
     skipReview: z.boolean().optional().describe("Publish without waiting for a review"),
     deployPercentage: z.number().int().min(1).max(100).optional().describe("Staged rollout percentage (1–100)")
   })
@@ -19,7 +20,7 @@ export const ChromeOptionsSchema = z
       ctx.issues.push({
         code: "custom",
         input: ctx.value.zip,
-        message: getErrorMessage(`Zip doesn't exist: ${getFullPath(ctx.value.zip)}`)
+        message: storeError(`Zip doesn't exist: ${getFullPath(ctx.value.zip)}`)
       });
     }
   });

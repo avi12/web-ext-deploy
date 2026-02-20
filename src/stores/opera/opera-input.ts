@@ -1,25 +1,26 @@
 import { z } from "zod";
+import { red } from "../../logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 
-function getErrorMessage(message: string) {
-  return `Opera: ${message}`;
+export function storeError(message: string) {
+  return red(`Opera: ${message}`);
 }
 
 export const OperaOptionsSchema = z
   .object({
     packageId: z.coerce
       .number({
-        message: getErrorMessage(
+        message: storeError(
           "No package ID is provided, e.g. https://addons.opera.com/developer/package/PACKAGE_ID"
         )
       })
       .describe("Package ID from addons.opera.com/developer/package/PACKAGE_ID"),
 
-    sessionid: z.string().min(1, getErrorMessage("No sessionid is provided")).describe("Opera session cookie"),
+    sessionid: z.string().min(1, storeError("No sessionid is provided")).describe("Opera session cookie"),
 
-    csrftoken: z.string().min(1, getErrorMessage("No csrftoken is provided")).describe("Opera CSRF token cookie"),
+    csrftoken: z.string().min(1, storeError("No csrftoken is provided")).describe("Opera CSRF token cookie"),
 
-    zip: z.string().min(1, getErrorMessage("No zip is provided")).describe("Path to the ZIP file"),
+    zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
 
     changelog: z.string().optional().describe("Changelog for this version")
   })
@@ -28,7 +29,7 @@ export const OperaOptionsSchema = z
       ctx.issues.push({
         code: "custom",
         input: ctx.value.zip,
-        message: getErrorMessage(`Zip doesn't exist: ${getFullPath(ctx.value.zip)}`)
+        message: storeError(`Zip doesn't exist: ${getFullPath(ctx.value.zip)}`)
       });
     }
   });

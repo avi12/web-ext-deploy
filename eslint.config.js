@@ -3,6 +3,7 @@ import globals from "globals";
 import tsEslint from "typescript-eslint";
 import stylistic from "@stylistic/eslint-plugin";
 import importPlugin from "eslint-plugin-import";
+import perfectionist from "eslint-plugin-perfectionist";
 
 export default [
   eslint.configs.recommended,
@@ -17,14 +18,15 @@ export default [
     },
     plugins: {
       "@stylistic": stylistic,
-      import: importPlugin
+      import: importPlugin,
+      perfectionist
     }
   },
   {
     ignores: ["dist-esm/**/*", "node_modules"],
     rules: {
       "prefer-const": "error",
-      "import/order": ["error", { groups: ["external", "internal"] }],
+      "perfectionist/sort-imports": ["error"],
       "@stylistic/quotes": ["error", "double", { allowTemplateLiterals: "always" }],
       "@stylistic/quote-props": ["error", "as-needed"],
       "@stylistic/semi": ["error"],
@@ -76,8 +78,6 @@ export default [
         { selector: "VariableDeclarator > ArrowFunctionExpression", message: "Do not assign arrow functions to variables. Use a named function declaration instead." },
         { selector: "ForOfStatement > CallExpression[callee.object.name='Object'][callee.property.name='keys']", message: "Use a for-in loop instead of for-of Object.keys()." }
       ],
-      "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }]
-
     }
   }
 ];

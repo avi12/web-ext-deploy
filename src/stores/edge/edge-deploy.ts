@@ -1,18 +1,11 @@
 import { z } from "zod";
-import { EdgeOptionsPublishApi } from "./edge-input.js";
+import { EdgeOptionsPublishApi, storeError } from "./edge-input.js";
 import { PublishOperationStatusSchema, StatusPackageUploadSchema, type StatusPackageUpload } from "./edge-types.js";
 import { createHttpClient, type HttpResponse } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
 import { getExtJson } from "../../utils.js";
-import { red } from "../../logging.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
-
-const STORE = "Edge";
-
-function storeError(message: string) {
-  return red(`${STORE}: ${message}`);
-}
 
 let httpClient: ReturnType<typeof createHttpClient>;
 

@@ -1,15 +1,9 @@
-import { ChromeOptions } from "./chrome-input.js";
+import { ChromeOptions, storeError } from "./chrome-input.js";
 import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
 import { createHttpClient } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
-import { red } from "../../logging.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
-
-const STORE = "Chrome";
-function storeError(message: string) {
-  return red(`${STORE}: ${message}`);
-}
 const BASE_URL = "https://chromewebstore.googleapis.com";
 
 let httpClient: ReturnType<typeof createHttpClient>;

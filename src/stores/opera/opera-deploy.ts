@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OperaOptions } from "./opera-input.js";
+import { OperaOptions, storeError } from "./opera-input.js";
 import {
   ListVersionsSchema,
   ListingDetailSchema,
@@ -11,16 +11,10 @@ import {
   type UploadResult
 } from "./opera-types.js";
 import type { DeployContext } from "../../types.js";
-import { red } from "../../logging.js";
 import { CookieAuthError, getExtJson, toError } from "../../utils.js";
 import fs from "node:fs";
 
-const STORE = "Opera";
 const BASE_URL = "https://addons.opera.com/api/";
-
-function storeError(message: string) {
-  return red(`${STORE}: ${message}`);
-}
 
 let defaultHeaders: Record<string, string> = {};
 let hasCookieRefreshBeenAttempted = false;

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { ZipReader, BlobReader, TextWriter } from "@zip.js/zip.js";
 import { camelCase } from "./case-conversion.js";
-import { red } from "./logging.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -53,19 +52,6 @@ export async function getExtJson(zip: string) {
     throw new Error(`Invalid manifest.json: ${manifest.error.message}`);
   }
   return manifest.data;
-}
-
-export function getErrorMessage({
-  store,
-  error = "",
-  actionName
-}: {
-  store: string;
-  zip?: string;
-  error?: number | string;
-  actionName: string;
-}) {
-  return red(`${store}: Failed to ${actionName}: ${error}`);
 }
 
 export function createGitIgnoreIfNeeded(stores: Array<string>) {
