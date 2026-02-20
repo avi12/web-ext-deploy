@@ -79,14 +79,14 @@ async function fetchWithBackOff(url: string, options: RequestInit) {
       }
 
       throw new Error(response.statusText);
-    } catch (e) {
+    } catch (error) {
       const isRetryable = attempt < maxRetries;
       if (isRetryable) {
         const delay = Math.min(maxDelay, Math.pow(2, attempt) * 1000) * (1 + 0.5 * Math.random());
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
-      throw e;
+      throw error;
     }
   }
 
@@ -103,16 +103,16 @@ async function handleRequestWithBackOff<T>({
   parseResponse: (data: unknown) => T;
   errorActionOnFailure: string;
   zip: string;
-}): Promise<[string] | [undefined, T]> {
+}): Promise<readonly [string] | readonly [undefined, T]> {
   try {
     const { data } = await sendRequest();
-    return [undefined, parseResponse(data)];
-  } catch (e: unknown) {
-    if (e instanceof CookieAuthError) {
-      throw e;
+    return [undefined, parseResponse(data)] as const;
+  } catch (error: unknown) {
+    if (error instanceof CookieAuthError) {
+      throw error;
     }
 
-    const errorMessage = e instanceof Error ? e.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return [
       getErrorMessage({
         store: STORE,
@@ -120,7 +120,7 @@ async function handleRequestWithBackOff<T>({
         actionName: errorActionOnFailure,
         zip
       })
-    ];
+    ] as const;
   }
 }
 
@@ -141,7 +141,11 @@ async function verifySourceCodeExistence({
   const [error, data] = await handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: d => ListingDetailSchema.parse(d),
+    parseResponse: response => {
+      const result = ListingDetailSchema.safeParse(response);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "verify source code existence of"
   });
   if (error) {
@@ -177,7 +181,11 @@ async function cancelLatestVersionIfNotSubmitted({
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: d => CancelChangesSchema.parse(d),
+    parseResponse: response => {
+      const result = CancelChangesSchema.safeParse(response);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "cancel unsubmitted changes of"
   });
 }
@@ -192,14 +200,20 @@ async function submitChanges({ zip, packageId }: { zip: string; packageId: numbe
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: d => SubmitChangesSchema.parse(d),
+    parseResponse: response => {
+      const result = SubmitChangesSchema.safeParse(response);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "submit changes to"
   });
 }
 
 function getFileMetadata(zipPath: string) {
   const sizeInBytes = fs.statSync(zipPath).size;
-  const zipName = z.string().parse(zipPath.split(/[\\/]/).pop());
+  const zipNameResult = z.string().safeParse(zipPath.split(/[\\/]/).pop());
+  if (!zipNameResult.success) throw new Error(`Invalid zip path: ${zipPath}`);
+  const zipName = zipNameResult.data;
   const zipNameWithoutForbiddenCharacters = zipName.replace(/[.]/g, "");
   const fileId = `${sizeInBytes}-${zipNameWithoutForbiddenCharacters}`;
   return { zipName,
@@ -240,7 +254,11 @@ async function uploadZip({ zip }: { zip: string }) {
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: d => FileUploadResponseSchema.parse(d),
+    parseResponse: response => {
+      const result = FileUploadResponseSchema.safeParse(response);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "upload zip for"
   });
 }
@@ -270,7 +288,11 @@ async function verifyUploadSuccessful({
   const [error, data] = await handleRequestWithBackOff({
     zip: zipPath,
     sendRequest,
-    parseResponse: d => UploadResultSchema.parse(d),
+    parseResponse: response => {
+      const result = UploadResultSchema.safeParse(response);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "verify upload of"
   });
   if (error) {
@@ -299,7 +321,11 @@ async function updateChangelog({ zip, packageId, changelog }: { zip: string; pac
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: d => ListingDetailSchema.parse(d),
+    parseResponse: response => {
+      const result = ListingDetailSchema.safeParse(response);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "update changelog of"
   });
 }
@@ -312,7 +338,7 @@ function verifyVersionNotSubmittedForModeration({
   zip: string;
   versionsListed: ListVersions["versions"];
   version: string;
-}): [string | undefined] {
+}) {
   const isVersionAlreadySubmitted = versionsListed.some(
     entry => entry.version === version && entry.submitted_for_moderation
   );
@@ -324,9 +350,9 @@ function verifyVersionNotSubmittedForModeration({
         actionName: "update",
         zip
       })
-    ];
+    ] as const;
   }
-  return [undefined];
+  return [undefined] as const;
 }
 
 async function getVersions({ zip, packageId }: { zip: string; packageId: number }) {
@@ -335,7 +361,11 @@ async function getVersions({ zip, packageId }: { zip: string; packageId: number 
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: d => ListVersionsSchema.parse(d),
+    parseResponse: response => {
+      const result = ListVersionsSchema.safeParse(response);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "get all package versions of"
   });
 }
@@ -400,7 +430,7 @@ export default async function deployToOpera(
     logger?.info("Verifying upload");
   }
 
-  const lastVersion = versionsData.versions.find(v => v.submitted_for_moderation)?.version || "";
+  const lastVersion = versionsData.versions.find(version => version.submitted_for_moderation)?.version || "";
   const [verifyUploadError] = await verifyUploadSuccessful({ zipPath: zip,
     packageId,
     lastVersion });

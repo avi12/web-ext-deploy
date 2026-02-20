@@ -12,7 +12,7 @@ interface HttpResponse<T> {
   headers?: Record<string, string>;
 }
 
-import type { ReadStream } from "node:fs";
+import { ReadStream } from "node:fs";
 
 async function streamToBuffer(stream: ReadStream) {
   return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
@@ -20,17 +20,13 @@ async function streamToBuffer(stream: ReadStream) {
     stream.on("data", (chunk: Buffer) => chunks.push(chunk));
     stream.on("end", () => {
       const buf = Buffer.concat(chunks);
-      const ab = new ArrayBuffer(buf.length);
-      const view = new Uint8Array(ab);
+      const arrayBuffer = new ArrayBuffer(buf.length);
+      const view = new Uint8Array(arrayBuffer);
       view.set(buf);
       resolve(view);
     });
     stream.on("error", reject);
   });
-}
-
-function isReadStream(value: unknown): value is ReadStream {
-  return typeof value === "object" && value !== null && "read" in value && typeof value.read === "function";
 }
 
 function stringifyParams(params: Record<string, string | number>) {
@@ -102,12 +98,7 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
   }
 
   async function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
-    let finalBody: BodyInit | undefined;
-    if (isReadStream(body)) {
-      finalBody = await streamToBuffer(body);
-    } else {
-      finalBody = body;
-    }
+    const finalBody = body instanceof ReadStream ? await streamToBuffer(body) : body;
     return request("POST", endpoint, { ...options,
       body: finalBody });
   }

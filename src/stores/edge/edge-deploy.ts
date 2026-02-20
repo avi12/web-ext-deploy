@@ -11,10 +11,10 @@ const STORE = "Edge";
 let httpClient: ReturnType<typeof createHttpClient>;
 let logger: StoreLogger | undefined;
 
-function handleError(e: unknown, errorActionOnFailure: string, zip: string, productId: string) {
-  const err = e instanceof Object ? e : {};
+function handleError(error: unknown, errorActionOnFailure: string, zip: string, productId: string) {
+  const err = error instanceof Object ? error : {};
   const status = "status" in err ? Number(err.status) : 0;
-  const statusText = "statusText" in err && typeof err.statusText === "string" ? err.statusText : String(e);
+  const statusText = "statusText" in err && typeof err.statusText === "string" ? err.statusText : String(error);
 
   if (status === 429) {
     const responseData =
@@ -53,7 +53,7 @@ async function requestWithBackOff<T>({
   errorActionOnFailure: string;
   zip: string;
   productId: string;
-}): Promise<[string] | [undefined, T]> {
+}): Promise<readonly [string] | readonly [undefined, T]> {
   const maxRetries = 5;
   const maxBackOffMs = 30_000;
   const rateLimitRetryMs = 60_000;
@@ -61,9 +61,9 @@ async function requestWithBackOff<T>({
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await sendRequest();
-      return [undefined, parseResponse(response)];
-    } catch (e: unknown) {
-      const err = e instanceof Object ? e : {};
+      return [undefined, parseResponse(response)] as const;
+    } catch (error: unknown) {
+      const err = error instanceof Object ? error : {};
       const status = "status" in err ? Number(err.status) : 0;
       if (status >= 500 && attempt < maxRetries) {
         const exponentialDelay = Math.min(1000 * Math.pow(2, attempt - 1), maxBackOffMs);
@@ -71,12 +71,12 @@ async function requestWithBackOff<T>({
         continue;
       }
 
-      const errorMsg = handleError(e, errorActionOnFailure, zip, productId);
+      const errorMsg = handleError(error, errorActionOnFailure, zip, productId);
       if (errorMsg === undefined) {
         await setTimeout(rateLimitRetryMs);
         continue;
       }
-      return [errorMsg];
+      return [errorMsg] as const;
     }
   }
 
@@ -85,7 +85,7 @@ async function requestWithBackOff<T>({
       error: "Max retries exceeded",
       actionName: errorActionOnFailure,
       zip })
-  ];
+  ] as const;
 }
 
 async function checkStatusOfPackageUpload({
@@ -104,7 +104,11 @@ async function checkStatusOfPackageUpload({
   do {
     [error, data] = await requestWithBackOff({
       sendRequest,
-      parseResponse: r => StatusPackageUploadSchema.parse(r.data),
+      parseResponse: response => {
+      const result = StatusPackageUploadSchema.safeParse(response.data);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
       errorActionOnFailure: "verify upload of",
       zip,
       productId
@@ -120,8 +124,10 @@ async function checkStatusOfPackageUpload({
   return [undefined, data];
 }
 
-function parseLocation(r: HttpResponse<unknown>) {
-  return z.string().parse(r.headers?.location);
+function parseLocation(response: HttpResponse<unknown>) {
+  const result = z.string().safeParse(response.headers?.location);
+  if (!result.success) throw new Error("Missing or invalid location header");
+  return result.data;
 }
 
 async function uploadZip({
@@ -178,7 +184,11 @@ async function checkPublishStatus({
 
   const [error, data] = await requestWithBackOff({
     sendRequest,
-    parseResponse: r => PublishOperationStatusSchema.parse(r.data),
+    parseResponse: response => {
+      const result = PublishOperationStatusSchema.safeParse(response.data);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "check the submission status of",
     zip,
     productId

@@ -7,5 +7,6 @@ export const opera = defineStore({
   schema: OperaOptionsSchema,
   prepare: prepareOperaOptions,
   deploy: deployToOpera,
-  cookieFields: ["sessionid", "csrftoken"]
+  cookieFields: ["sessionid", "csrftoken"],
+  dynamicFields: ["changelog"]
 });

@@ -1,102 +1,74 @@
 #!/usr/bin/env node
 import { z } from "zod";
-import { capitalCase } from "./case-conversion.js";
-import { argv, getCookies, getJsonStoresFromCli, readCookiesFromEnv, type CliLog } from "./cli.js";
+import { createCookieRefreshCallback, getJsonStoresFromCli, parser } from "./cli.js";
 import { deployStore } from "./deploy-store.js";
 import { red } from "./logging.js";
-import { isSupportedStore, isSupportedGetCookies, getStore } from "./stores/registry.js";
-import type { CookieRefreshCallback, StoreLogger, StoreOptionsBase } from "./types.js";
+import { createInkLogger } from "./ink-logger.js";
+import { getStore, isSupportedStore } from "./stores/registry.js";
+
+async function runStoreDeploy(
+  store: string,
+  json: Record<string, unknown>,
+  inkLogger: ReturnType<typeof createInkLogger>,
+  dryRun?: boolean,
+  verbose?: boolean
+) {
+  const zip = z.string().safeParse(json["zip"]);
+  if (zip.success) {
+    inkLogger.monitor.setZipPath(store, zip.data);
+  }
+
+  inkLogger.logger.info(store, dryRun ? "Validating inputs" : "Starting deployment");
+
+  const storeLogger = inkLogger.forStore(store);
+  const storeDef = getStore(store);
+  const onCookieExpired = storeDef?.cookieFields
+    ? createCookieRefreshCallback(store, storeDef.cookieFields)
+    : undefined;
+
+  return deployStore(json, store, storeLogger, onCookieExpired, dryRun, verbose);
+}
 
 async function initCli() {
-  if (argv.getCookies) {
-    const getCookiesArg = z.array(z.string()).parse(argv.getCookies);
-    const validCookies = getCookiesArg.filter(isSupportedGetCookies);
-    await getCookies(validCookies);
-    process.exit();
+  const argv = parser.parseSync();
+  const storeJsons = await getJsonStoresFromCli(argv);
+
+  const storeEntries: [string, Record<string, unknown>][] = [];
+  for (const [store, json] of Object.entries(storeJsons)) {
+    if (isSupportedStore(store) && json !== undefined) {
+      storeEntries.push([store, json]);
+    }
   }
-
-  const command = z.string().parse(argv._[0]);
-  const publishOnlyArg = z.array(z.string()).optional().parse(argv.publishOnly) ?? [];
-  const validStores = publishOnlyArg.filter(isSupportedStore);
-  if (validStores.length > 0 && command !== "env") {
-    throw new Error(red("You must use the env command to use --publish-only"));
-  }
-
-  const pendingLogs: Array<{ level: "info" | "error"; store: string; message: string }> = [];
-  const collectLog: CliLog = (level, store, message) =>
-    pendingLogs.push({
-      level,
-      store,
-      message
-    });
-
-  const storeJsons = await getJsonStoresFromCli(collectLog);
-  const storeEntries = Object.entries(storeJsons).filter(
-    (entry): entry is [string, StoreOptionsBase] => isSupportedStore(entry[0]) && entry[1] !== undefined
-  );
 
   if (storeEntries.length === 0) {
     throw new Error(red("No stores to deploy to"));
   }
 
-  const selectedStoreNames = storeEntries.map(([store]) => store);
-  const { createInkLogger } = await import("./ink-logger.js");
-  const inkLogger = createInkLogger(selectedStoreNames);
-
-  for (const { level, store, message } of pendingLogs) {
-    inkLogger.logger[level](store, message);
-  }
-
-  const autoFetchCookies = z.boolean().optional().parse(argv.autoFetchCookies);
-  const dryRun = z.boolean().optional().parse(argv.dryRun);
-  const verbose = z.boolean().optional().parse(argv.verbose);
+  const inkLogger = createInkLogger(storeEntries.map(([store]) => store));
+  const dryRun = z.boolean().safeParse(argv.dryRun).data;
+  const verbose = z.boolean().safeParse(argv.verbose).data;
 
   const results = await Promise.allSettled(
-    storeEntries.map(async ([store, json]) => {
-      if (json.zip) {
-        inkLogger.monitor.setZipPath(store, json.zip);
-      }
-      try {
-        inkLogger.logger.info(store, dryRun ? "Validating inputs" : "Starting deployment");
-        const storeLogger = {
-          info: msg => inkLogger.logger.info(capitalCase(store), msg),
-          warning: msg => inkLogger.logger.warning(capitalCase(store), msg),
-          error: msg => inkLogger.logger.error(capitalCase(store), msg)
-        } satisfies StoreLogger;
-
-        let onCookieExpired: CookieRefreshCallback | undefined;
-        const storeDef = autoFetchCookies ? getStore(store) : undefined;
-        if (storeDef?.cookieFields) {
-          onCookieExpired = async () => {
-            await getCookies([store]);
-            return readCookiesFromEnv(store, storeDef.cookieFields);
-          };
-        }
-
-        const success = await deployStore(json, store, storeLogger, onCookieExpired, dryRun, verbose);
-        if (!success) {
-          inkLogger.logger.error(store, "Deployment failed");
-          return false;
-        }
-        inkLogger.logger.info(store, "Published!");
-        return true;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        inkLogger.logger.error(store, errorMessage);
-        return false;
-      }
-    })
+    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, dryRun, verbose))
   );
 
-  const successes = results.filter(r => r.status === "fulfilled" && r.value === true).length;
-  const failures = results.length - successes;
+  let successes = 0;
+  let failures = 0;
 
-  storeEntries.forEach(([store], i) => {
-    const r = results[i];
-    if (r.status === "fulfilled" && r.value === true) {
+  for (let i = 0; i < storeEntries.length; i++) {
+    const [store] = storeEntries[i];
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      inkLogger.logger.info(store, "Published!");
       inkLogger.monitor.updateStore(store, "success");
+      successes++;
+    } else {
+      const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      inkLogger.logger.error(store, message);
+      inkLogger.monitor.updateStore(store, "error");
+      failures++;
     }
-  });
+  }
 
   inkLogger.logger.info("System", `Deployments complete! ${successes} succeeded, ${failures} failed`);
   inkLogger.unmount();

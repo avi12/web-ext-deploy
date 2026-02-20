@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
 import {
   FirefoxUploadDetailSchema,
@@ -28,17 +29,17 @@ async function handleRequestWithBackOff<T>({
   errorActionOnFailure: string;
   zip: string;
   extId: string;
-}): Promise<[string] | [undefined, T]> {
+}): Promise<readonly [string] | readonly [undefined, T]> {
   const maxRetries = 5;
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await sendRequest();
-      return [undefined, parseResponse(response.data)];
-    } catch (e: unknown) {
-      lastError = e;
-      const err = e instanceof Object ? e : {};
+      return [undefined, parseResponse(response.data)] as const;
+    } catch (error: unknown) {
+      lastError = error;
+      const err = error instanceof Object ? error : {};
       const status = "status" in err ? Number(err.status) : 0;
 
       if (status >= 500 && attempt < maxRetries) {
@@ -61,7 +62,7 @@ async function handleRequestWithBackOff<T>({
               actionName: errorActionOnFailure,
               zip
             })
-          ];
+          ] as const;
         }
         if (secondsToWait < SECONDS_TO_TOKEN_EXPIRY) {
           const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
@@ -76,7 +77,7 @@ async function handleRequestWithBackOff<T>({
       const errData = "data" in err ? err.data : undefined;
       let errorMessage = getErrorMessage({
         store: STORE,
-        error: typeof errData === "string" ? errData : JSON.stringify(errData),
+        error: z.string().safeParse(errData).data ?? JSON.stringify(errData),
         actionName: errorActionOnFailure,
         zip
       });
@@ -84,7 +85,7 @@ async function handleRequestWithBackOff<T>({
         errorMessage +=
           " Supported language codes: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py";
       }
-      return [errorMessage];
+      return [errorMessage] as const;
     }
   }
 
@@ -118,7 +119,11 @@ async function uploadZip({
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: data => FirefoxUploadDetailSchema.parse(data),
+    parseResponse: data => {
+      const result = FirefoxUploadDetailSchema.safeParse(data);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "upload zip for",
     extId
   });
@@ -168,7 +173,11 @@ async function createNewVersion({
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: data => FirefoxCreateNewVersionSchema.parse(data),
+    parseResponse: data => {
+      const result = FirefoxCreateNewVersionSchema.safeParse(data);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "create new version of",
     extId: slug
   });
@@ -191,7 +200,11 @@ async function validateUpload({
     [error, data] = await handleRequestWithBackOff({
       zip,
       sendRequest,
-      parseResponse: d => FirefoxUploadDetailSchema.parse(d),
+      parseResponse: response => {
+        const result = FirefoxUploadDetailSchema.safeParse(response);
+        if (!result.success) throw result.error;
+        return result.data;
+      },
       errorActionOnFailure: "verify upload of",
       extId
     });
@@ -236,7 +249,11 @@ async function uploadSourceCodeIfNeeded({
   return handleRequestWithBackOff({
     zip,
     sendRequest,
-    parseResponse: data => FirefoxUploadSourceSchema.parse(data),
+    parseResponse: data => {
+      const result = FirefoxUploadSourceSchema.safeParse(data);
+      if (!result.success) throw result.error;
+      return result.data;
+    },
     errorActionOnFailure: "upload source code of",
     extId: slug
   });

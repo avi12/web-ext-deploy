@@ -41,11 +41,11 @@ export default [
           }
         }
       ],
-      "object-property-newline": "error",
       curly: ["error", "all"],
       "@stylistic/indent": ["error", 2],
       "@stylistic/arrow-parens": ["error", "as-needed"],
       "@stylistic/brace-style": "error",
+      "id-length": ["error", { min: 3, exceptions: ["z", "_", "i", "fs", "id"] }]
     }
   }
 ];

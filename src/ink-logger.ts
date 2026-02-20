@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { capitalCase, kebabCase, screamingSnakeCase } from "./case-conversion.js";
 import { Colors } from "./logging.js";
+import type { StoreLogger } from "./types.js";
 
 export type StoreStatus = "pending" | "running" | "success" | "error";
 
@@ -91,9 +92,9 @@ export type MonitorApi = {
 
 export function createInkLogger(storeNames: string[]) {
   const storeStatuses = new Map<string, StoreStatus>();
-  storeNames.forEach(store => {
+  for (const store of storeNames) {
     storeStatuses.set(store, "pending");
-  });
+  }
 
   const logEntries: LogEntry[] = [];
   let mounted = true;
@@ -103,93 +104,61 @@ export function createInkLogger(storeNames: string[]) {
       return;
     }
 
-    const ui = createDeploymentUI(storeStatuses, logEntries);
+    const output = createDeploymentUI(storeStatuses, logEntries);
     // Clear screen and move cursor to top, then render
-    process.stdout.write("\x1b[2J\x1b[H" + ui);
+    process.stdout.write("\x1b[2J\x1b[H" + output);
   }
 
+  const logger = {
+    info: (store: string, message: string) => {
+      logEntries.push({ store, level: "info", message, timestamp: new Date() });
+      if (storeStatuses.get(store) === "pending") {
+        storeStatuses.set(store, "running");
+      }
+      renderUI();
+    },
+    warning: (store: string, message: string) => {
+      logEntries.push({ store, level: "warning", message: `Warning: ${message}`, timestamp: new Date() });
+      if (storeStatuses.get(store) === "pending") {
+        storeStatuses.set(store, "running");
+      }
+      renderUI();
+    },
+    error: (store: string, message: string) => {
+      logEntries.push({ store, level: "error", message, timestamp: new Date() });
+      storeStatuses.set(store, "error");
+      renderUI();
+    }
+  };
+
+  const monitor: MonitorApi = {
+    updateStore: (store: string, status: StoreStatus, message?: string) => {
+      if (storeStatuses.get(store) === status) {
+        return;
+      }
+      storeStatuses.set(store, status);
+      if (message) {
+        logEntries.push({ store, level: status === "error" ? "error" : "info", message, timestamp: new Date() });
+      }
+      renderUI();
+    },
+    setZipPath: (store: string, zipPath: string) => {
+      logEntries.push({ store, level: "info", message: `ZIP: ${zipPath}`, timestamp: new Date() });
+      if (storeStatuses.get(store) === "pending") {
+        storeStatuses.set(store, "running");
+      }
+      renderUI();
+    }
+  };
+
   return {
-    logger: {
-      info: (store: string, message: string) => {
-        const entry: LogEntry = {
-          store,
-          level: "info",
-          message,
-          timestamp: new Date()
-        };
-        logEntries.push(entry);
-
-        if (storeStatuses.get(store) === "pending") {
-          storeStatuses.set(store, "running");
-        }
-
-        renderUI();
-      },
-      warning: (store: string, message: string) => {
-        const entry: LogEntry = {
-          store,
-          level: "warning",
-          message: `Warning: ${message}`,
-          timestamp: new Date()
-        };
-        logEntries.push(entry);
-
-        if (storeStatuses.get(store) === "pending") {
-          storeStatuses.set(store, "running");
-        }
-
-        renderUI();
-      },
-      error: (store: string, message: string) => {
-        const entry: LogEntry = {
-          store,
-          level: "error",
-          message,
-          timestamp: new Date()
-        };
-        logEntries.push(entry);
-
-        storeStatuses.set(store, "error");
-
-        renderUI();
-      }
-    },
-    monitor: {
-      updateStore: (store: string, status: StoreStatus, message?: string) => {
-        const currentStatus = storeStatuses.get(store);
-        if (currentStatus !== status) {
-          storeStatuses.set(store, status);
-
-          if (message) {
-            const entry: LogEntry = {
-              store,
-              level: status === "error" ? "error" : "info",
-              message,
-              timestamp: new Date()
-            };
-            logEntries.push(entry);
-          }
-
-          renderUI();
-        }
-      },
-      setZipPath: (store: string, zipPath: string) => {
-        // For now, just log the zip path as a message
-        const entry: LogEntry = {
-          store,
-          level: "info",
-          message: `ZIP: ${zipPath}`,
-          timestamp: new Date()
-        };
-        logEntries.push(entry);
-
-        if (storeStatuses.get(store) === "pending") {
-          storeStatuses.set(store, "running");
-        }
-
-        renderUI();
-      }
-    },
+    logger,
+    monitor,
+    forStore: (store: string) => ({
+      info: msg => logger.info(capitalCase(store), msg),
+      warning: msg => logger.warning(capitalCase(store), msg),
+      error: msg => logger.error(capitalCase(store), msg)
+    } satisfies StoreLogger),
     unmount: () => {
       mounted = false;
     }
@@ -241,7 +210,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
       description: zodValue.description || "" });
   }
 
-  const nameWidth = Math.max(10, ...fields.map(f => f.name.length)) + 2;
+  const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
   const typeWidth = 10;
   const reqWidth = 10;
 
@@ -250,12 +219,64 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + 20)}\n`;
 
   let rows = "";
-  for (const f of fields) {
-    const reqMark = f.required ? `${Colors.Green}✔${Colors.Reset}` : "";
-    const nameStr = f.required ? `${Colors.Red}${f.name}${Colors.Reset}` : f.name;
+  for (const field of fields) {
+    const reqMark = field.required ? `${Colors.Green}✔${Colors.Reset}` : "";
+    const nameStr = field.required ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
     // Pad based on raw name length since ANSI codes are invisible
-    const namePad = " ".repeat(Math.max(0, nameWidth - f.name.length));
-    rows += `  ${nameStr}${namePad}${f.type.padEnd(typeWidth)}${reqMark.padEnd(reqWidth + (reqMark.length - 1))}${f.description}\n`;
+    const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
+    rows += `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark.padEnd(reqWidth + (reqMark.length - 1))}${field.description}\n`;
+  }
+
+  return `\n${header}${colHeader}${separator}${rows}`;
+}
+
+export function renderGlobalArgsHelp(missingArgs: string[], mode?: "cli" | "env") {
+  if (missingArgs.length === 0) {
+    return "";
+  }
+
+  const formatFieldName = (key: string) => {
+    if (mode === "cli") {
+      return `--${kebabCase(key)}`;
+    }
+    if (mode === "env") {
+      return screamingSnakeCase(key);
+    }
+    return key;
+  };
+
+  const globalArgs: Array<{ name: string; key: string; description: string }> = [
+    { name: formatFieldName("publishOnly"),
+      key: "publishOnly",
+      description: "Only publish to specific stores" },
+    { name: formatFieldName("autoFetchCookies"),
+      key: "autoFetchCookies",
+      description: "Automatically fetch cookies for stores that support it" },
+    { name: formatFieldName("dryRun"),
+      key: "dryRun",
+      description: "Validate inputs without deploying" },
+    { name: formatFieldName("verbose"),
+      key: "verbose",
+      description: "Log each deployment step" }
+  ];
+
+  const filteredArgs = globalArgs.filter(arg => missingArgs.includes(arg.key));
+
+  if (filteredArgs.length === 0) {
+    return "";
+  }
+
+  const nameWidth = Math.max(10, ...filteredArgs.map(arg => arg.name.length)) + 2;
+
+  const header = `${Colors.Yellow}Global Arguments${Colors.Reset} — Optional (not provided):\n`;
+  const colHeader = `  ${"Argument".padEnd(nameWidth)}Description\n`;
+  const separator = `  ${"─".repeat(nameWidth + 20)}\n`;
+
+  let rows = "";
+  for (const arg of filteredArgs) {
+    const nameStr = `${Colors.Red}${arg.name}${Colors.Reset}`;
+    const namePad = " ".repeat(Math.max(0, nameWidth - arg.name.length));
+    rows += `  ${nameStr}${namePad}${arg.description}\n`;
   }
 
   return `\n${header}${colHeader}${separator}${rows}`;

@@ -40,6 +40,7 @@ export function prepareOperaOptions(options: OperaOptions) {
     changelog: options.changelog?.replaceAll("\\\\n", "\n")
   };
 
-  OperaOptionsSchema.parse(correctedOptions);
-  return correctedOptions;
+  const result = OperaOptionsSchema.safeParse(correctedOptions);
+  if (!result.success) throw result.error;
+  return result.data;
 }

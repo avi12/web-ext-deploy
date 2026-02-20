@@ -6,5 +6,6 @@ export const edge = defineStore({
   name: "edge",
   schema: EdgeOptionsPublishApiSchema,
   prepare: prepareEdgeOptions,
-  deploy: deployToEdgePublishApi
+  deploy: deployToEdgePublishApi,
+  dynamicFields: ["devChangelog"]
 });

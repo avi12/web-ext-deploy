@@ -41,7 +41,7 @@ async function addNavigationListener({
   });
 }
 
-async function saveOperaHeaders(page: Page): Promise<string> {
+async function saveOperaHeaders(page: Page) {
   const cookiesToLogin = ["sessionid", "csrftoken"];
   const url = "https://addons.opera.com/developer/";
   const cookiePromise = new Promise<string>(resolve => {

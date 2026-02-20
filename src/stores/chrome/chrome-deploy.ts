@@ -39,7 +39,9 @@ async function uploadZip({
     }
   );
 
-  const data = UploadResponseSchema.parse(response.data);
+  const upload = UploadResponseSchema.safeParse(response.data);
+  if (!upload.success) throw upload.error;
+  const data = upload.data;
   if (data.state === "SUCCESS") {
     return;
   }
@@ -54,14 +56,28 @@ async function uploadZip({
 
 async function publishExtension({
   extId,
-  publisherId
+  publisherId,
+  skipReview,
+  deployPercentage
 }: {
   extId: string;
   publisherId: string;
+  skipReview?: boolean;
+  deployPercentage?: number;
 }) {
-  const response = await httpClient.post(`v2/publishers/${publisherId}/items/${extId}:publish`);
+  const body: Record<string, unknown> = {};
+  if (skipReview) body.skipReview = true;
+  if (deployPercentage !== undefined) body.deployPercentage = deployPercentage;
 
-  const data = PublishResponseSchema.parse(response.data);
+  const response = await httpClient.post(
+    `v2/publishers/${publisherId}/items/${extId}:publish`,
+    Object.keys(body).length ? JSON.stringify(body) : undefined,
+    Object.keys(body).length ? { headers: { "Content-Type": "application/json" } } : {}
+  );
+
+  const publish = PublishResponseSchema.safeParse(response.data);
+  if (!publish.success) throw publish.error;
+  const data = publish.data;
   if (data.state === "SUCCESS") {
     return;
   }
@@ -74,7 +90,7 @@ async function publishExtension({
 }
 
 export async function deployToChrome(
-  { extId, publisherId, refreshToken, zip }: ChromeOptions,
+  { extId, publisherId, refreshToken, zip, skipReview, deployPercentage }: ChromeOptions,
   logger?: StoreLogger,
   _onCookieExpired?: CookieRefreshCallback,
   verbose?: boolean
@@ -95,8 +111,7 @@ export async function deployToChrome(
     logger?.info("Publishing extension");
   }
 
-  await publishExtension({ extId,
-    publisherId });
+  await publishExtension({ extId, publisherId, skipReview, deployPercentage });
 
   logger?.info("Successfully published to Chrome Web Store!");
   return true;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ZipReader, BlobReader, TextWriter } from "@zip.js/zip.js";
 import { camelCase } from "./case-conversion.js";
 import { red } from "./logging.js";
 import fs from "node:fs";
@@ -36,8 +37,6 @@ export function getCorrectZip(zipName: string) {
 }
 
 export async function getExtJson(zip: string) {
-  const { ZipReader, BlobReader, TextWriter } = await import("@zip.js/zip.js");
-
   const blob = new Blob([fs.readFileSync(zip)]);
   const reader = new ZipReader(new BlobReader(blob));
   const entries = await reader.getEntries();
@@ -51,7 +50,11 @@ export async function getExtJson(zip: string) {
   }
 
   await reader.close();
-  return ExtensionManifestSchema.parse(JSON.parse(manifestContent));
+  const manifest = ExtensionManifestSchema.safeParse(JSON.parse(manifestContent));
+  if (!manifest.success) {
+    throw new Error(`Invalid manifest.json: ${manifest.error.message}`);
+  }
+  return manifest.data;
 }
 
 
@@ -89,7 +92,7 @@ export function createGitIgnoreIfNeeded(stores: Array<string>) {
   fs.appendFileSync(filename, storesToAppend.map(store => `${store}.env`).join("\n"));
 }
 
-export function mapStoreArgs(rawArgs: Record<string, unknown>, store: string): Record<string, unknown> {
+export function mapStoreArgs(rawArgs: Record<string, unknown>, store: string) {
   const prefix = `${store}-`;
   return Object.fromEntries(
     Object.entries(rawArgs)

@@ -65,6 +65,7 @@ export function prepareFirefoxOptions(options: FirefoxOptionsSubmissionApi) {
     devChangelog: options.devChangelog?.replace(/\/\/n/g, "\n")
   };
 
-  FirefoxOptionsSubmissionApiSchema.parse(correctedOptions);
-  return correctedOptions;
+  const result = FirefoxOptionsSubmissionApiSchema.safeParse(correctedOptions);
+  if (!result.success) throw result.error;
+  return result.data;
 }

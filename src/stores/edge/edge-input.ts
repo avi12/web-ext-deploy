@@ -58,6 +58,7 @@ export function prepareEdgeOptions(options: EdgeOptionsPublishApi) {
     devChangelog: options.devChangelog?.replace(/\/\n/g, "\n")
   };
 
-  EdgeOptionsPublishApiSchema.parse(correctedOptions);
-  return correctedOptions;
+  const result = EdgeOptionsPublishApiSchema.safeParse(correctedOptions);
+  if (!result.success) throw result.error;
+  return result.data;
 }

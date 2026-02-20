@@ -6,5 +6,6 @@ export const chrome = defineStore({
   name: "chrome",
   schema: ChromeOptionsSchema,
   prepare: prepareChromeOptions,
-  deploy: deployToChrome
+  deploy: deployToChrome,
+  dynamicFields: ["skipReview", "deployPercentage"]
 });
