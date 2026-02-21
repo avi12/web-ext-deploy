@@ -12,7 +12,6 @@ export const FirefoxOptionsSubmissionApiSchema = z
       .string()
       .min(1, storeError("No extension ID is provided, e.g. https://addons.mozilla.org/addon/EXT_ID"))
       .describe("Extension ID from addons.mozilla.org/addon/EXT_ID"),
-
     jwtIssuer: z
       .string()
       .min(
@@ -20,7 +19,6 @@ export const FirefoxOptionsSubmissionApiSchema = z
         storeError("No JWT issuer is provided. Get it from https://addons.mozilla.org/developers/addon/api/key/")
       )
       .describe("JWT issuer from the Developer Hub"),
-
     jwtSecret: z
       .string()
       .min(
@@ -28,15 +26,10 @@ export const FirefoxOptionsSubmissionApiSchema = z
         storeError("No JWT secret is provided. Get it from https://addons.mozilla.org/developers/addon/api/key/")
       )
       .describe("JWT secret from the Developer Hub"),
-
     zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
-
     zipSource: z.string().optional().describe("Path to the source code ZIP"),
-
     changelog: z.string().optional().describe("Changelog for this version"),
-
-    changelogLang: z.string().default("en-US").describe("Language code for the changelog"),
-
+    changelogLang: z.string().optional().describe("Changelog language code (default: default_locale || en-US)"),
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })
   .check(ctx => {

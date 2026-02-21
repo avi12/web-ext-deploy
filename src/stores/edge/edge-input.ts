@@ -17,7 +17,6 @@ export const EdgeOptionsPublishApiSchema = z
         )
       )
       .describe("Product ID from the Edge Partner Dashboard"),
-
     clientId: z
       .string()
       .min(
@@ -27,7 +26,6 @@ export const EdgeOptionsPublishApiSchema = z
         )
       )
       .describe("Edge Publish API client ID"),
-
     apiKey: z
       .string()
       .min(
@@ -37,9 +35,7 @@ export const EdgeOptionsPublishApiSchema = z
         )
       )
       .describe("Edge Publish API key"),
-
     zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
-
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })
   .check(ctx => {

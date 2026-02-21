@@ -15,13 +15,9 @@ export const OperaOptionsSchema = z
         )
       })
       .describe("Package ID from addons.opera.com/developer/package/PACKAGE_ID"),
-
     sessionid: z.string().min(1, storeError("No sessionid is provided")).describe("Opera session cookie"),
-
     csrftoken: z.string().min(1, storeError("No csrftoken is provided")).describe("Opera CSRF token cookie"),
-
     zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
-
     changelog: z.string().optional().describe("Changelog for this version")
   })
   .check(ctx => {

@@ -176,7 +176,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     return key;
   }
 
-  type FieldInfo = { name: string; type: string; isMissing: boolean; description: string };
+  type FieldInfo = { name: string; type: string; isMissing: boolean; defaultValue: string; description: string };
   const fields: FieldInfo[] = [];
 
   for (const key in shape) {
@@ -202,21 +202,37 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
       type = "array";
     }
 
+    let defaultValue = zodValue instanceof z.ZodDefault ? String(zodValue._def.defaultValue) : "";
+    let description = zodValue.description || "";
+
+    // Extract (default: ...) from description into the Default column
+    if (!defaultValue) {
+      const defaultMatch = description.match(/\s*\(default:\s*(.+?)\)\s*$/i);
+      if (defaultMatch) {
+        defaultValue = defaultMatch[1];
+        description = description.slice(0, defaultMatch.index);
+      }
+    }
+
     fields.push({ name: formatFieldName(key),
       type,
       isMissing: !isOptional,
-      description: zodValue.description || "" });
+      defaultValue,
+      description });
   }
 
   const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
   const typeWidth = 10;
   const reqWidth = 10;
+  const hasDefaults = fields.some(field => field.defaultValue);
+  const defaultWidth = hasDefaults ? Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2 : 0;
 
   const title = mode === "env" ? `${storeName}.env` : `${capitalCase(storeName)} Store`;
   const label = missingFields ? "Missing arguments" : "Arguments";
   const header = `${Colors.Yellow}${title}${Colors.Reset} — ${label}:\n`;
-  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}Description\n`;
-  const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + 20)}\n`;
+  const defaultCol = hasDefaults ? `${"Default".padEnd(defaultWidth)}` : "";
+  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${defaultCol}Description\n`;
+  const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
   let rows = "";
   for (const field of fields) {
@@ -224,7 +240,8 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     const nameStr = field.isMissing ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
     // Pad based on raw name length since ANSI codes are invisible
     const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
-    rows += `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark.padEnd(reqWidth + (reqMark.length - 1))}${field.description}\n`;
+    const defaultStr = hasDefaults ? field.defaultValue.padEnd(defaultWidth) : "";
+    rows += `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark.padEnd(reqWidth + (reqMark.length - 1))}${defaultStr}${field.description}\n`;
   }
 
   return `\n${header}${colHeader}${separator}${rows}`;

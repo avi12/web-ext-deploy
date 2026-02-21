@@ -67,10 +67,10 @@ describe("Env mode - .env parsing + validation", () => {
       expect(() => FirefoxOptionsSubmissionApiSchema.parse(parsed)).toThrow();
     });
 
-    it("changelogLang defaults to en-US when absent from .env", () => {
+    it("changelogLang is undefined when absent from .env (resolved at deploy time)", () => {
       const parsed = writeEnv(`extId=addon-id\njwtIssuer=issuer-id\njwtSecret=secret-val\nzip=${FIXTURE_ZIP}`);
       const result = FirefoxOptionsSubmissionApiSchema.parse(parsed);
-      expect(result.changelogLang).toBe("en-US");
+      expect(result.changelogLang).toBeUndefined();
     });
   });
 

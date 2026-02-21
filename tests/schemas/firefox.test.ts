@@ -32,9 +32,9 @@ describe("FirefoxOptionsSubmissionApiSchema", () => {
     expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, zip: "" })).toThrow("No zip");
   });
 
-  it("defaults changelogLang to en-US", () => {
+  it("changelogLang is optional (resolved at deploy time from manifest default_locale or en-US)", () => {
     const result = FirefoxOptionsSubmissionApiSchema.parse(validInput);
-    expect(result.changelogLang).toBe("en-US");
+    expect(result.changelogLang).toBeUndefined();
   });
 
   it("zipSource, changelog, devChangelog are optional", () => {

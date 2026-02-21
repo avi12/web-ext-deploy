@@ -88,12 +88,13 @@ async function createNewVersion({
   slug: string;
   uuid: string;
   changelog: string;
-  changelogLang: string;
+  changelogLang?: string;
   devChangelog: string;
   zip: string;
   logger?: DeployContext["logger"];
 }) {
-  const { default_locale = changelogLang } = await getExtJson(zip);
+  const { default_locale } = await getExtJson(zip);
+  const locale = changelogLang ?? default_locale ?? "en-US";
 
   if (changelog) {
     logger?.info(`Adding changelog: ${changelog}`);
@@ -110,7 +111,7 @@ async function createNewVersion({
         upload: uuid,
         ...(changelog && {
           release_notes: {
-            [default_locale.replaceAll("_", "-")]: changelog
+            [locale.replaceAll("_", "-")]: changelog
           }
         }),
         ...(devChangelog && {
@@ -214,7 +215,7 @@ export async function deployToFirefox(
     zip,
     zipSource = "",
     changelog = "",
-    changelogLang = "en-US",
+    changelogLang,
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
   { logger, isVerbose, setStatus, setZipPath }: DeployContext = {}
