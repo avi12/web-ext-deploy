@@ -38,9 +38,7 @@ describe("parse", () => {
   });
 
   it("parses multiple entries", () => {
-    expect(parse("FOO=1\nBAR=2\nBAZ=3")).toEqual({
-      FOO: "1", BAR: "2", BAZ: "3"
-    });
+    expect(parse("FOO=1\nBAR=2\nBAZ=3")).toEqual({ FOO: "1", BAR: "2", BAZ: "3" });
   });
 });
 

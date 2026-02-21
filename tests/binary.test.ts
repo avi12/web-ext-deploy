@@ -23,9 +23,7 @@ function runCli(args: string[]) {
 
 describe("binary", () => {
   it("exits non-zero with no command", () => {
-    const {
-      status, stdout, stderr
-    } = runCli([]);
+    const { status, stdout, stderr } = runCli([]);
     expect(status).not.toBe(0);
     expect(stdout + stderr).toContain("You need at least one command");
   });

@@ -71,7 +71,5 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
     return request("PATCH", endpoint, { ...options, body });
   }
 
-  return {
-    post, get, patch
-  };
+  return { post, get, patch };
 }

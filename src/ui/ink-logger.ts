@@ -1,5 +1,6 @@
 import { StoreStatus, type StoreLogger } from "../types.js";
 import { capitalCase, kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
+import { getZodBaseType, getZodDefaultValue, unwrapZod } from "../utils/zod.js";
 import { Colors } from "./logging.js";
 import { z } from "zod";
 
@@ -36,7 +37,7 @@ function createDeploymentUI(storeStatuses: Record<string, StoreStatus>, logEntri
     lines.push(`${Colors.Gray}${Colors.Bold}Recent Activity:${Colors.Reset}`);
 
     for (const entry of logEntries.slice(-5)) {
-      const color = entry.level === "error" ? Colors.Red : entry.level === "warning" ? Colors.Yellow : Colors.White;
+      const color = logLevelColors[entry.level];
       lines.push(`${color}[${entry.timestamp.toLocaleTimeString()}] ${entry.store}: ${entry.message}${Colors.Reset}`);
     }
   }
@@ -56,6 +57,12 @@ const statusTexts: Record<StoreStatus, string> = {
   [StoreStatus.Running]: "Deploying...",
   [StoreStatus.Success]: "Published!",
   [StoreStatus.Error]: "Failed"
+};
+
+const logLevelColors: Record<LogEntry["level"], string> = {
+  info: Colors.White,
+  warning: Colors.Yellow,
+  error: Colors.Red
 };
 
 function renderProgressBar(current: number, total: number) {
@@ -151,35 +158,22 @@ export function createInkLogger(storeNames: string[]) {
 }
 
 function unwrapZodType(zodValue: z.ZodTypeAny) {
-  const unwrapped = unwrapZodWrappers(zodValue);
   const rawDescription = zodValue.description || "";
   const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
 
-  const type = unwrapped.inner instanceof z.ZodBoolean ? "boolean"
-    : unwrapped.inner instanceof z.ZodNumber ? "number"
-      : unwrapped.inner instanceof z.ZodArray ? "array"
-        : "string";
+  const type = getZodBaseType(unwrapZod(zodValue));
+  const schemaDefault = getZodDefaultValue(zodValue);
 
-  const defaultValue = defaultMatch
-    ? defaultMatch[1]
-    : unwrapped.defaultValue !== undefined ? String(unwrapped.defaultValue) : "";
+  let defaultValue = "";
+  if (defaultMatch) {
+    defaultValue = defaultMatch[1];
+  } else if (schemaDefault !== undefined) {
+    defaultValue = String(schemaDefault);
+  }
 
   const description = defaultMatch ? rawDescription.slice(0, defaultMatch.index) : rawDescription;
 
-  return {
-    type, defaultValue, description
-  };
-}
-
-function unwrapZodWrappers(zodValue: unknown): { inner: unknown; defaultValue: unknown } {
-  if (zodValue instanceof z.ZodDefault) {
-    const result = unwrapZodWrappers(zodValue.removeDefault());
-    return { inner: result.inner, defaultValue: zodValue._def.defaultValue };
-  }
-  if (zodValue instanceof z.ZodOptional || zodValue instanceof z.ZodNullable) {
-    return unwrapZodWrappers(zodValue.unwrap());
-  }
-  return { inner: zodValue, defaultValue: undefined };
+  return { type, defaultValue, description };
 }
 
 export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
@@ -218,9 +212,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     const zodValue = shape[key];
     const isOptional =
       zodValue instanceof z.ZodOptional || zodValue instanceof z.ZodNullable || zodValue instanceof z.ZodDefault;
-    const {
-      type, defaultValue, description
-    } = unwrapZodType(zodValue);
+    const { type, defaultValue, description } = unwrapZodType(zodValue);
 
     fields.push({
       name: formatFieldName(key),
@@ -283,9 +275,7 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
       continue;
     }
     const zodValue = shape[key];
-    const {
-      type, defaultValue, description
-    } = unwrapZodType(zodValue);
+    const { type, defaultValue, description } = unwrapZodType(zodValue);
 
     fields.push({
       name: formatFieldName(key),

@@ -48,9 +48,7 @@ async function cancelSubmissionIfPending({
   logger?: DeployContext["logger"];
   isVerbose?: boolean;
 }) {
-  const status = await fetchStatus({
-    extId, publisherId, logger
-  });
+  const status = await fetchStatus({ extId, publisherId, logger });
   const submittedState = status.submittedItemRevisionStatus?.state;
   if (!submittedState || !PENDING_REVIEW_STATES.includes(submittedState)) {
     return;
@@ -140,9 +138,7 @@ async function uploadZip({
     return;
   }
   if (data.uploadState === UploadState.IN_PROGRESS) {
-    return waitForUpload({
-      extId, publisherId, logger
-    });
+    return waitForUpload({ extId, publisherId, logger });
   }
   throw new Error(storeError(`Upload failed with state: ${data.uploadState}`));
 }
@@ -201,9 +197,7 @@ async function verifySubmission({
   publisherId: string;
   logger?: DeployContext["logger"];
 }) {
-  const status = await fetchStatus({
-    extId, publisherId, logger
-  });
+  const status = await fetchStatus({ extId, publisherId, logger });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const publishedState = status.publishedItemRevisionStatus?.state;
 
@@ -258,9 +252,7 @@ export async function deployToChrome(
     logger?.info("Verifying submission");
   }
 
-  await verifySubmission({
-    extId, publisherId, logger
-  });
+  await verifySubmission({ extId, publisherId, logger });
 
   logger?.info("Successfully published to Chrome Web Store!");
   setStatus?.(StoreStatus.Success);

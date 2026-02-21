@@ -85,8 +85,8 @@ export default [
       "@stylistic/rest-spread-spacing": ["error", "never"],
       "@stylistic/spaced-comment": ["error", "always"],
       "@stylistic/object-curly-newline": ["error", {
-        ObjectExpression: { multiline: true, minProperties: 3 },
-        ObjectPattern: { multiline: true, minProperties: 3 },
+        ObjectExpression: { multiline: true, minProperties: 4 },
+        ObjectPattern: { multiline: true, minProperties: 4 },
         ImportDeclaration: "never",
         ExportDeclaration: "never"
       }],
@@ -113,7 +113,8 @@ export default [
           type: "unsorted",
           newlinesBetween: 0
         }
-      ]
+      ],
+      "no-nested-ternary": "error"
     }
   },
   {

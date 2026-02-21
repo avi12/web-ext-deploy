@@ -5,6 +5,7 @@ import { red } from "./ui/logging.js";
 import { capitalCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
+import { getZodBaseType, unwrapZod } from "./utils/zod.js";
 import yargs, { type Options } from "yargs";
 import { z } from "zod";
 
@@ -21,27 +22,6 @@ const EnvOptionsSchema = z.object({
   ...BaseOptionsSchema.shape
 });
 
-function getZodBaseType(value: unknown): Options["type"] {
-  const inner = unwrapZod(value);
-  if (inner instanceof z.ZodBoolean) {
-    return "boolean";
-  }
-  if (inner instanceof z.ZodNumber) {
-    return "number";
-  }
-  if (inner instanceof z.ZodArray) {
-    return "array";
-  }
-  return "string";
-}
-
-function unwrapZod(value: unknown) {
-  if (value instanceof z.ZodDefault || value instanceof z.ZodOptional || value instanceof z.ZodNullable) {
-    return unwrapZod(value.unwrap());
-  }
-  return value;
-}
-
 function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
   const options: Record<string, Options> = {};
   if (!(schema instanceof z.ZodObject)) {
@@ -56,7 +36,7 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
     const isOptional =
       value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
 
-    const type = getZodBaseType(value);
+    const type = getZodBaseType(unwrapZod(value));
 
     const description = value.description || "";
     options[optionName] = { type, description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description };
