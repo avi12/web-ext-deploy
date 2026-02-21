@@ -3,22 +3,13 @@ import fs from "node:fs";
 export function parse(envContent: string) {
   const result: Record<string, string> = {};
 
-  for (const line of envContent.split("\n")) {
-    const trimmed = line.trim();
+  const keyPattern = `([^#=\\s][^=]*?)`;
+  const valuePattern = `(.*?)`;
+  const lineRegex = new RegExp(`^\\s*${keyPattern}\\s*=\\s*${valuePattern}\\s*$`, "gm");
 
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-
-    const equalsIndex = trimmed.indexOf("=");
-    if (equalsIndex === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, equalsIndex).trim();
-    const raw = trimmed.slice(equalsIndex + 1).trim();
-    const isQuoted = (raw.startsWith("\"") && raw.endsWith("\"")) || (raw.startsWith("'") && raw.endsWith("'"));
-    result[key] = isQuoted ? raw.slice(1, -1) : raw;
+  for (const [, key, raw] of envContent.matchAll(lineRegex)) {
+    const quoteMatch = raw.match(/^(["'])(.*)\1$/);
+    result[key] = quoteMatch ? quoteMatch[2] : raw;
   }
 
   return result;
