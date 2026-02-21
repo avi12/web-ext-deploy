@@ -8,7 +8,7 @@ export default [
   eslint.configs.recommended,
   ...tsEslint.configs.recommended,
   {
-    files: ["**/*.ts", "eslint.config.js"],
+    files: ["**/*.{ts,tsx}", "eslint.config.js"],
     languageOptions: {
       parser: tsEslint.parser,
       globals: { ...globals.node }
@@ -114,7 +114,9 @@ export default [
           newlinesBetween: 0
         }
       ],
-      "no-nested-ternary": "error"
+      "no-nested-ternary": "error",
+      "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }
+      ]
     }
   },
   {

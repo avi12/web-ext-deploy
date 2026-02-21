@@ -9,26 +9,22 @@ Supported stores:
 - [Chrome Web Store](https://chrome.google.com/webstore/category/extensions)
   - [`.env` snippet](#chromeenv)
   - [CLI API](#chrome-web-store-cli)
-  - [Node.js API](#chrome-web-store-api)
 - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/extensions)
   - [`.env` snippet](#firefoxenv)
   - [CLI API](#firefox-add-ons-cli)
-  - [Node.js API](#firefox-submission-api)
 - [Edge Add-ons](https://microsoftedge.microsoft.com/addons)
   - [`.env` snippet](#edgeenv)
   - [CLI API](#edge-add-ons-cli)
-  - [Node.js API](#edge-publish-api)
 - [Opera Add-ons](https://addons.opera.com/en/extensions)
   - [`.env` snippet](#operaenv)
   - [CLI API](#opera-add-ons-cli)
-  - [Node.js API](#opera-api)
 
 # Core packages/APIs used
 
 - [Playwright](https://github.com/microsoft/playwright) - for fetching the Opera cookies
-- [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api)
-- [Microsoft Edge Publish API v1.1](https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/using-addons-api)
-- [Firefox Add-ons Store Submission API](https://blog.mozilla.org/addons/2022/03/17/new-api-for-submitting-and-updating-add-ons/)
+- [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/publish)
+- [Microsoft Edge Publish API v1.1](https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/using-addons-api)
+- [Firefox Add-ons Store Submission API](https://mozilla.github.io/addons-server/topics/api/addons.html)
 - Opera Store API
 
 # Installing
@@ -38,7 +34,7 @@ npm i -D web-ext-deploy
 # or
 pnpm i -D web-ext-deploy
 # or
-yarn add -D web-ext-deploy
+bun add -D web-ext-deploy
 ```
 
 or install globally
@@ -48,10 +44,10 @@ npm i -g web-ext-deploy
 # or
 pnpm i -g web-ext-deploy
 # or
-yarn global add web-ext-deploy
+bun add -g web-ext-deploy
 ```
 
-Deployment to Chrome Web Store: [follow this guide](https://github.com/fregante/chrome-webstore-upload-keys)  
+Deployment to Chrome Web Store: [follow this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)
 Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)
 
 # Usage
@@ -75,7 +71,6 @@ As for the Edge Add-ons Store, you'll use the Microsoft Edge Publish API
 
 - [`.env` files method](#env-files-method)
 - [CLI arguments method](#cli-arguments-method)
-- [Node.js API method](#nodejs-api-method)
 
 ## `.env` files method
 
@@ -92,8 +87,12 @@ web-ext-deploy --env
 
 ### Additional arguments for the `.env` mode:
 
-- `--verbose` boolean?  
-  If specified, the steps of every store will be logged to the console.
+- `--verbose` boolean?
+  If specified, the steps of every store will be logged to the console
+
+- `--auto-fetch-cookies` boolean?
+  If specified, cookies will be automatically refreshed when they expire mid-deployment (Opera only)
+  Playwright will be auto-installed if needed
   
 - `--publish-only` `Array<"chrome" | "firefox" | "edge" | "opera">`?  
   If specified, for each specified store that has an `.env` file, it will be deployed  
@@ -132,7 +131,7 @@ web-ext-deploy --env
 
 - Chrome Web Store:
 
-  - `REFRESH_TOKEN`, `CLIENT_ID`, `CLIENT_SECRET` - follow [this guide](https://github.com/fregante/chrome-webstore-upload-keys)
+  - `REFRESH_TOKEN`, `CLIENT_ID`, `CLIENT_SECRET` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)
   - `EXT_ID` - Get it from `https://chrome.google.com/webstore/detail/EXT_ID`, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
 
 - Firefox Add-ons store:
@@ -217,8 +216,12 @@ Stores:
 
 Options:
 
-- `--verbose` boolean?  
+- `--verbose` boolean?
   If specified, the steps of every store will be logged to the console
+
+- `--auto-fetch-cookies` boolean?
+  If specified, cookies will be automatically refreshed when they expire mid-deployment (Opera only)
+  Playwright will be auto-installed if needed
 
 - `--zip` string?  
   If specified, it will be used for every store that the `zip` is not specified  
@@ -235,7 +238,7 @@ Options:
 # Get it from https://chrome.google.com/webstore/detail/EXT_ID, e.g. https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone
 --chrome-ext-id: string
 
-# Get them by following https://github.com/fregante/chrome-webstore-upload-keys
+# Get them by following https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md
 --chrome-refresh-token: string
 --chrome-client-id: string
 --chrome-client-secret: string
@@ -245,7 +248,7 @@ Options:
 --chrome-zip: string
 ```
 
-Get your `--chrome-refresh-token`, `--chrome-client-id` and `--chrome-client-secret` by following [this guide](https://github.com/fregante/chrome-webstore-upload-keys)  
+Get your `--chrome-refresh-token`, `--chrome-client-id` and `--chrome-client-secret` by following [this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)  
 Example:
 
 ```shell
@@ -357,186 +360,3 @@ web-ext-deploy --opera-package-id=123456 --opera-sessionid="sessionid_value" --o
   - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
   Note that you **do not** want to store the command with your extension package, as the review team will have access to your precious cookies.
-
-## Node.js API method
-
-### ESM
-
-```ts
-import { deployChrome, deployFirefoxSubmissionApi, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
-```
-
-### Node.js API
-
-- [Chrome Web Store](#chrome-web-store-api)
-- [Firefox Add-ons](#firefox-submission-api)
-- [Edge Add-ons](#edge-publish-api)
-- [Opera Add-ons](#opera-api)
-
-#### Chrome Web Store API
-
-`deployChrome` object
-```yaml
-# Get it from https://chrome.google.com/webstore/detail/EXT_ID, e.g. https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone
-extId: string;
-
-# Get them by following https://github.com/fregante/chrome-webstore-upload-keys
-refreshToken: string;
-clientId: string;
-clientSecret: string;
-
-# The relative path from the root to the ZIP
-# You can use {version} in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
-zip: string;
-
-# Setting to `true` will result in every step of the upload process be logged to the console
-verbose?: boolean;
-```
-
-Returns `Promise<true>` or throws an exception.
-
-#### Firefox Submission API
-
-`deployFirefoxSubmissionApi` object
-```yaml
-# Get it from https://addons.mozilla.org/addon/EXT_ID
-extId: string;
-
-# Get them from https://addons.mozilla.org/developers/addon/api/key
-jwtIssuer: string;
-jwtSecret: string;
-
-# The relative path from the root to the ZIP
-# You can use {version} in the ZIP filename, which will be replaced by the `version` entry from your package.json
-zip: string;
-
-# If applicable, the relative path from the root to the ZIP source
-# You can use {version} in the ZIP filename, which will be replaced by the `version` entry from your `package.json`
-zipSource?: string;
-
-# A description of the changes in this version, compared to the previous one
-# It's recommended to use instead --firefox-changelog , so it stays up to date
-changelog?: string;
-
-# The language of the changelog
-# Fallbacks to the Manifest's `default_locale` field, if applicable, or `en-US`
-changelogLang?: string;
-
-# A description of the technical changes made in this version, compared to the previous one
-# This will only be seen by the Firefox Addons reviewers
-# It's recommended to use instead --firefox-dev-changelog , so it stays up to date
-devChangelog?: string;
-
-# Setting to `true` will result in every step of the upload process be logged to the console
-verbose?: boolean;
-```
-
-Returns `Promise<true>` or throws an exception
-
-#### Edge Publish API
-
-`deployEdgePublishApi` object
-```yaml
-# Get it from https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID
-productId: string;
-
-# Get them by following https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md
-clientId: string;
-apiKey: string;
-
-# The relative path from the root to the zip
-# You can use {version}, which will be replaced by the version in package.json
-zip: string;
-
-# The technical changes made in this version, compared to the previous one
-devChangelog?: string;
-
-# Setting to `true` will result in every step of the upload process be logged to the console
-verbose?: boolean;
-```
-Returns `Promise<true>` or throws an exception
-
-**Note:**  
-Due to the way the Edge dashboard works, when an extension is being reviewed or its review has just been canceled, it will take about a minute until a cancellation will cause its state to change from "In review" to "In draft", after which the new version can be submitted  
-Therefore, expect for longer wait times if you run the tool on an extension you had just published/canceled
-
-#### Opera API
-
-`deployOpera` object
-```yaml
-# The package ID of the extension from the store dashboard, e.g. https://addons.opera.com/developer/package/PACKAGE_ID
-packageId: number;
-
-# If you have a hard time obtaining them, run: web-ext-deploy --get-cookies=opera
-sessionid: string;
-csrftoken: string;
-
-# The relative path from the root to the ZIP.  
-# You can use {version} in the ZIP filename, which will be replaced by the `version` entry from your package.json
-zip: string;
-
-# A description of the changes in this version, compared to the previous one.
-# It's recommended to use instead --opera-changelog , so it stays up to date.
-changelog?: string;
-
-# Setting to `true` will result in every step of the upload process be logged to the console
-verbose?: boolean;
-````
-Returns `Promise<true>` or throws an exception.
-
-**Notes:**
-
-- Source code inspection:  
-  The Opera Add-ons reviewers require inspecting your extension's source code  
-  This can be done by doing **one** of the following:
-
-  - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service such as [Google Drive](https://drive.google.com)
-  - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository
-
-  Note that you **do not** want to store the deployment script with your extension package, as the review team will have access to your precious cookies  
-  If you'll open-source the extension on GitHub, you can exclude the deployment script by listing it in `.gitignore`
-
-Examples:
-
-```ts
-import { deployChrome, deployFirefoxSubmissionApi, deployEdgePublishApi, deployOpera } from "web-ext-deploy";
-
-deployChrome({
-  extId: "ExtensionID",
-  refreshToken: "refreshToken",
-  clientId: "clientId",
-  clientSecret: "clientSecret",
-  zip: "dist/some-zip-v{version}.zip",
-  verbose: false
-}).catch(console.error);
-
-deployFirefoxSubmissionApi({
-  extId: "EXT_ID",
-  jwtIssuer: "jwtIssuer",
-  jwtSecret: "jwtSecret",
-  zip: "dist/some-zip-v{version}.zip",
-  zipSource: "dist/zip-source-v{version}.zip",
-  changelog: "Some changes",
-  changelogLang: "en-US",
-  devChangelog: "Changes for reviewers",
-  verbose: false
-}).catch(console.error);
-
-deployEdgePublishApi({
-  productId: "PRODUCT_ID",
-  clientId: "clientId",
-  apiKey: "apiKey",
-  zip: "dist/some-zip-v{version}.zip",
-  devChangelog: "Changes for reviewers",
-  verbose: false
-}).catch(console.error);
-
-deployOpera({
-  packageId: 123456,
-  sessionid: "sessionid_value",
-  csrftoken: "csrftoken_value",
-  zip: "dist/some-zip-v{version}.zip",
-  changelog: "Some changes",
-  verbose: false
-}).catch(console.error);
-```
