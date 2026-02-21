@@ -10,23 +10,21 @@ export const FirefoxOptionsSubmissionApiSchema = z
   .object({
     extId: z
       .string()
-      .min(1, storeError("No extension ID is provided, e.g. https://addons.mozilla.org/addon/EXT_ID"))
-      .describe("Extension ID from addons.mozilla.org/addon/EXT_ID"),
+      .nonempty(storeError("No extension ID is provided, e.g. https://addons.mozilla.org/addon/EXT_ID"))
+      .describe("Extension ID from https://addons.mozilla.org/addon/EXT_ID"),
     jwtIssuer: z
       .string()
-      .min(
-        1,
+      .nonempty(
         storeError("No JWT issuer is provided. Get it from https://addons.mozilla.org/developers/addon/api/key/")
       )
       .describe("JWT issuer from the Developer Hub"),
     jwtSecret: z
       .string()
-      .min(
-        1,
+      .nonempty(
         storeError("No JWT secret is provided. Get it from https://addons.mozilla.org/developers/addon/api/key/")
       )
       .describe("JWT secret from the Developer Hub"),
-    zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
+    zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
     zipSource: z.string().optional().describe("Path to the source code ZIP"),
     changelog: z.string().optional().describe("Changelog for this version"),
     changelogLang: z.string().default("en-US").describe(`Changelog language code (default: manifest.json's "default_locale" or "en-US")`),

@@ -10,8 +10,7 @@ export const EdgeOptionsPublishApiSchema = z
   .object({
     productId: z
       .string()
-      .min(
-        1,
+      .nonempty(
         storeError(
           "No product ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"
         )
@@ -19,8 +18,7 @@ export const EdgeOptionsPublishApiSchema = z
       .describe("Product ID from the Edge Partner Dashboard"),
     clientId: z
       .string()
-      .min(
-        1,
+      .nonempty(
         storeError(
           "No client ID is provided. To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
         )
@@ -28,14 +26,13 @@ export const EdgeOptionsPublishApiSchema = z
       .describe("Edge Publish API client ID"),
     apiKey: z
       .string()
-      .min(
-        1,
+      .nonempty(
         storeError(
           "No API key is provided. To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
         )
       )
       .describe("Edge Publish API key"),
-    zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
+    zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })
   .check(ctx => {
