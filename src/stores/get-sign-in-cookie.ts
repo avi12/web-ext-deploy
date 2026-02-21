@@ -1,5 +1,6 @@
 import { config, parse } from "../utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "../utils/helpers.js";
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { chromium, Page } from "playwright";
 
@@ -79,7 +80,15 @@ export async function getSignInCookie(siteNames: Array<string>) {
   }
 
   const [width, height] = [1280, 720];
-  const browser = await chromium.launch({ headless: false, args: [`--window-size=${width},${height}`] });
+  const launchOptions = { headless: false, args: [`--window-size=${width},${height}`] };
+  const browser = await chromium.launch(launchOptions).catch(async (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("npx playwright install")) {
+      throw error;
+    }
+    execSync("npx playwright install chromium", { stdio: "inherit" });
+    return chromium.launch(launchOptions);
+  });
   const context = await browser.newContext({ viewport: { width, height } });
 
   for (const siteName of siteNames) {
