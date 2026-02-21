@@ -122,7 +122,7 @@ export const parser = yargs(process.argv.slice(2))
     () => {}
   )
   .demandCommand(1, "You need at least one command before moving on")
-  .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options.`)
+  .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options`)
   .strict()
   .fail((message, _error, instance) => {
     if (message) {
@@ -293,7 +293,7 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
       const globalHelp = renderGlobalArgsHelp(EnvOptionsSchema, allGlobalKeys, "cli");
       throw new Error(red("No .env files found. In env mode, store credentials are read from .env files.\n") + storeHelp + globalHelp);
     }
-    throw new Error(red("Supply arguments for at least one store."));
+    throw new Error(red("Supply arguments for at least one store"));
   }
 
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
