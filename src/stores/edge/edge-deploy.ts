@@ -78,9 +78,7 @@ function uploadZip({
   logger?: DeployContext["logger"];
 }) {
   return requestWithRetry({
-    sendRequest: () => httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
-      headers: { "Content-Type": "application/zip" }
-    }),
+    sendRequest: () => httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), { headers: { "Content-Type": "application/zip" } }),
     parseResponse: parseLocation,
     formatError: storeError,
     errorContext: "Upload failed",
@@ -99,9 +97,7 @@ function publishSubmission({
   logger?: DeployContext["logger"];
 }) {
   return requestWithRetry({
-    sendRequest: () => httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
-      headers: { "Content-Type": "application/json" }
-    }),
+    sendRequest: () => httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), { headers: { "Content-Type": "application/json" } }),
     parseResponse: parseLocation,
     formatError: storeError,
     errorContext: "Publish failed",
@@ -148,8 +144,12 @@ async function checkPublishStatus({
 }
 
 export async function deployToEdgePublishApi(
-  { productId, clientId, apiKey, zip, devChangelog }: EdgeOptionsPublishApi,
-  { logger, isVerbose, setStatus, setZipPath }: DeployContext = {}
+  {
+    productId, clientId, apiKey, zip, devChangelog
+  }: EdgeOptionsPublishApi,
+  {
+    logger, isVerbose, setStatus, setZipPath
+  }: DeployContext = {}
 ) {
   httpClient = createHttpClient("https://api.addons.microsoftedge.microsoft.com/v1", {
     Authorization: `ApiKey ${apiKey}`,
@@ -163,33 +163,41 @@ export async function deployToEdgePublishApi(
     logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
   }
 
-  const uploadOperationId = await uploadZip({ zip,
+  const uploadOperationId = await uploadZip({
+    zip,
     productId,
-    logger });
+    logger
+  });
 
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
-  await checkStatusOfPackageUpload({ productId,
+  await checkStatusOfPackageUpload({
+    productId,
     operationId: uploadOperationId,
-    logger });
+    logger
+  });
 
   if (isVerbose) {
     logger?.info("Publishing submission");
   }
 
-  const publishOperationId = await publishSubmission({ productId,
+  const publishOperationId = await publishSubmission({
+    productId,
     devChangelog,
-    logger });
+    logger
+  });
 
   if (isVerbose) {
     logger?.info("Checking the submission status");
   }
 
-  await checkPublishStatus({ productId,
+  await checkPublishStatus({
+    productId,
     operationId: publishOperationId,
-    logger });
+    logger
+  });
 
   logger?.info("Successfully published to Edge Add-ons!");
   setStatus?.("success");

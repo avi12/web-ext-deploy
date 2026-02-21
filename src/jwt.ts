@@ -17,8 +17,10 @@ export function generateJwt({
     exp: issuedAt + expiresInSeconds
   };
 
-  const header = { alg: "HS256",
-    typ: "JWT" };
+  const header = {
+    alg: "HS256",
+    typ: "JWT"
+  };
 
   const headerBase64 = Buffer.from(JSON.stringify(header)).toString("base64");
   const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64");

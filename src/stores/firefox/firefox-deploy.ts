@@ -4,12 +4,10 @@ import { generateJwt } from "../../jwt.js";
 import type { DeployContext } from "../../types.js";
 import { getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
 import { FirefoxOptionsSubmissionApi, storeError } from "./firefox-input.js";
-import {
-  FirefoxUploadDetailSchema,
+import { FirefoxUploadDetailSchema,
   FirefoxCreateNewVersionSchema,
   FirefoxUploadSourceSchema,
-  type FirefoxUploadDetail
-} from "./firefox-types.js";
+  type FirefoxUploadDetail } from "./firefox-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
@@ -55,13 +53,7 @@ function uploadZip({
   formData.append("channel", "listed");
 
   return requestWithRetry({
-    sendRequest: () => httpClient.post("upload/", formData.getBody(), {
-      headers: {
-        ...formData.getHeaders(),
-        Authorization: `JWT ${generateJwt({ jwtIssuer,
-          jwtSecret })}`
-      }
-    }),
+    sendRequest: () => httpClient.post("upload/", formData.getBody(), { headers: { ...formData.getHeaders(), Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` } }),
     parseResponse(response) {
       const result = FirefoxUploadDetailSchema.safeParse(response.data);
       if (!result.success) {
@@ -109,14 +101,8 @@ async function createNewVersion({
       `addon/${slug}/versions/`,
       JSON.stringify({
         upload: uuid,
-        ...(changelog && {
-          release_notes: {
-            [locale.replaceAll("_", "-")]: changelog
-          }
-        }),
-        ...(devChangelog && {
-          approval_notes: devChangelog
-        })
+        ...(changelog && { release_notes: { [locale.replaceAll("_", "-")]: changelog } }),
+        ...(devChangelog && { approval_notes: devChangelog })
       }),
       { headers: { "Content-Type": "application/json" } }
     ),
@@ -134,10 +120,7 @@ async function createNewVersion({
   });
 }
 
-async function validateUpload({
-  uuid,
-  logger
-}: {
+async function validateUpload({ uuid, logger }: {
   uuid: string;
   logger?: DeployContext["logger"];
 }) {
@@ -190,9 +173,7 @@ function uploadSourceCodeIfNeeded({
   formData.append("source", fs.createReadStream(zipSource));
 
   return requestWithRetry({
-    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.getBody(), {
-      headers: formData.getHeaders()
-    }),
+    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.getBody(), { headers: formData.getHeaders() }),
     parseResponse(response) {
       const result = FirefoxUploadSourceSchema.safeParse(response.data);
       if (!result.success) {
@@ -218,12 +199,11 @@ export async function deployToFirefox(
     changelogLang,
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
-  { logger, isVerbose, setStatus, setZipPath }: DeployContext = {}
+  {
+    logger, isVerbose, setStatus, setZipPath
+  }: DeployContext = {}
 ) {
-  httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/", {
-    Authorization: `JWT ${generateJwt({ jwtIssuer,
-      jwtSecret })}`
-  });
+  httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/", { Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` });
 
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
@@ -232,19 +212,20 @@ export async function deployToFirefox(
     logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
   }
 
-  const uploadData = await uploadZip({ zip,
+  const uploadData = await uploadZip({
+    zip,
     extId,
     jwtIssuer,
     jwtSecret,
-    logger });
+    logger
+  });
   const { uuid, version } = uploadData;
 
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
-  await validateUpload({ uuid,
-    logger });
+  await validateUpload({ uuid, logger });
 
   if (isVerbose) {
     logger?.info(`Creating a new version: ${version}`);

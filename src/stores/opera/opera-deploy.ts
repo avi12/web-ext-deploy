@@ -1,16 +1,14 @@
 import type { DeployContext } from "../../types.js";
 import { CookieAuthError, getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
 import { OperaOptions, storeError } from "./opera-input.js";
-import {
-  ListVersionsSchema,
+import { ListVersionsSchema,
   ListingDetailSchema,
   SubmitChangesSchema,
   CancelChangesSchema,
   UploadResultSchema,
   FileUploadResponseSchema,
   type ListVersions,
-  type UploadResult
-} from "./opera-types.js";
+  type UploadResult } from "./opera-types.js";
 import fs from "node:fs";
 import { z } from "zod";
 
@@ -37,8 +35,10 @@ async function fetchWithAuth(
 ): Promise<HttpLikeResponse> {
   let response = await fetch(url, {
     ...options,
-    headers: { ...defaultHeaders,
-      ...options.headers }
+    headers: {
+      ...defaultHeaders,
+      ...options.headers
+    }
   });
 
   const isAuthFailure = response.status === 401 || response.status === 403;
@@ -50,8 +50,10 @@ async function fetchWithAuth(
 
     response = await fetch(url, {
       ...options,
-      headers: { ...defaultHeaders,
-        ...options.headers }
+      headers: {
+        ...defaultHeaders,
+        ...options.headers
+      }
     });
   }
 
@@ -60,9 +62,11 @@ async function fetchWithAuth(
   }
 
   const data: unknown = await response.json();
-  return { data,
+  return {
+    data,
     status: response.status,
-    statusText: response.statusText };
+    statusText: response.statusText
+  };
 }
 
 async function verifySourceCodeExistence({
@@ -185,8 +189,7 @@ function getFileMetadata(zipPath: string) {
   const zipName = zipNameResult.data;
   const zipNameWithoutForbiddenCharacters = zipName.replace(/[.]/g, "");
   const fileId = `${sizeInBytes}-${zipNameWithoutForbiddenCharacters}`;
-  return { zipName,
-    fileId };
+  return { zipName, fileId };
 }
 
 async function uploadZip({
@@ -224,9 +227,7 @@ async function uploadZip({
       `${BASE_URL}file-upload/`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": `multipart/form-data; boundary=${boundary}`
-        },
+        headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
         body
       },
       logger,
@@ -314,13 +315,7 @@ async function updateChangelog({
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          translations: {
-            [default_locale]: {
-              changelog
-            }
-          }
-        })
+        body: JSON.stringify({ translations: { [default_locale]: { changelog } } })
       },
       logger,
       onCookieExpired
@@ -338,10 +333,7 @@ async function updateChangelog({
   });
 }
 
-function verifyVersionNotSubmittedForModeration({
-  versionsListed,
-  version
-}: {
+function verifyVersionNotSubmittedForModeration({ versionsListed, version }: {
   versionsListed: ListVersions["versions"];
   version: string;
 }) {
@@ -383,8 +375,12 @@ function getVersions({
 }
 
 export async function deployToOpera(
-  { sessionid, csrftoken, packageId, zip, changelog = "" }: OperaOptions,
-  { logger, onCookieExpired, isVerbose, setStatus, setZipPath }: DeployContext = {}
+  {
+    sessionid, csrftoken, packageId, zip, changelog = ""
+  }: OperaOptions,
+  {
+    logger, onCookieExpired, isVerbose, setStatus, setZipPath
+  }: DeployContext = {}
 ) {
   hasCookieRefreshBeenAttempted = false;
 
@@ -402,16 +398,20 @@ export async function deployToOpera(
     logger?.info(`Retrieving listed versions of ${name} with package ID ${packageId}`);
   }
 
-  const versionsData = await getVersions({ packageId,
+  const versionsData = await getVersions({
+    packageId,
     logger,
-    onCookieExpired });
+    onCookieExpired
+  });
 
   if (isVerbose) {
     logger?.info(`Verifying version ${version}`);
   }
 
-  verifyVersionNotSubmittedForModeration({ versionsListed: versionsData.versions,
-    version });
+  verifyVersionNotSubmittedForModeration({
+    versionsListed: versionsData.versions,
+    version
+  });
 
   await cancelLatestVersionIfNotSubmitted({
     packageId,
@@ -424,49 +424,59 @@ export async function deployToOpera(
     logger?.info("Uploading zip");
   }
 
-  await uploadZip({ zip,
+  await uploadZip({
+    zip,
     logger,
-    onCookieExpired });
+    onCookieExpired
+  });
 
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
   const lastVersion = versionsData.versions.find(entry => entry.submitted_for_moderation)?.version || "";
-  await verifyUploadSuccessful({ zipPath: zip,
+  await verifyUploadSuccessful({
+    zipPath: zip,
     packageId,
     lastVersion,
     logger,
-    onCookieExpired });
+    onCookieExpired
+  });
 
   if (isVerbose) {
     logger?.info("Verifying source code existence");
   }
 
-  await verifySourceCodeExistence({ zip,
+  await verifySourceCodeExistence({
+    zip,
     packageId,
     logger,
-    onCookieExpired });
+    onCookieExpired
+  });
 
   if (changelog) {
     if (isVerbose) {
       logger?.info("Updating changelog");
     }
-    await updateChangelog({ zip,
+    await updateChangelog({
+      zip,
       packageId,
       changelog,
       logger,
-      onCookieExpired });
+      onCookieExpired
+    });
   }
 
   if (isVerbose) {
     logger?.info("Submitting changes");
   }
 
-  await submitChanges({ zip,
+  await submitChanges({
+    zip,
     packageId,
     logger,
-    onCookieExpired });
+    onCookieExpired
+  });
 
   logger?.info("Successfully published to Opera Add-ons!");
   setStatus?.("success");

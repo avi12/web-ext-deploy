@@ -100,21 +100,27 @@ export function createInkLogger(storeNames: string[]) {
 
   const logger = {
     info(store: string, message: string) {
-      logEntries.push({ store, level: "info", message, timestamp: new Date() });
+      logEntries.push({
+        store, level: "info", message, timestamp: new Date()
+      });
       if (storeStatuses.get(store) === "pending") {
         storeStatuses.set(store, "running");
       }
       renderUI();
     },
     warning(store: string, message: string) {
-      logEntries.push({ store, level: "warning", message: `Warning: ${message}`, timestamp: new Date() });
+      logEntries.push({
+        store, level: "warning", message: `Warning: ${message}`, timestamp: new Date()
+      });
       if (storeStatuses.get(store) === "pending") {
         storeStatuses.set(store, "running");
       }
       renderUI();
     },
     error(store: string, message: string) {
-      logEntries.push({ store, level: "error", message, timestamp: new Date() });
+      logEntries.push({
+        store, level: "error", message, timestamp: new Date()
+      });
       storeStatuses.set(store, "error");
       renderUI();
     }
@@ -127,12 +133,16 @@ export function createInkLogger(storeNames: string[]) {
       }
       storeStatuses.set(store, status);
       if (message) {
-        logEntries.push({ store, level: status === "error" ? "error" : "info", message, timestamp: new Date() });
+        logEntries.push({
+          store, level: status === "error" ? "error" : "info", message, timestamp: new Date()
+        });
       }
       renderUI();
     },
     setZipPath(store: string, zipPath: string) {
-      logEntries.push({ store, level: "info", message: `ZIP: ${zipPath}`, timestamp: new Date() });
+      logEntries.push({
+        store, level: "info", message: `ZIP: ${zipPath}`, timestamp: new Date()
+      });
       if (storeStatuses.get(store) === "pending") {
         storeStatuses.set(store, "running");
       }
@@ -218,11 +228,13 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
       description = description.slice(0, defaultMatch.index);
     }
 
-    fields.push({ name: formatFieldName(key),
+    fields.push({
+      name: formatFieldName(key),
       type,
       isMissing: !isOptional,
       defaultValue,
-      description });
+      description
+    });
   }
 
   const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
@@ -305,11 +317,13 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
       description = description.slice(0, defaultMatch.index);
     }
 
-    fields.push({ name: formatFieldName(key),
+    fields.push({
+      name: formatFieldName(key),
       key,
       type,
       defaultValue,
-      description });
+      description
+    });
   }
 
   if (fields.length === 0) {

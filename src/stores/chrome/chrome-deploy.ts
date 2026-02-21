@@ -48,7 +48,9 @@ async function cancelSubmissionIfPending({
   logger?: DeployContext["logger"];
   isVerbose?: boolean;
 }) {
-  const status = await fetchStatus({ extId, publisherId, logger });
+  const status = await fetchStatus({
+    extId, publisherId, logger
+  });
   const submittedState = status.submittedItemRevisionStatus?.state;
   if (!submittedState || !PENDING_REVIEW_STATES.includes(submittedState)) {
     return;
@@ -139,7 +141,9 @@ async function uploadZip({
     return;
   }
   if (data.uploadState === UploadState.IN_PROGRESS) {
-    return waitForUpload({ extId, publisherId, logger });
+    return waitForUpload({
+      extId, publisherId, logger
+    });
   }
   throw new Error(storeError(`Upload failed with state: ${data.uploadState}`));
 }
@@ -160,12 +164,8 @@ async function publishExtension({
   logger?: DeployContext["logger"];
 }) {
   const body = {
-    ...skipReview && {
-      skipReview: true
-    },
-    ...deployPercentage !== undefined && {
-      deployPercentage
-    }
+    ...skipReview && { skipReview: true },
+    ...deployPercentage !== undefined && { deployPercentage }
   };
 
   const hasBody = Object.keys(body).length > 0;
@@ -202,7 +202,9 @@ async function verifySubmission({
   publisherId: string;
   logger?: DeployContext["logger"];
 }) {
-  const status = await fetchStatus({ extId, publisherId, logger });
+  const status = await fetchStatus({
+    extId, publisherId, logger
+  });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const publishedState = status.publishedItemRevisionStatus?.state;
 
@@ -218,36 +220,48 @@ async function verifySubmission({
 }
 
 export async function deployToChrome(
-  { extId, publisherId, refreshToken, zip, skipReview, deployPercentage }: ChromeOptions,
-  { logger, isVerbose, setStatus, setZipPath }: DeployContext = {}
+  {
+    extId, publisherId, refreshToken, zip, skipReview, deployPercentage
+  }: ChromeOptions,
+  {
+    logger, isVerbose, setStatus, setZipPath
+  }: DeployContext = {}
 ) {
   setZipPath?.(zip);
   const authHeaders = { Authorization: `Bearer ${refreshToken}` };
   httpClient = createHttpClient(BASE_URL, authHeaders);
   uploadHttpClient = createHttpClient(BASE_URL, authHeaders);
 
-  await cancelSubmissionIfPending({ extId, publisherId, logger, isVerbose });
+  await cancelSubmissionIfPending({
+    extId, publisherId, logger, isVerbose
+  });
 
   if (isVerbose) {
     logger?.info(`Uploading zip with extension ID ${extId}`);
   }
 
-  await uploadZip({ zip,
+  await uploadZip({
+    zip,
     extId,
     publisherId,
-    logger });
+    logger
+  });
 
   if (isVerbose) {
     logger?.info("Publishing extension");
   }
 
-  await publishExtension({ extId, publisherId, skipReview, deployPercentage, logger });
+  await publishExtension({
+    extId, publisherId, skipReview, deployPercentage, logger
+  });
 
   if (isVerbose) {
     logger?.info("Verifying submission");
   }
 
-  await verifySubmission({ extId, publisherId, logger });
+  await verifySubmission({
+    extId, publisherId, logger
+  });
 
   logger?.info("Successfully published to Chrome Web Store!");
   setStatus?.("success");

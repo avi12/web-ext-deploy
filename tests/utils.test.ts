@@ -33,8 +33,10 @@ describe("getCorrectZip", () => {
 
 describe("headersToEnv", () => {
   it("converts object to key=value lines", () => {
-    const result = headersToEnv({ FOO: "bar",
-      BAZ: 123 });
+    const result = headersToEnv({
+      FOO: "bar",
+      BAZ: 123
+    });
     expect(result).toBe("FOO=\"bar\"\nBAZ=\"123\"");
   });
 });

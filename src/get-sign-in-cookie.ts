@@ -45,24 +45,26 @@ async function saveOperaHeaders(page: Page) {
   const cookiesToLogin = ["sessionid", "csrftoken"];
   const url = "https://addons.opera.com/developer/";
   const cookiePromise = new Promise<string>(resolve => {
-    void addNavigationListener({ page,
+    void addNavigationListener({
+      page,
       cookiesToLogin,
       resolve,
-      urlToEnd: url });
+      urlToEnd: url
+    });
   });
   await page.goto(url);
   return cookiePromise;
 }
 
-const siteFuncs: Record<string, typeof saveOperaHeaders> = {
-  opera: saveOperaHeaders
-} as const;
+const siteFuncs: Record<string, typeof saveOperaHeaders> = { opera: saveOperaHeaders } as const;
 
 function appendToEnv(filename: string, headers: string) {
   const { parsed: envCurrent = {} } = config({ path: filename });
   const envHeaders = parse(headers);
-  const envNew = { ...envCurrent,
-    ...envHeaders };
+  const envNew = {
+    ...envCurrent,
+    ...envHeaders
+  };
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
@@ -77,14 +79,8 @@ export async function getSignInCookie(siteNames: Array<string>) {
   }
 
   const [width, height] = [1280, 720];
-  const browser = await chromium.launch({
-    headless: false,
-    args: [`--window-size=${width},${height}`] // , "--window-position=0,0"]
-  });
-  const context = await browser.newContext({
-    viewport: { width,
-      height }
-  });
+  const browser = await chromium.launch({ headless: false, args: [`--window-size=${width},${height}`] });
+  const context = await browser.newContext({ viewport: { width, height } });
 
   for (const siteName of siteNames) {
     const page = await context.newPage();

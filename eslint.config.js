@@ -11,9 +11,7 @@ export default [
     files: ["**/*.ts", "eslint.config.js"],
     languageOptions: {
       parser: tsEslint.parser,
-      globals: {
-        ...globals.node
-      }
+      globals: { ...globals.node }
     },
     plugins: {
       "@stylistic": stylistic,
@@ -60,7 +58,9 @@ export default [
       "@stylistic/comma-dangle": ["error", "never"],
       "@stylistic/no-trailing-spaces": "error",
       "@stylistic/eol-last": ["error", "always"],
-      "@stylistic/no-multiple-empty-lines": ["error", { max: 1, maxEOF: 0, maxBOF: 0 }],
+      "@stylistic/no-multiple-empty-lines": ["error", {
+        max: 1, maxEOF: 0, maxBOF: 0
+      }],
       "@stylistic/comma-spacing": ["error", { before: false, after: true }],
       "@stylistic/key-spacing": ["error", { beforeColon: false, afterColon: true }],
       "@stylistic/keyword-spacing": ["error", { before: true, after: true }],
@@ -80,8 +80,14 @@ export default [
       "@stylistic/padded-blocks": ["error", "never"],
       "@stylistic/rest-spread-spacing": ["error", "never"],
       "@stylistic/spaced-comment": ["error", "always"],
-      "@stylistic/object-curly-newline": ["error", { consistent: true }],
-      "id-length": ["error", { min: 3, exceptions: ["z", "_", "i", "fs", "id"] }],
+      "@stylistic/object-curly-newline": ["error", {
+        ObjectExpression: { multiline: true, minProperties: 3 },
+        ObjectPattern: { multiline: true, minProperties: 3 },
+        ImportDeclaration: "never",
+        ExportDeclaration: "never"
+      }],
+      "@stylistic/object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
+      "id-length": ["error", { min: 3, exceptions: ["z", "_", "i", "fs", "id", "os"] }],
       "func-style": ["error", "declaration", { allowArrowFunctions: false }],
       "no-restricted-syntax": ["error",
         { selector: "VariableDeclarator > ArrowFunctionExpression", message: "Do not assign arrow functions to variables. Use a named function declaration instead." },
@@ -89,8 +95,12 @@ export default [
       ],
       "@stylistic/padding-line-between-statements": [
         "error",
-        { blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"] },
-        { blankLine: "any", prev: "import", next: "import" }
+        {
+          blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"]
+        },
+        {
+          blankLine: "any", prev: "import", next: "import"
+        }
       ],
       "object-shorthand": ["error", "always", { avoidExplicitReturnArrows: true }],
       "perfectionist/sort-objects": [

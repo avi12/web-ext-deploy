@@ -2,8 +2,10 @@ import { generateJwt } from "../src/jwt.js";
 import { describe, it, expect } from "vitest";
 
 describe("generateJwt", () => {
-  const baseArgs = { jwtIssuer: "test-issuer",
-    jwtSecret: "test-secret" };
+  const baseArgs = {
+    jwtIssuer: "test-issuer",
+    jwtSecret: "test-secret"
+  };
 
   it("has 3 dot-separated parts", () => {
     const jwt = generateJwt(baseArgs);
@@ -13,8 +15,10 @@ describe("generateJwt", () => {
   it("header decodes to HS256/JWT", () => {
     const jwt = generateJwt(baseArgs);
     const header = JSON.parse(Buffer.from(jwt.split(".")[0], "base64").toString());
-    expect(header).toEqual({ alg: "HS256",
-      typ: "JWT" });
+    expect(header).toEqual({
+      alg: "HS256",
+      typ: "JWT"
+    });
   });
 
   it("payload contains required fields", () => {
@@ -39,10 +43,14 @@ describe("generateJwt", () => {
   });
 
   it("different secrets produce different signatures", () => {
-    const jwt1 = generateJwt({ jwtIssuer: "iss",
-      jwtSecret: "secret-a" });
-    const jwt2 = generateJwt({ jwtIssuer: "iss",
-      jwtSecret: "secret-b" });
+    const jwt1 = generateJwt({
+      jwtIssuer: "iss",
+      jwtSecret: "secret-a"
+    });
+    const jwt2 = generateJwt({
+      jwtIssuer: "iss",
+      jwtSecret: "secret-b"
+    });
     expect(jwt1.split(".")[2]).not.toBe(jwt2.split(".")[2]);
   });
 

@@ -54,10 +54,7 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
     }
 
     const description = value.description || "";
-    options[optionName] = {
-      type,
-      description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description
-    };
+    options[optionName] = { type, description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description };
   }
 
   return options;

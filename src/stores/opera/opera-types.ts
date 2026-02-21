@@ -25,15 +25,19 @@ export const ListVersionsSchema = z
     developer: z.string(),
     is_editable: z.boolean(),
     app_id: z.string(),
-    category: z.object({ slug: z.string(),
-      name: z.string() }),
+    category: z.object({
+      slug: z.string(),
+      name: z.string()
+    }),
     warnings: z.array(z.string()),
     unlisted: z.boolean(),
     details_url: z.string(),
     is_published: z.boolean(),
     available_auto_moderation: z.boolean(),
-    dev_promotional_image: z.object({ id: z.number(),
-      url: z.string() }),
+    dev_promotional_image: z.object({
+      id: z.number(),
+      url: z.string()
+    }),
     is_extension: z.boolean(),
     retirejs_warnings: z.array(z.unknown())
   })
@@ -51,9 +55,7 @@ export const ListingDetailSchema = z
   .passthrough();
 
 const DidChangesSchema = z
-  .object({
-    version: z.string()
-  })
+  .object({ version: z.string() })
   .passthrough();
 
 export const SubmitChangesSchema = DidChangesSchema;
@@ -69,9 +71,7 @@ const UploadResultSuccessSchema = z.object({
   retirejs_warnings: z.array(z.unknown())
 });
 
-const UploadResultErrorSchema = z.object({
-  package_file: z.string()
-});
+const UploadResultErrorSchema = z.object({ package_file: z.string() });
 
 export const UploadResultSchema = z.union([UploadResultSuccessSchema, UploadResultErrorSchema]);
 export type UploadResult = z.infer<typeof UploadResultSchema>;

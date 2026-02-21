@@ -29,8 +29,10 @@ export const FirefoxCreateNewVersionSchema = z
     approval_notes: z.string(),
     channel: z.enum(["listed", "unlisted"]),
     compatibility: z.object({
-      firefox: z.object({ min: z.string(),
-        max: z.string() }).optional()
+      firefox: z.object({
+        min: z.string(),
+        max: z.string()
+      }).optional()
     }),
     edit_url: z.string(),
     file: z.object({
