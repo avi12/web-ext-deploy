@@ -14,8 +14,10 @@ const BaseOptionsSchema = z.object({
   verbose: z.boolean().optional().default(false).describe("Log each deployment step")
 });
 
+const publishOnlyDescription = `Only publish to specific stores: ${storeNames.join(", ")}`;
+
 const EnvOptionsSchema = z.object({
-  publishOnly: z.array(z.string()).optional().describe("Only publish to specific stores (e.g. chrome firefox)"),
+  publishOnly: z.array(z.string()).optional().describe(publishOnlyDescription),
   ...BaseOptionsSchema.shape
 });
 
@@ -118,7 +120,7 @@ export const parser = yargs(process.argv.slice(2))
         ...otherBaseOptions,
         "publish-only": {
           type: "array" as const,
-          description: "Only publish to specific stores (e.g. chrome firefox)"
+          description: publishOnlyDescription
         },
         ...envOverrideStoreOptions
       });
