@@ -57,7 +57,7 @@ async function saveOperaHeaders(page: Page) {
   return cookiePromise;
 }
 
-const siteFuncs: Record<string, typeof saveOperaHeaders> = { opera: saveOperaHeaders } as const;
+const siteFuncs: Record<string, typeof saveOperaHeaders> = { opera: saveOperaHeaders };
 
 function appendToEnv(filename: string, headers: string) {
   const { parsed: envCurrent = {} } = config({ path: filename });
