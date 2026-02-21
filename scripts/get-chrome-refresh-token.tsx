@@ -35,7 +35,7 @@ const SCOPE = "https://www.googleapis.com/auth/chromewebstore";
 const PORT = 8818;
 const REDIRECT_URI = `http://localhost:${PORT}`;
 
-const [,, clientId, clientSecret] = process.argv[2];
+const [,, clientId, clientSecret] = process.argv;
 
 if (!clientId || !clientSecret) {
   console.error("Usage: pnpm chrome:token <client-id> <client-secret>");
