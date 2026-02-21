@@ -69,24 +69,16 @@ function appendToEnv(filename: string, headers: string) {
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
-function getInvalidSite(siteNames: Array<string>) {
-  return siteNames.find(site => !siteFuncs[site]);
-}
-
 export async function getSignInCookie(siteNames: Array<string>) {
-  const invalidSite = getInvalidSite(siteNames);
-  if (invalidSite) {
-    throw new Error(`Invalid site: ${invalidSite}`);
-  }
-
-  const [width, height] = [1280, 720];
+  const width = 1280;
+  const height = 720;
   const launchOptions = { headless: false, args: [`--window-size=${width},${height}`] };
-  const browser = await chromium.launch(launchOptions).catch(async (error: unknown) => {
+  const browser = await chromium.launch(launchOptions).catch(async error => {
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes("npx playwright install")) {
       throw error;
     }
-    execSync("npx playwright install chromium", { stdio: "inherit" });
+    execSync("npx playwright install", { stdio: "inherit" });
     return chromium.launch(launchOptions);
   });
   const context = await browser.newContext({ viewport: { width, height } });
