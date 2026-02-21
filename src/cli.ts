@@ -302,7 +302,7 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
   }
 
   const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCookies);
-  if (Object.keys(missingArgs).length > 0) {
+  if (!isObjectEmpty(missingArgs)) {
     const isCliMode = command === "cli";
     const storeHelpParts: string[] = [];
     for (const storeName in missingArgs) {

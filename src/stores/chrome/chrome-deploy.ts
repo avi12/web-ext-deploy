@@ -5,6 +5,7 @@ import { ChromeOptions, storeError } from "./chrome-input.js";
 import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
+import { isObjectEmpty } from "../../utils/helpers.js";
 
 const BASE_URL = "https://chromewebstore.googleapis.com";
 
@@ -163,7 +164,7 @@ async function publishExtension({
     ...deployPercentage !== undefined && { deployPercentage }
   };
 
-  const hasBody = Object.keys(body).length > 0;
+  const hasBody = !isObjectEmpty(body);
   const data = await requestWithRetry({
     sendRequest: () => httpClient.post(
       `v2/publishers/${publisherId}/items/${extId}:publish`,
