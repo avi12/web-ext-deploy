@@ -66,7 +66,7 @@ export default [
       "@stylistic/keyword-spacing": ["error", { before: true, after: true }],
       "@stylistic/space-before-blocks": "error",
       "@stylistic/space-before-function-paren": ["error", {
-        named: "always",
+        named: "never",
         asyncArrow: "always",
         catch: "always"
       }],

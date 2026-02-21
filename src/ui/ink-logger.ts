@@ -1,9 +1,7 @@
-import { capitalCase, kebabCase, screamingSnakeCase } from "./case-conversion.js";
+import { StoreStatus, type StoreLogger } from "../types.js";
+import { capitalCase, kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
 import { Colors } from "./logging.js";
-import type { StoreLogger } from "./types.js";
 import { z } from "zod";
-
-type StoreStatus = "pending" | "running" | "success" | "error";
 
 interface LogEntry {
   store: string;
@@ -12,18 +10,19 @@ interface LogEntry {
   timestamp: Date;
 }
 
-function createDeploymentUI (storeStatuses: Map<string, StoreStatus>, logEntries: LogEntry[]) {
-  const completedCount = Array.from(storeStatuses.values()).filter(
-    status => status === "success" || status === "error"
+function createDeploymentUI(storeStatuses: Record<string, StoreStatus>, logEntries: LogEntry[]) {
+  const statuses = Object.values(storeStatuses);
+  const completedCount = statuses.filter(
+    status => status === StoreStatus.Success || status === StoreStatus.Error
   ).length;
-  const totalCount = storeStatuses.size;
+  const totalCount = statuses.length;
 
-  const lines = ["\x1b[36m\x1b[1mWeb Extension Deployment\x1b[0m\n"];
+  const lines = [`${Colors.Cyan}${Colors.Bold}Web Extension Deployment${Colors.Reset}\n`];
 
   // Store Status Section
-  for (const [store, status] of storeStatuses.entries()) {
-    const symbol = getStatusSymbol(status);
-    const statusText = getStatusText(status);
+  for (const [store, status] of Object.entries(storeStatuses)) {
+    const symbol = statusSymbols[status];
+    const statusText = statusTexts[status];
     lines.push(`${symbol} ${store}: ${statusText}`);
   }
 
@@ -34,44 +33,32 @@ function createDeploymentUI (storeStatuses: Map<string, StoreStatus>, logEntries
 
   // Recent Logs Section
   if (logEntries.length > 0) {
-    lines.push("\x1b[90m\x1b[1mRecent Activity:\x1b[0m");
+    lines.push(`${Colors.Gray}${Colors.Bold}Recent Activity:${Colors.Reset}`);
 
     for (const entry of logEntries.slice(-5)) {
-      const color = entry.level === "error" ? "\x1b[31m" : entry.level === "warning" ? "\x1b[33m" : "\x1b[37m";
-      lines.push(`${color}[${entry.timestamp.toLocaleTimeString()}] ${entry.store}: ${entry.message}\x1b[0m`);
+      const color = entry.level === "error" ? Colors.Red : entry.level === "warning" ? Colors.Yellow : Colors.White;
+      lines.push(`${color}[${entry.timestamp.toLocaleTimeString()}] ${entry.store}: ${entry.message}${Colors.Reset}`);
     }
   }
 
   return lines.join("\n");
 }
 
-function getStatusSymbol (status: StoreStatus) {
-  switch (status) {
-    case "pending":
-      return "\x1b[34m○\x1b[0m";
-    case "running":
-      return "\x1b[36m●\x1b[0m";
-    case "success":
-      return "\x1b[32m✔\x1b[0m";
-    case "error":
-      return "\x1b[31m✖\x1b[0m";
-  }
-}
+const statusSymbols: Record<StoreStatus, string> = {
+  [StoreStatus.Pending]: `${Colors.Blue}○${Colors.Reset}`,
+  [StoreStatus.Running]: `${Colors.Cyan}●${Colors.Reset}`,
+  [StoreStatus.Success]: `${Colors.Green}✔${Colors.Reset}`,
+  [StoreStatus.Error]: `${Colors.Red}✖${Colors.Reset}`
+};
 
-function getStatusText (status: StoreStatus) {
-  switch (status) {
-    case "pending":
-      return "Waiting...";
-    case "running":
-      return "Deploying...";
-    case "success":
-      return "Published!";
-    case "error":
-      return "Failed";
-  }
-}
+const statusTexts: Record<StoreStatus, string> = {
+  [StoreStatus.Pending]: "Waiting...",
+  [StoreStatus.Running]: "Deploying...",
+  [StoreStatus.Success]: "Published!",
+  [StoreStatus.Error]: "Failed"
+};
 
-function renderProgressBar (current: number, total: number) {
+function renderProgressBar(current: number, total: number) {
   const percentage = Math.round((current / total) * 100);
   const barWidth = 30;
   const filled = Math.round((current / total) * barWidth);
@@ -79,16 +66,15 @@ function renderProgressBar (current: number, total: number) {
   return `[${"█".repeat(filled)}${"░".repeat(barWidth - filled)}] ${percentage}%`;
 }
 
-export function createInkLogger (storeNames: string[]) {
-  const storeStatuses = new Map<string, StoreStatus>();
-  for (const store of storeNames) {
-    storeStatuses.set(store, "pending");
-  }
+export function createInkLogger(storeNames: string[]) {
+  const storeStatuses: Record<string, StoreStatus> = Object.fromEntries(
+    storeNames.map(store => [store, StoreStatus.Pending])
+  );
 
   const logEntries: LogEntry[] = [];
   let isMounted = true;
 
-  function renderUI () {
+  function renderUI() {
     if (!isMounted) {
       return;
     }
@@ -99,52 +85,52 @@ export function createInkLogger (storeNames: string[]) {
   }
 
   const logger = {
-    info (store: string, message: string) {
+    info(store: string, message: string) {
       logEntries.push({
         store, level: "info", message, timestamp: new Date()
       });
-      if (storeStatuses.get(store) === "pending") {
-        storeStatuses.set(store, "running");
+      if (storeStatuses[store] === StoreStatus.Pending) {
+        storeStatuses[store] = StoreStatus.Running;
       }
       renderUI();
     },
-    warning (store: string, message: string) {
+    warning(store: string, message: string) {
       logEntries.push({
         store, level: "warning", message: `Warning: ${message}`, timestamp: new Date()
       });
-      if (storeStatuses.get(store) === "pending") {
-        storeStatuses.set(store, "running");
+      if (storeStatuses[store] === StoreStatus.Pending) {
+        storeStatuses[store] = StoreStatus.Running;
       }
       renderUI();
     },
-    error (store: string, message: string) {
+    error(store: string, message: string) {
       logEntries.push({
         store, level: "error", message, timestamp: new Date()
       });
-      storeStatuses.set(store, "error");
+      storeStatuses[store] = StoreStatus.Error;
       renderUI();
     }
   };
 
   const monitor = {
-    updateStore (store: string, status: StoreStatus, message?: string) {
-      if (storeStatuses.get(store) === status) {
+    updateStore(store: string, status: StoreStatus, message?: string) {
+      if (storeStatuses[store] === status) {
         return;
       }
-      storeStatuses.set(store, status);
+      storeStatuses[store] = status;
       if (message) {
         logEntries.push({
-          store, level: status === "error" ? "error" : "info", message, timestamp: new Date()
+          store, level: status === StoreStatus.Error ? "error" : "info", message, timestamp: new Date()
         });
       }
       renderUI();
     },
-    setZipPath (store: string, zipPath: string) {
+    setZipPath(store: string, zipPath: string) {
       logEntries.push({
         store, level: "info", message: `ZIP: ${zipPath}`, timestamp: new Date()
       });
-      if (storeStatuses.get(store) === "pending") {
-        storeStatuses.set(store, "running");
+      if (storeStatuses[store] === StoreStatus.Pending) {
+        storeStatuses[store] = StoreStatus.Running;
       }
       renderUI();
     }
@@ -158,13 +144,13 @@ export function createInkLogger (storeNames: string[]) {
       warning: msg => logger.warning(capitalCase(store), msg),
       error: msg => logger.error(capitalCase(store), msg)
     } satisfies StoreLogger),
-    unmount () {
+    unmount() {
       isMounted = false;
     }
   };
 }
 
-function unwrapZodType (zodValue: z.ZodTypeAny) {
+function unwrapZodType(zodValue: z.ZodTypeAny) {
   const unwrapped = unwrapZodWrappers(zodValue);
   const rawDescription = zodValue.description || "";
   const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
@@ -185,7 +171,7 @@ function unwrapZodType (zodValue: z.ZodTypeAny) {
   };
 }
 
-function unwrapZodWrappers (zodValue: unknown): { inner: unknown; defaultValue: unknown } {
+function unwrapZodWrappers(zodValue: unknown): { inner: unknown; defaultValue: unknown } {
   if (zodValue instanceof z.ZodDefault) {
     const result = unwrapZodWrappers(zodValue.removeDefault());
     return { inner: result.inner, defaultValue: zodValue._def.defaultValue };
@@ -196,13 +182,13 @@ function unwrapZodWrappers (zodValue: unknown): { inner: unknown; defaultValue: 
   return { inner: zodValue, defaultValue: undefined };
 }
 
-export function renderStoreHelp (storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
+export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
   if (!(schema instanceof z.ZodObject)) {
     return "";
   }
 
   const shape = schema.shape;
-  function formatFieldName (key: string) {
+  function formatFieldName(key: string) {
     const isDynamic = dynamicFields?.includes(key);
     const isOverridable = cliOverridableFields?.includes(key);
     if (mode === "cli" || (mode === "env" && isDynamic)) {
@@ -269,16 +255,16 @@ export function renderStoreHelp (storeName: string, schema: z.ZodType, mode?: "c
   return `\n${header}${colHeader}${separator}${rows}\n`;
 }
 
-export function renderFatalError (message: string) {
-  process.stdout.write(`\x1b[31m✖\x1b[0m ${message}\n`);
+export function renderFatalError(message: string) {
+  process.stdout.write(`${Colors.Red}✖${Colors.Reset} ${message}\n`);
 }
 
-export function renderGlobalArgsHelp (schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
+export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
   if (missingArgs.length === 0 || !(schema instanceof z.ZodObject)) {
     return "";
   }
 
-  function formatFieldName (key: string) {
+  function formatFieldName(key: string) {
     if (mode === "cli") {
       return `--${kebabCase(key)}`;
     }

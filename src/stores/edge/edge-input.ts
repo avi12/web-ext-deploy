@@ -1,8 +1,8 @@
-import { red } from "../../logging.js";
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
+import { red } from "../../ui/logging.js";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils/zip.js";
 import { z } from "zod";
 
-export function storeError (message: string) {
+export function storeError(message: string) {
   return red(`Edge: ${message}`);
 }
 
@@ -26,7 +26,7 @@ export const EdgeOptionsPublishApiSchema = z
 
 export type EdgeOptionsPublishApi = z.infer<typeof EdgeOptionsPublishApiSchema>;
 
-export function prepareEdgeOptions (options: EdgeOptionsPublishApi) {
+export function prepareEdgeOptions(options: EdgeOptionsPublishApi) {
   const correctedOptions = {
     ...options,
     zip: getCorrectZip(options.zip),

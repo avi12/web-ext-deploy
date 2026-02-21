@@ -1,8 +1,8 @@
-import { red } from "../../logging.js";
-import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
+import { red } from "../../ui/logging.js";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils/zip.js";
 import { z } from "zod";
 
-export function storeError (message: string) {
+export function storeError(message: string) {
   return red(`Opera: ${message}`);
 }
 
@@ -26,7 +26,7 @@ export const OperaOptionsSchema = z
 
 export type OperaOptions = z.infer<typeof OperaOptionsSchema>;
 
-export function prepareOperaOptions (options: OperaOptions) {
+export function prepareOperaOptions(options: OperaOptions) {
   const correctedOptions = {
     ...options,
     zip: getCorrectZip(options.zip),

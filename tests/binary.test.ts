@@ -13,7 +13,7 @@ beforeAll(() => {
   }
 }, 60000);
 
-function runCli (args: string[]) {
+function runCli(args: string[]) {
   return spawnSync(process.execPath, [BINARY, ...args], {
     cwd: ROOT,
     encoding: "utf8",

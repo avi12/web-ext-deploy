@@ -1,4 +1,4 @@
-import { generateJwt } from "../src/jwt.js";
+import { generateJwt } from "../src/http/jwt.js";
 import { describe, it, expect } from "vitest";
 
 describe("generateJwt", () => {

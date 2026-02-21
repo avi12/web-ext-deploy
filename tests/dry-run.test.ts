@@ -31,7 +31,7 @@ const validInputs: Record<string, Record<string, unknown>> = {
   }
 };
 
-function tryDeployStore (options: unknown, store: string): Promise<boolean> {
+function tryDeployStore(options: unknown, store: string): Promise<boolean> {
   try {
     return deployStore(options, store, { isDryRun: true });
   } catch (error) {

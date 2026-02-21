@@ -1,8 +1,9 @@
-import { buildFormData } from "../../form-data.js";
-import { createHttpClient } from "../../http-client.js";
-import { generateJwt } from "../../jwt.js";
-import type { DeployContext } from "../../types.js";
-import { getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
+import { createHttpClient } from "../../http/client.js";
+import { buildFormData } from "../../http/form-data.js";
+import { generateJwt } from "../../http/jwt.js";
+import { StoreStatus, type DeployContext } from "../../types.js";
+import { requestWithRetry, type HttpLikeResponse } from "../../utils/retry.js";
+import { getExtJson } from "../../utils/zip.js";
 import { FirefoxOptionsSubmissionApi, storeError } from "./firefox-input.js";
 import { FirefoxUploadDetailSchema, FirefoxCreateNewVersionSchema, FirefoxUploadSourceSchema } from "./firefox-types.js";
 import fs from "node:fs";
@@ -13,7 +14,7 @@ const SECONDS_TO_TOKEN_EXPIRY = 60 * 3;
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
-function handleFirefoxRateLimit (extId: string, errorContext: string, logger?: DeployContext["logger"]) {
+function handleFirefoxRateLimit(extId: string, errorContext: string, logger?: DeployContext["logger"]) {
   return async (response: HttpLikeResponse) => {
     const detail = z.object({ detail: z.string() }).safeParse(response.data).data?.detail ?? "";
     const secondsToWait = Number(detail.match(/\d+/)?.[0] || "60");
@@ -32,7 +33,7 @@ function handleFirefoxRateLimit (extId: string, errorContext: string, logger?: D
   };
 }
 
-function uploadZip ({
+function uploadZip({
   zip,
   extId,
   jwtIssuer,
@@ -52,7 +53,7 @@ function uploadZip ({
 
   return requestWithRetry({
     sendRequest: () => httpClient.post("upload/", formData.body, { headers: { ...formData.headers, Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` } }),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = FirefoxUploadDetailSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -66,7 +67,7 @@ function uploadZip ({
   });
 }
 
-async function createNewVersion ({
+async function createNewVersion({
   slug,
   uuid,
   changelog,
@@ -104,7 +105,7 @@ async function createNewVersion ({
       }),
       { headers: { "Content-Type": "application/json" } }
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = FirefoxCreateNewVersionSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -118,7 +119,7 @@ async function createNewVersion ({
   });
 }
 
-async function validateUpload ({ uuid, logger }: {
+async function validateUpload({ uuid, logger }: {
   uuid: string;
   logger?: DeployContext["logger"];
 }) {
@@ -127,7 +128,7 @@ async function validateUpload ({ uuid, logger }: {
   for (;;) {
     const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`upload/${uuid}/`),
-      parseResponse (response) {
+      parseResponse(response) {
         const result = FirefoxUploadDetailSchema.safeParse(response.data);
         if (!result.success) {
           throw result.error;
@@ -153,7 +154,7 @@ async function validateUpload ({ uuid, logger }: {
   }
 }
 
-function uploadSourceCodeIfNeeded ({
+function uploadSourceCodeIfNeeded({
   slug,
   zipSource,
   version,
@@ -170,7 +171,7 @@ function uploadSourceCodeIfNeeded ({
 
   return requestWithRetry({
     sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.body, { headers: formData.headers }),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = FirefoxUploadSourceSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -184,7 +185,7 @@ function uploadSourceCodeIfNeeded ({
   });
 }
 
-export async function deployToFirefox (
+export async function deployToFirefox(
   {
     extId,
     jwtIssuer,
@@ -250,6 +251,6 @@ export async function deployToFirefox (
   }
 
   logger?.info("Successfully published to Firefox Add-ons!");
-  setStatus?.("success");
+  setStatus?.(StoreStatus.Success);
   return true;
 }

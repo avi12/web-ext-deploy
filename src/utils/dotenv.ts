@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-export function parse (envContent: string) {
+export function parse(envContent: string) {
   const result: Record<string, string> = {};
 
   for (const line of envContent.split("\n")) {
@@ -24,7 +24,7 @@ export function parse (envContent: string) {
   return result;
 }
 
-export function config (options?: { path?: string }) {
+export function config(options?: { path?: string }) {
   const path = options?.path || ".env";
   try {
     const content = fs.readFileSync(path, "utf8");

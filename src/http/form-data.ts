@@ -8,7 +8,7 @@ interface FormDataEntry {
   filename?: string;
 }
 
-function readValue (value: FormDataValue) {
+function readValue(value: FormDataValue) {
   if (Buffer.isBuffer(value)) {
     return value;
   }
@@ -21,7 +21,7 @@ function readValue (value: FormDataValue) {
   return Buffer.from(value);
 }
 
-export function buildFormData (entries: FormDataEntry[]) {
+export function buildFormData(entries: FormDataEntry[]) {
   const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
   const chunks: Buffer[] = [];
 

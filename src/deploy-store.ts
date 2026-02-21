@@ -1,9 +1,9 @@
-import { renderStoreHelp } from "./ink-logger.js";
-import { red } from "./logging.js";
 import { storeRegistry } from "./stores/registry.js";
-import type { DeployContext } from "./types.js";
+import { StoreStatus, type DeployContext } from "./types.js";
+import { renderStoreHelp } from "./ui/ink-logger.js";
+import { red } from "./ui/logging.js";
 
-export function deployStore (
+export function deployStore(
   options: unknown,
   storeName: string,
   context?: DeployContext & { isDryRun?: boolean }
@@ -22,7 +22,7 @@ export function deployStore (
   const prepared = store.prepare(parseResult.data);
   if (context?.isDryRun) {
     context.logger?.info("Dry run: validation passed");
-    context.setStatus?.("success");
+    context.setStatus?.(StoreStatus.Success);
     return Promise.resolve(true);
   }
   return store.deploy(prepared, context);

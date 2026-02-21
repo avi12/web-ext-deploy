@@ -1,6 +1,7 @@
-import { createHttpClient } from "../../http-client.js";
-import type { DeployContext } from "../../types.js";
-import { getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
+import { createHttpClient } from "../../http/client.js";
+import { StoreStatus, type DeployContext } from "../../types.js";
+import { requestWithRetry, type HttpLikeResponse } from "../../utils/retry.js";
+import { getExtJson } from "../../utils/zip.js";
 import { EdgeOptionsPublishApi, storeError } from "./edge-input.js";
 import { PublishOperationStatusSchema, StatusPackageUploadSchema } from "./edge-types.js";
 import fs from "node:fs";
@@ -9,7 +10,7 @@ import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
-function handleEdgeRateLimit (productId: string, logger?: DeployContext["logger"]) {
+function handleEdgeRateLimit(productId: string, logger?: DeployContext["logger"]) {
   return async (response: HttpLikeResponse) => {
     const message = z.object({ message: z.string() }).safeParse(response.data).data?.message ?? "";
     const secondsToWait = Number(message.match(/\d+/)?.[0] || "60");
@@ -23,7 +24,7 @@ function handleEdgeRateLimit (productId: string, logger?: DeployContext["logger"
   };
 }
 
-async function checkStatusOfPackageUpload ({
+async function checkStatusOfPackageUpload({
   productId,
   operationId,
   logger
@@ -37,7 +38,7 @@ async function checkStatusOfPackageUpload ({
   for (;;) {
     const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`),
-      parseResponse (response) {
+      parseResponse(response) {
         const result = StatusPackageUploadSchema.safeParse(response.data);
         if (!result.success) {
           throw result.error;
@@ -60,7 +61,7 @@ async function checkStatusOfPackageUpload ({
   }
 }
 
-function parseLocation (response: HttpLikeResponse) {
+function parseLocation(response: HttpLikeResponse) {
   const result = z.string().safeParse(response.headers?.location);
   if (!result.success) {
     throw new Error("Missing or invalid location header");
@@ -68,7 +69,7 @@ function parseLocation (response: HttpLikeResponse) {
   return result.data;
 }
 
-function uploadZip ({
+function uploadZip({
   zip,
   productId,
   logger
@@ -87,7 +88,7 @@ function uploadZip ({
   });
 }
 
-function publishSubmission ({
+function publishSubmission({
   productId,
   devChangelog,
   logger
@@ -106,7 +107,7 @@ function publishSubmission ({
   });
 }
 
-async function checkPublishStatus ({
+async function checkPublishStatus({
   productId,
   operationId,
   logger
@@ -117,7 +118,7 @@ async function checkPublishStatus ({
 }) {
   const data = await requestWithRetry({
     sendRequest: () => httpClient.get(`products/${productId}/submissions/operations/${operationId}`),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = PublishOperationStatusSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -143,7 +144,7 @@ async function checkPublishStatus ({
   return data;
 }
 
-export async function deployToEdgePublishApi (
+export async function deployToEdgePublishApi(
   {
     productId, clientId, apiKey, zip, devChangelog
   }: EdgeOptionsPublishApi,
@@ -200,6 +201,6 @@ export async function deployToEdgePublishApi (
   });
 
   logger?.info("Successfully published to Edge Add-ons!");
-  setStatus?.("success");
+  setStatus?.(StoreStatus.Success);
   return true;
 }

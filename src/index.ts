@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import { createCookieRefreshCallback, getJsonStoresFromCli, parser } from "./cli.js";
 import { deployStore } from "./deploy-store.js";
-import { createInkLogger, renderFatalError } from "./ink-logger.js";
-import { red } from "./logging.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
-import { toError } from "./utils.js";
+import { StoreStatus } from "./types.js";
+import { createInkLogger, renderFatalError } from "./ui/ink-logger.js";
+import { red } from "./ui/logging.js";
+import { toError } from "./utils/retry.js";
 import { z } from "zod";
 
-async function runStoreDeploy (
+async function runStoreDeploy(
   store: string,
   json: Record<string, unknown>,
   inkLogger: ReturnType<typeof createInkLogger>,
@@ -31,7 +32,7 @@ async function runStoreDeploy (
   });
 }
 
-async function initCli () {
+async function initCli() {
   const argv = parser.parseSync();
   const preDeployLogs: string[] = [];
   const storeJsons = await getJsonStoresFromCli(argv, msg => preDeployLogs.push(msg));
@@ -63,10 +64,10 @@ async function initCli () {
     const [store] = storeEntries[idx];
     if (result.status === "fulfilled") {
       inkLogger.logger.info(store, "Published!");
-      inkLogger.monitor.updateStore(store, "success");
+      inkLogger.monitor.updateStore(store, StoreStatus.Success);
     } else {
       inkLogger.logger.error(store, toError(result.reason).message);
-      inkLogger.monitor.updateStore(store, "error");
+      inkLogger.monitor.updateStore(store, StoreStatus.Error);
       failures.push(store);
     }
   }

@@ -1,5 +1,6 @@
-import type { DeployContext } from "../../types.js";
-import { CookieAuthError, getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
+import { StoreStatus, type DeployContext } from "../../types.js";
+import { CookieAuthError, requestWithRetry, type HttpLikeResponse } from "../../utils/retry.js";
+import { getExtJson } from "../../utils/zip.js";
 import { OperaOptions, storeError } from "./opera-input.js";
 import { ListVersionsSchema,
   ListingDetailSchema,
@@ -17,7 +18,7 @@ const BASE_URL = "https://addons.opera.com/api/";
 let defaultHeaders: Record<string, string> = {};
 let hasCookieRefreshBeenAttempted = false;
 
-function updateCookieHeaders (freshCookies: Record<string, string>) {
+function updateCookieHeaders(freshCookies: Record<string, string>) {
   const csrftoken = freshCookies["csrftoken"] || "";
   const sessionid = freshCookies["sessionid"] || "";
   defaultHeaders = {
@@ -27,7 +28,7 @@ function updateCookieHeaders (freshCookies: Record<string, string>) {
   };
 }
 
-async function fetchWithAuth (
+async function fetchWithAuth(
   url: string,
   options: RequestInit,
   logger?: DeployContext["logger"],
@@ -69,7 +70,7 @@ async function fetchWithAuth (
   };
 }
 
-async function verifySourceCodeExistence ({
+async function verifySourceCodeExistence({
   zip,
   packageId,
   logger,
@@ -92,7 +93,7 @@ async function verifySourceCodeExistence ({
       logger,
       onCookieExpired
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = ListingDetailSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -109,7 +110,7 @@ async function verifySourceCodeExistence ({
   }
 }
 
-async function cancelLatestVersionIfNotSubmitted ({
+async function cancelLatestVersionIfNotSubmitted({
   packageId,
   versionsListed,
   logger,
@@ -133,7 +134,7 @@ async function cancelLatestVersionIfNotSubmitted ({
       logger,
       onCookieExpired
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = CancelChangesSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -146,7 +147,7 @@ async function cancelLatestVersionIfNotSubmitted ({
   });
 }
 
-async function submitChanges ({
+async function submitChanges({
   zip,
   packageId,
   logger,
@@ -167,7 +168,7 @@ async function submitChanges ({
       logger,
       onCookieExpired
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = SubmitChangesSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -180,7 +181,7 @@ async function submitChanges ({
   });
 }
 
-function getFileMetadata (zipPath: string) {
+function getFileMetadata(zipPath: string) {
   const sizeInBytes = fs.statSync(zipPath).size;
   const zipNameResult = z.string().safeParse(zipPath.split(/[\\/]/).pop());
   if (!zipNameResult.success) {
@@ -192,7 +193,7 @@ function getFileMetadata (zipPath: string) {
   return { zipName, fileId };
 }
 
-async function uploadZip ({
+async function uploadZip({
   zip,
   logger,
   onCookieExpired
@@ -233,7 +234,7 @@ async function uploadZip ({
       logger,
       onCookieExpired
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = FileUploadResponseSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -246,7 +247,7 @@ async function uploadZip ({
   });
 }
 
-async function verifyUploadSuccessful ({
+async function verifyUploadSuccessful({
   zipPath,
   packageId,
   lastVersion,
@@ -276,7 +277,7 @@ async function verifyUploadSuccessful ({
       logger,
       onCookieExpired
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = UploadResultSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -294,7 +295,7 @@ async function verifyUploadSuccessful ({
   return data;
 }
 
-async function updateChangelog ({
+async function updateChangelog({
   zip,
   packageId,
   changelog,
@@ -320,7 +321,7 @@ async function updateChangelog ({
       logger,
       onCookieExpired
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = ListingDetailSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -333,7 +334,7 @@ async function updateChangelog ({
   });
 }
 
-function verifyVersionNotSubmittedForModeration ({ versionsListed, version }: {
+function verifyVersionNotSubmittedForModeration({ versionsListed, version }: {
   versionsListed: ListVersions["versions"];
   version: string;
 }) {
@@ -345,7 +346,7 @@ function verifyVersionNotSubmittedForModeration ({ versionsListed, version }: {
   }
 }
 
-function getVersions ({
+function getVersions({
   packageId,
   logger,
   onCookieExpired
@@ -361,7 +362,7 @@ function getVersions ({
       logger,
       onCookieExpired
     ),
-    parseResponse (response) {
+    parseResponse(response) {
       const result = ListVersionsSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -374,7 +375,7 @@ function getVersions ({
   });
 }
 
-export async function deployToOpera (
+export async function deployToOpera(
   {
     sessionid, csrftoken, packageId, zip, changelog = ""
   }: OperaOptions,
@@ -479,6 +480,6 @@ export async function deployToOpera (
   });
 
   logger?.info("Successfully published to Opera Add-ons!");
-  setStatus?.("success");
+  setStatus?.(StoreStatus.Success);
   return true;
 }
