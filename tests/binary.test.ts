@@ -43,7 +43,7 @@ describe("binary", () => {
   it("env with no .env files exits non-zero", () => {
     const { status, stdout } = runCli(["env"]);
     expect(status).not.toBe(0);
-    expect(stdout).toContain("Supply arguments for at least one store");
+    expect(stdout).toContain("No .env files found");
   });
 
   it("cli --dry-run with valid chrome args exits 0", () => {

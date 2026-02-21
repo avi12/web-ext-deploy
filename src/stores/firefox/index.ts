@@ -7,5 +7,6 @@ export const firefox = defineStore({
   schema: FirefoxOptionsSubmissionApiSchema,
   prepare: prepareFirefoxOptions,
   deploy: deployToFirefox,
-  dynamicFields: ["changelog", "devChangelog"]
+  dynamicFields: ["changelog", "devChangelog"],
+  cliOverridableFields: ["changelogLang"]
 });

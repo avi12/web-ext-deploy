@@ -87,6 +87,17 @@ function applyStoreGroups(builder: ReturnType<typeof yargs>) {
   return builder;
 }
 
+function stripCamelCaseArgs(message: string) {
+  return message.replace(
+    /Unknown arguments?: (.+)/,
+    (_, args: string) => {
+      const kebabOnly = args.split(", ").filter(arg => arg.includes("-"));
+      const label = kebabOnly.length === 1 ? "Unknown argument" : "Unknown arguments";
+      return `${label}: ${kebabOnly.map(arg => `--${arg}`).join(", ")}`;
+    }
+  );
+}
+
 export const parser = yargs(process.argv.slice(2))
   .scriptName("web-ext-deploy")
   .usage("$0 <command> [options]")
@@ -119,8 +130,15 @@ export const parser = yargs(process.argv.slice(2))
     () => {}
   )
   .demandCommand(1, "You need at least one command before moving on")
-  .epilogue("Run 'web-ext-deploy env --help' or 'web-ext-deploy cli --help' for store-specific options.")
+  .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options.`)
   .strict()
+  .fail((message, _error, instance) => {
+    if (message) {
+      instance.showHelp();
+      console.error(`\n${stripCamelCaseArgs(message)}`);
+    }
+    process.exit(1);
+  })
   .help();
 
 type Argv = ReturnType<typeof parser.parseSync>;
@@ -132,27 +150,35 @@ function getJsons(command: string, argv: Argv) {
   if (command === "env") {
     const publishOnly = z.array(z.string()).safeParse(argv.publishOnly).data;
     const stores = (publishOnly && publishOnly.length > 0 ? publishOnly : storeNames).filter(isSupportedStore);
-    return stores.reduce((storesAcc: StoreConfigMap, store: string) => {
+    const result: StoreConfigMap = {};
+    for (const store of stores) {
       const { parsed = {} } = config({ path: `${store}.env` });
-      if (!isObjectEmpty(parsed)) {
-        const dynamicFields = getStore(store)?.dynamicFields ?? [];
-        const envValues = dynamicFields.length
-          ? Object.fromEntries(Object.entries(parsed).filter(([key]) => !dynamicFields.includes(key)))
-          : parsed;
-        const cliOverrides = getJsonsFromArgs(store, argv);
-        storesAcc[store] = { ...envValues, ...cliOverrides };
+      if (isObjectEmpty(parsed)) {
+        continue;
       }
-      return storesAcc;
-    }, {});
+      const storeConfig = getStore(store);
+      const dynamicFields = storeConfig?.dynamicFields ?? [];
+      const cliOverridableFields = new Set([...dynamicFields, ...(storeConfig?.cliOverridableFields ?? [])]);
+      const envValues = dynamicFields.length
+        ? Object.fromEntries(Object.entries(parsed).filter(([key]) => !dynamicFields.includes(key)))
+        : parsed;
+      const cliOverrides = getJsonsFromArgs(store, argv);
+      const allowedOverrides = Object.fromEntries(
+        Object.entries(cliOverrides).filter(([key]) => cliOverridableFields.has(key))
+      );
+      result[store] = { ...envValues, ...allowedOverrides };
+    }
+    return result;
   }
 
-  return storeNames.reduce((storesAcc: StoreConfigMap, store: string) => {
+  const result: StoreConfigMap = {};
+  for (const store of storeNames) {
     const jsonStore = getJsonsFromArgs(store, argv);
     if (!isObjectEmpty(jsonStore)) {
-      storesAcc[store] = jsonStore;
+      result[store] = jsonStore;
     }
-    return storesAcc;
-  }, {});
+  }
+  return result;
 }
 
 export { mapStoreArgs };
@@ -255,9 +281,7 @@ function collectMissingGlobalArgs(argv: Argv) {
   const missingGlobal: string[] = [];
 
   for (const key in globalSchema) {
-    const argValue = argv[key];
-
-    if (!z.coerce.string().nonempty().safeParse(argValue).success) {
+    if (argv[key] === undefined) {
       missingGlobal.push(key);
     }
   }
@@ -270,6 +294,15 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
   const jsonStoresRaw = getJsons(command, argv);
 
   if (isObjectEmpty(jsonStoresRaw)) {
+    if (command === "env") {
+      let errorContent = red("No .env files found. In env mode, store credentials are read from .env files.\n");
+      for (const store of storeRegistry) {
+        errorContent += renderStoreHelp(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields);
+      }
+      const allGlobalKeys = ["publishOnly", "autoFetchCookies", "dryRun", "verbose"];
+      errorContent += renderGlobalArgsHelp(allGlobalKeys, "cli");
+      throw new Error(errorContent);
+    }
     throw new Error(red("Supply arguments for at least one store."));
   }
 
@@ -285,12 +318,13 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
     for (const storeName in missingArgs) {
       const store = getStore(storeName);
       if (store) {
-        errorContent += renderStoreHelp(storeName, store.schema, isCliMode ? "cli" : "env");
+        const { required, optional = [] } = missingArgs[storeName];
+        errorContent += renderStoreHelp(storeName, store.schema, isCliMode ? "cli" : "env", [...required, ...optional], store.dynamicFields, store.cliOverridableFields);
       }
     }
     const missingGlobalArgs = collectMissingGlobalArgs(argv);
     if (missingGlobalArgs.length > 0) {
-      errorContent += renderGlobalArgsHelp(missingGlobalArgs, isCliMode ? "cli" : "env");
+      errorContent += renderGlobalArgsHelp(missingGlobalArgs, "cli");
     }
     throw new Error(errorContent);
   }

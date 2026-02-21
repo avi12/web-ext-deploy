@@ -23,6 +23,7 @@ export type StoreDefinition = {
   deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
+  cliOverridableFields?: string[];
 };
 
 export function defineStore<T, Name extends string>(config: {
@@ -32,6 +33,7 @@ export function defineStore<T, Name extends string>(config: {
   deploy: (options: T, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
+  cliOverridableFields?: string[];
 }) {
   return {
     name: config.name,
@@ -51,6 +53,7 @@ export function defineStore<T, Name extends string>(config: {
       return config.deploy(result.data, context);
     },
     cookieFields: config.cookieFields,
-    dynamicFields: config.dynamicFields
+    dynamicFields: config.dynamicFields,
+    cliOverridableFields: config.cliOverridableFields
   };
 }

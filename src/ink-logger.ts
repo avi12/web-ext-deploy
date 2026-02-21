@@ -154,28 +154,37 @@ export function createInkLogger(storeNames: string[]) {
   };
 }
 
-export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env") {
+export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
   if (!(schema instanceof z.ZodObject)) {
     return "";
   }
 
   const shape = schema.shape;
   function formatFieldName(key: string) {
-    if (mode === "cli") {
+    const isDynamic = dynamicFields?.includes(key);
+    const isOverridable = cliOverridableFields?.includes(key);
+    if (mode === "cli" || (mode === "env" && isDynamic)) {
       return `--${kebabCase(storeName)}-${kebabCase(key)}`;
     }
     if (mode === "env") {
-      return screamingSnakeCase(key);
+      const envName = screamingSnakeCase(key);
+      if (isOverridable) {
+        return `${envName} / --${kebabCase(storeName)}-${kebabCase(key)}`;
+      }
+      return envName;
     }
     return key;
   }
 
-  type FieldInfo = { name: string; type: string; isRequired: boolean; description: string };
+  type FieldInfo = { name: string; type: string; isMissing: boolean; description: string };
   const fields: FieldInfo[] = [];
 
   for (const key in shape) {
     // verbose is a global flag, not per-store
     if (key === "verbose" && mode) {
+      continue;
+    }
+    if (missingFields && !missingFields.includes(key)) {
       continue;
     }
     const zodValue = shape[key];
@@ -195,7 +204,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
 
     fields.push({ name: formatFieldName(key),
       type,
-      isRequired: !isOptional,
+      isMissing: !isOptional,
       description: zodValue.description || "" });
   }
 
@@ -203,14 +212,16 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   const typeWidth = 10;
   const reqWidth = 10;
 
-  const header = `${Colors.Yellow}${capitalCase(storeName)} Store${Colors.Reset} — Arguments:\n`;
+  const title = mode === "env" ? `${storeName}.env` : `${capitalCase(storeName)} Store`;
+  const label = missingFields ? "Missing arguments" : "Arguments";
+  const header = `${Colors.Yellow}${title}${Colors.Reset} — ${label}:\n`;
   const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}Description\n`;
   const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + 20)}\n`;
 
   let rows = "";
   for (const field of fields) {
-    const reqMark = field.isRequired ? `${Colors.Green}✔${Colors.Reset}` : "";
-    const nameStr = field.isRequired ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
+    const reqMark = field.isMissing ? `${Colors.Green}✔${Colors.Reset}` : "";
+    const nameStr = field.isMissing ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
     // Pad based on raw name length since ANSI codes are invisible
     const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
     rows += `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark.padEnd(reqWidth + (reqMark.length - 1))}${field.description}\n`;
@@ -238,18 +249,23 @@ export function renderGlobalArgsHelp(missingArgs: string[], mode?: "cli" | "env"
     return key;
   }
 
-  const globalArgs: Array<{ name: string; key: string; description: string }> = [
+  type GlobalArg = { name: string; key: string; type: string; description: string };
+  const globalArgs: GlobalArg[] = [
     { name: formatFieldName("publishOnly"),
       key: "publishOnly",
+      type: "array",
       description: "Only publish to specific stores" },
     { name: formatFieldName("autoFetchCookies"),
       key: "autoFetchCookies",
+      type: "boolean",
       description: "Automatically fetch cookies for stores that support it" },
     { name: formatFieldName("dryRun"),
       key: "dryRun",
+      type: "boolean",
       description: "Validate inputs without deploying" },
     { name: formatFieldName("verbose"),
       key: "verbose",
+      type: "boolean",
       description: "Log each deployment step" }
   ];
 
@@ -260,16 +276,17 @@ export function renderGlobalArgsHelp(missingArgs: string[], mode?: "cli" | "env"
   }
 
   const nameWidth = Math.max(10, ...filteredArgs.map(arg => arg.name.length)) + 2;
+  const typeWidth = 10;
+  const reqWidth = 10;
 
-  const header = `${Colors.Yellow}Global Arguments${Colors.Reset} — Optional (not provided):\n`;
-  const colHeader = `  ${"Argument".padEnd(nameWidth)}Description\n`;
-  const separator = `  ${"─".repeat(nameWidth + 20)}\n`;
+  const header = `${Colors.Yellow}Global Arguments${Colors.Reset} — Optional:\n`;
+  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}Description\n`;
+  const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + 20)}\n`;
 
   let rows = "";
   for (const arg of filteredArgs) {
-    const nameStr = `${Colors.Red}${arg.name}${Colors.Reset}`;
     const namePad = " ".repeat(Math.max(0, nameWidth - arg.name.length));
-    rows += `  ${nameStr}${namePad}${arg.description}\n`;
+    rows += `  ${arg.name}${namePad}${arg.type.padEnd(typeWidth)}${"".padEnd(reqWidth)}${arg.description}\n`;
   }
 
   return `\n${header}${colHeader}${separator}${rows}`;
