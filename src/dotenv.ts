@@ -18,9 +18,7 @@ export function parse(envContent: string) {
     const key = trimmed.slice(0, equalsIndex).trim();
     const raw = trimmed.slice(equalsIndex + 1).trim();
     const isQuoted = (raw.startsWith("\"") && raw.endsWith("\"")) || (raw.startsWith("'") && raw.endsWith("'"));
-    const value = isQuoted ? raw.slice(1, -1) : raw;
-
-    result[key] = value;
+    result[key] = isQuoted ? raw.slice(1, -1) : raw;
   }
 
   return result;
