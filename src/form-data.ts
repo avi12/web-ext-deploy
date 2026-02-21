@@ -1,12 +1,14 @@
 import fs from "node:fs";
 
+type FormDataValue = string | Buffer | fs.ReadStream;
+
 interface FormDataEntry {
   name: string;
-  value: string | Buffer | fs.ReadStream;
+  value: FormDataValue;
   filename?: string;
 }
 
-function readValue(value: string | Buffer | fs.ReadStream) {
+function readValue(value: FormDataValue) {
   if (Buffer.isBuffer(value)) {
     return value;
   }
