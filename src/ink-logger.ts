@@ -221,14 +221,12 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
   const typeWidth = 10;
   const reqWidth = 10;
-  const hasDefaults = fields.some(field => field.defaultValue);
-  const defaultWidth = hasDefaults ? Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2 : 0;
+  const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
 
   const title = mode === "env" ? `${storeName}.env` : `${capitalCase(storeName)} Store`;
   const label = missingFields ? "Missing arguments" : "Arguments";
-  const header = `${Colors.Yellow}${title}${Colors.Reset} — ${label}:\n`;
-  const defaultCol = hasDefaults ? `${"Default".padEnd(defaultWidth)}` : "";
-  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${defaultCol}Description\n`;
+  const header = `${Colors.Yellow}${title}${Colors.Reset} - ${label}:\n`;
+  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
   const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
   let rows = "";
@@ -237,7 +235,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     const nameStr = field.isMissing ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
     // Pad based on raw name length since ANSI codes are invisible
     const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
-    const defaultStr = hasDefaults ? field.defaultValue.padEnd(defaultWidth) : "";
+    const defaultStr = field.defaultValue.padEnd(defaultWidth);
     rows += `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark.padEnd(reqWidth + (reqMark.length - 1))}${defaultStr}${field.description}\n`;
   }
 
@@ -248,8 +246,8 @@ export function renderFatalError(message: string) {
   process.stdout.write(`\x1b[31m✖\x1b[0m ${message}\n`);
 }
 
-export function renderGlobalArgsHelp(missingArgs: string[], mode?: "cli" | "env") {
-  if (missingArgs.length === 0) {
+export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
+  if (missingArgs.length === 0 || !(schema instanceof z.ZodObject)) {
     return "";
   }
 
@@ -263,44 +261,66 @@ export function renderGlobalArgsHelp(missingArgs: string[], mode?: "cli" | "env"
     return key;
   }
 
-  type GlobalArg = { name: string; key: string; type: string; description: string };
-  const globalArgs: GlobalArg[] = [
-    { name: formatFieldName("publishOnly"),
-      key: "publishOnly",
-      type: "array",
-      description: "Only publish to specific stores" },
-    { name: formatFieldName("autoFetchCookies"),
-      key: "autoFetchCookies",
-      type: "boolean",
-      description: "Automatically fetch cookies for stores that support it" },
-    { name: formatFieldName("dryRun"),
-      key: "dryRun",
-      type: "boolean",
-      description: "Validate inputs without deploying" },
-    { name: formatFieldName("verbose"),
-      key: "verbose",
-      type: "boolean",
-      description: "Log each deployment step" }
-  ];
+  const shape = schema.shape;
+  type FieldInfo = { name: string; key: string; type: string; defaultValue: string; description: string };
+  const fields: FieldInfo[] = [];
 
-  const filteredArgs = globalArgs.filter(arg => missingArgs.includes(arg.key));
+  for (const key in shape) {
+    if (!missingArgs.includes(key)) {
+      continue;
+    }
+    const zodValue = shape[key];
+    let defaultValue = "";
+    let unwrapped = zodValue;
+    while (unwrapped instanceof z.ZodOptional || unwrapped instanceof z.ZodNullable || unwrapped instanceof z.ZodDefault) {
+      if (unwrapped instanceof z.ZodDefault) {
+        defaultValue = String(unwrapped._def.defaultValue);
+        unwrapped = unwrapped.removeDefault();
+      } else {
+        unwrapped = unwrapped.unwrap();
+      }
+    }
 
-  if (filteredArgs.length === 0) {
+    let type = "string";
+    if (unwrapped instanceof z.ZodBoolean) {
+      type = "boolean";
+    } else if (unwrapped instanceof z.ZodNumber) {
+      type = "number";
+    } else if (unwrapped instanceof z.ZodArray) {
+      type = "array";
+    }
+    let description = zodValue.description || "";
+
+    const defaultMatch = description.match(/\s*\(default:\s*(.+?)\)\s*$/i);
+    if (defaultMatch) {
+      defaultValue = defaultMatch[1];
+      description = description.slice(0, defaultMatch.index);
+    }
+
+    fields.push({ name: formatFieldName(key),
+      key,
+      type,
+      defaultValue,
+      description });
+  }
+
+  if (fields.length === 0) {
     return "";
   }
 
-  const nameWidth = Math.max(10, ...filteredArgs.map(arg => arg.name.length)) + 2;
+  const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
   const typeWidth = 10;
   const reqWidth = 10;
+  const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
 
-  const header = `${Colors.Yellow}Global Arguments${Colors.Reset} — Optional:\n`;
-  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}Description\n`;
-  const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + 20)}\n`;
+  const header = `${Colors.Yellow}Global Arguments${Colors.Reset}:\n`;
+  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
+  const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
   let rows = "";
-  for (const arg of filteredArgs) {
-    const namePad = " ".repeat(Math.max(0, nameWidth - arg.name.length));
-    rows += `  ${arg.name}${namePad}${arg.type.padEnd(typeWidth)}${"".padEnd(reqWidth)}${arg.description}\n`;
+  for (const field of fields) {
+    const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
+    rows += `  ${field.name}${namePad}${field.type.padEnd(typeWidth)}${"".padEnd(reqWidth)}${field.defaultValue.padEnd(defaultWidth)}${field.description}\n`;
   }
 
   return `\n${header}${colHeader}${separator}${rows}`;

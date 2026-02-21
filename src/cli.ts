@@ -9,9 +9,14 @@ import yargs, { type Options } from "yargs";
 import { z } from "zod";
 
 const BaseOptionsSchema = z.object({
-  autoFetchCookies: z.boolean().optional().describe("Automatically fetch cookies as needed for stores that require them"),
-  dryRun: z.boolean().optional().describe("Validate inputs without deploying"),
-  verbose: z.boolean().optional().describe("Log each deployment step")
+  autoFetchCookies: z.boolean().optional().default(false).describe("Automatically fetch cookies as needed for stores that require them"),
+  dryRun: z.boolean().optional().default(false).describe("Validate inputs without deploying"),
+  verbose: z.boolean().optional().default(false).describe("Log each deployment step")
+});
+
+const EnvOptionsSchema = z.object({
+  publishOnly: z.array(z.string()).optional().describe("Only publish to specific stores"),
+  ...BaseOptionsSchema.shape
 });
 
 function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
@@ -21,8 +26,7 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
   }
 
   for (const [key, value] of Object.entries(schema.shape)) {
-    const isPerStoreVerbose = key === "verbose" && store !== "base";
-    if (isPerStoreVerbose) {
+    if (key === "verbose" && store !== "base") {
       continue;
     }
     const optionName = store === "base" ? kebabCase(key) : `${store}-${kebabCase(key)}`;
@@ -31,8 +35,12 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
       value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
 
     let valueType = value;
-    if (value instanceof z.ZodOptional || value instanceof z.ZodNullable) {
-      valueType = value.unwrap();
+    while (valueType instanceof z.ZodOptional || valueType instanceof z.ZodNullable || valueType instanceof z.ZodDefault) {
+      if (valueType instanceof z.ZodDefault) {
+        valueType = valueType.removeDefault();
+      } else {
+        valueType = valueType.unwrap();
+      }
     }
 
     if (valueType instanceof z.ZodBoolean) {
@@ -299,8 +307,9 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
       for (const store of storeRegistry) {
         errorContent += renderStoreHelp(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields);
       }
-      const allGlobalKeys = ["publishOnly", "autoFetchCookies", "dryRun", "verbose"];
-      errorContent += renderGlobalArgsHelp(allGlobalKeys, "cli");
+      const hasCookieStores = storeRegistry.some(store => store.cookieFields && store.cookieFields.length > 0);
+      const allGlobalKeys = ["publishOnly", ...(hasCookieStores ? ["autoFetchCookies"] : []), "dryRun", "verbose"];
+      errorContent += renderGlobalArgsHelp(EnvOptionsSchema, allGlobalKeys, "cli");
       throw new Error(errorContent);
     }
     throw new Error(red("Supply arguments for at least one store."));
@@ -322,9 +331,17 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
         errorContent += renderStoreHelp(storeName, store.schema, isCliMode ? "cli" : "env", [...required, ...optional], store.dynamicFields, store.cliOverridableFields);
       }
     }
-    const missingGlobalArgs = collectMissingGlobalArgs(argv);
+    const hasCookieStores = Object.keys(missingArgs).some(storeName => {
+      const store = getStore(storeName);
+      return store?.cookieFields && store.cookieFields.length > 0;
+    });
+    let missingGlobalArgs = collectMissingGlobalArgs(argv);
+    if (!hasCookieStores) {
+      missingGlobalArgs = missingGlobalArgs.filter(key => key !== "autoFetchCookies");
+    }
     if (missingGlobalArgs.length > 0) {
-      errorContent += renderGlobalArgsHelp(missingGlobalArgs, "cli");
+      const globalSchema = isCliMode ? BaseOptionsSchema : EnvOptionsSchema;
+      errorContent += renderGlobalArgsHelp(globalSchema, missingGlobalArgs, "cli");
     }
     throw new Error(errorContent);
   }

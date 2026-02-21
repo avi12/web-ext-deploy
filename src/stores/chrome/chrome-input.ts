@@ -12,8 +12,8 @@ export const ChromeOptionsSchema = z
     publisherId: z.string().nonempty(storeError("No publisher ID is provided")).describe("Chrome Web Store publisher ID"),
     refreshToken: z.string().nonempty(storeError("No refresh token is provided")).describe("OAuth refresh token"),
     zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
-    skipReview: z.boolean().optional().describe("Publish without waiting for a review"),
-    deployPercentage: z.number().int().min(1).max(100).optional().describe("Staged rollout percentage (1–100)")
+    skipReview: z.boolean().optional().default(false).describe("Publish without waiting for a review"),
+    deployPercentage: z.number().int().min(1).max(100).optional().describe("Staged rollout percentage (1–100) (default: 100)")
   })
   .check(ctx => {
     if (!getIsFileExists(ctx.value.zip)) {

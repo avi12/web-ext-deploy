@@ -36,9 +36,9 @@ describe("ChromeOptionsSchema", () => {
     expect(() => ChromeOptionsSchema.parse({ ...validInput, zip: "nonexistent.zip" })).toThrow("Zip doesn't exist");
   });
 
-  it("skipReview is optional", () => {
+  it("skipReview defaults to false", () => {
     const result = ChromeOptionsSchema.parse(validInput);
-    expect(result.skipReview).toBeUndefined();
+    expect(result.skipReview).toBe(false);
   });
 
   it("accepts skipReview as boolean", () => {
