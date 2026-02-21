@@ -16,7 +16,7 @@ describe("isObjectEmpty", () => {
   });
 
   it("returns false for non-empty object", () => {
-    expect(isObjectEmpty({ a: 1 })).toBe(false);
+    expect(isObjectEmpty({ key: 1 })).toBe(false);
   });
 });
 

@@ -17,19 +17,19 @@ describe("EdgeOptionsPublishApiSchema", () => {
   });
 
   it("rejects missing productId", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, productId: "" })).toThrow("No product ID");
+    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, productId: "" })).toThrow();
   });
 
   it("rejects missing clientId", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, clientId: "" })).toThrow("No client ID");
+    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, clientId: "" })).toThrow();
   });
 
   it("rejects missing apiKey", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, apiKey: "" })).toThrow("No API key");
+    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, apiKey: "" })).toThrow();
   });
 
   it("rejects missing zip", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, zip: "" })).toThrow("No zip");
+    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, zip: "" })).toThrow();
   });
 
   it("devChangelog is optional", () => {

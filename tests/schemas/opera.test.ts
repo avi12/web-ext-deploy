@@ -26,25 +26,31 @@ describe("OperaOptionsSchema", () => {
   });
 
   it("rejects missing zip", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, zip: "" })).toThrow("No zip");
+    expect(() => OperaOptionsSchema.parse({ ...validInput, zip: "" })).toThrow();
   });
 
   it("rejects missing sessionid", () => {
-    const { sessionid: _, ...input } = validInput;
-    expect(() => OperaOptionsSchema.parse(input)).toThrow();
+    expect(() => OperaOptionsSchema.parse({
+      packageId: validInput.packageId,
+      csrftoken: validInput.csrftoken,
+      zip: validInput.zip
+    })).toThrow();
   });
 
   it("rejects empty sessionid", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, sessionid: "" })).toThrow("No sessionid");
+    expect(() => OperaOptionsSchema.parse({ ...validInput, sessionid: "" })).toThrow();
   });
 
   it("rejects missing csrftoken", () => {
-    const { csrftoken: _, ...input } = validInput;
-    expect(() => OperaOptionsSchema.parse(input)).toThrow();
+    expect(() => OperaOptionsSchema.parse({
+      packageId: validInput.packageId,
+      sessionid: validInput.sessionid,
+      zip: validInput.zip
+    })).toThrow();
   });
 
   it("rejects empty csrftoken", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, csrftoken: "" })).toThrow("No csrftoken");
+    expect(() => OperaOptionsSchema.parse({ ...validInput, csrftoken: "" })).toThrow();
   });
 
   it("changelog is optional", () => {

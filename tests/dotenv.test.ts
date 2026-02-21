@@ -2,7 +2,7 @@ import { parse, config } from "../src/dotenv.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
 describe("parse", () => {
   it("returns empty object for empty string", () => {
@@ -38,8 +38,8 @@ describe("parse", () => {
   });
 
   it("parses multiple entries", () => {
-    expect(parse("A=1\nB=2\nC=3")).toEqual({
-      A: "1", B: "2", C: "3"
+    expect(parse("FOO=1\nBAR=2\nBAZ=3")).toEqual({
+      FOO: "1", BAR: "2", BAZ: "3"
     });
   });
 });

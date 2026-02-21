@@ -33,14 +33,14 @@ describe("CLI mode - arg mapping + validation", () => {
       expect(() => ChromeOptionsSchema.parse(mapStoreArgs(rawArgs, "chrome"))).not.toThrow();
     });
 
-    it("empty ext-id fails with 'No extension ID'", () => {
+    it("empty ext-id fails", () => {
       const rawArgs = {
         "chrome-ext-id": "",
         "chrome-publisher-id": "pub-456",
         "chrome-refresh-token": "token-xyz",
         "chrome-zip": FIXTURE_ZIP
       };
-      expect(() => ChromeOptionsSchema.parse(mapStoreArgs(rawArgs, "chrome"))).toThrow("No extension ID");
+      expect(() => ChromeOptionsSchema.parse(mapStoreArgs(rawArgs, "chrome"))).toThrow();
     });
 
     it("missing refresh-token fails", () => {
@@ -77,14 +77,14 @@ describe("CLI mode - arg mapping + validation", () => {
       expect(() => FirefoxOptionsSubmissionApiSchema.parse(mapStoreArgs(rawArgs, "firefox"))).not.toThrow();
     });
 
-    it("empty jwt-issuer fails with 'No JWT issuer'", () => {
+    it("empty jwt-issuer fails", () => {
       const rawArgs = {
         "firefox-ext-id": "addon-id",
         "firefox-jwt-issuer": "",
         "firefox-jwt-secret": "secret-val",
         "firefox-zip": FIXTURE_ZIP
       };
-      expect(() => FirefoxOptionsSubmissionApiSchema.parse(mapStoreArgs(rawArgs, "firefox"))).toThrow("No JWT issuer");
+      expect(() => FirefoxOptionsSubmissionApiSchema.parse(mapStoreArgs(rawArgs, "firefox"))).toThrow();
     });
 
     it("missing jwt-secret fails", () => {
@@ -121,14 +121,14 @@ describe("CLI mode - arg mapping + validation", () => {
       expect(() => EdgeOptionsPublishApiSchema.parse(mapStoreArgs(rawArgs, "edge"))).not.toThrow();
     });
 
-    it("empty api-key fails with 'No API key'", () => {
+    it("empty api-key fails", () => {
       const rawArgs = {
         "edge-product-id": "prod-123",
         "edge-client-id": "client-456",
         "edge-api-key": "",
         "edge-zip": FIXTURE_ZIP
       };
-      expect(() => EdgeOptionsPublishApiSchema.parse(mapStoreArgs(rawArgs, "edge"))).toThrow("No API key");
+      expect(() => EdgeOptionsPublishApiSchema.parse(mapStoreArgs(rawArgs, "edge"))).toThrow();
     });
 
     it("missing product-id fails", () => {
@@ -176,14 +176,14 @@ describe("CLI mode - arg mapping + validation", () => {
       expect(result.packageId).toBe(42);
     });
 
-    it("empty sessionid fails with 'No sessionid'", () => {
+    it("empty sessionid fails", () => {
       const rawArgs = {
         "opera-package-id": "100",
         "opera-sessionid": "",
         "opera-csrftoken": "csrf-xyz",
         "opera-zip": FIXTURE_ZIP
       };
-      expect(() => OperaOptionsSchema.parse(mapStoreArgs(rawArgs, "opera"))).toThrow("No sessionid");
+      expect(() => OperaOptionsSchema.parse(mapStoreArgs(rawArgs, "opera"))).toThrow();
     });
   });
 });

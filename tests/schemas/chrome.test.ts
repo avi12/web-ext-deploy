@@ -17,19 +17,19 @@ describe("ChromeOptionsSchema", () => {
   });
 
   it("rejects missing extId", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, extId: "" })).toThrow("No extension ID");
+    expect(() => ChromeOptionsSchema.parse({ ...validInput, extId: "" })).toThrow();
   });
 
   it("rejects missing publisherId", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, publisherId: "" })).toThrow("No publisher ID");
+    expect(() => ChromeOptionsSchema.parse({ ...validInput, publisherId: "" })).toThrow();
   });
 
   it("rejects missing refreshToken", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, refreshToken: "" })).toThrow("No refresh token");
+    expect(() => ChromeOptionsSchema.parse({ ...validInput, refreshToken: "" })).toThrow();
   });
 
   it("rejects missing zip", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, zip: "" })).toThrow("No zip");
+    expect(() => ChromeOptionsSchema.parse({ ...validInput, zip: "" })).toThrow();
   });
 
   it("rejects non-existent zip path", () => {

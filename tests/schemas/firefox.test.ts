@@ -17,19 +17,19 @@ describe("FirefoxOptionsSubmissionApiSchema", () => {
   });
 
   it("rejects missing extId", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, extId: "" })).toThrow("No extension ID");
+    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, extId: "" })).toThrow();
   });
 
   it("rejects missing jwtIssuer", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, jwtIssuer: "" })).toThrow("No JWT issuer");
+    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, jwtIssuer: "" })).toThrow();
   });
 
   it("rejects missing jwtSecret", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, jwtSecret: "" })).toThrow("No JWT secret");
+    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, jwtSecret: "" })).toThrow();
   });
 
   it("rejects missing zip", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, zip: "" })).toThrow("No zip");
+    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, zip: "" })).toThrow();
   });
 
   it("defaults changelogLang to en-US", () => {

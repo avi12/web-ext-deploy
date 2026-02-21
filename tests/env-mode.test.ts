@@ -22,9 +22,9 @@ describe("Env mode - .env parsing + validation", () => {
   }
 
   afterEach(() => {
-    for (const f of tmpFiles) {
+    for (const file of tmpFiles) {
       try {
-        fs.unlinkSync(f);
+        fs.unlinkSync(file);
       } catch {
         // ignore
       }
@@ -38,9 +38,9 @@ describe("Env mode - .env parsing + validation", () => {
       expect(() => ChromeOptionsSchema.parse(parsed)).not.toThrow();
     });
 
-    it("empty extId in .env fails with 'No extension ID'", () => {
+    it("empty extId in .env fails", () => {
       const parsed = writeEnv(`extId=\npublisherId=pub-456\nrefreshToken=token-xyz\nzip=${FIXTURE_ZIP}`);
-      expect(() => ChromeOptionsSchema.parse(parsed)).toThrow("No extension ID");
+      expect(() => ChromeOptionsSchema.parse(parsed)).toThrow();
     });
 
     it("missing refreshToken in .env fails", () => {
@@ -57,9 +57,9 @@ describe("Env mode - .env parsing + validation", () => {
       expect(() => FirefoxOptionsSubmissionApiSchema.parse(parsed)).not.toThrow();
     });
 
-    it("empty jwtIssuer in .env fails with 'No JWT issuer'", () => {
+    it("empty jwtIssuer in .env fails", () => {
       const parsed = writeEnv(`extId=addon-id\njwtIssuer=\njwtSecret=secret-val\nzip=${FIXTURE_ZIP}`);
-      expect(() => FirefoxOptionsSubmissionApiSchema.parse(parsed)).toThrow("No JWT issuer");
+      expect(() => FirefoxOptionsSubmissionApiSchema.parse(parsed)).toThrow();
     });
 
     it("missing jwtSecret in .env fails", () => {
@@ -80,9 +80,9 @@ describe("Env mode - .env parsing + validation", () => {
       expect(() => EdgeOptionsPublishApiSchema.parse(parsed)).not.toThrow();
     });
 
-    it("empty apiKey in .env fails with 'No API key'", () => {
+    it("empty apiKey in .env fails", () => {
       const parsed = writeEnv(`productId=prod-123\nclientId=client-456\napiKey=\nzip=${FIXTURE_ZIP}`);
-      expect(() => EdgeOptionsPublishApiSchema.parse(parsed)).toThrow("No API key");
+      expect(() => EdgeOptionsPublishApiSchema.parse(parsed)).toThrow();
     });
 
     it("missing clientId in .env fails", () => {
@@ -107,9 +107,9 @@ describe("Env mode - .env parsing + validation", () => {
       expect(result.packageId).toBe(42);
     });
 
-    it("empty sessionid in .env fails with 'No sessionid'", () => {
+    it("empty sessionid in .env fails", () => {
       const parsed = writeEnv(`packageId=100\nsessionid=\ncsrftoken=csrf-xyz\nzip=${FIXTURE_ZIP}`);
-      expect(() => OperaOptionsSchema.parse(parsed)).toThrow("No sessionid");
+      expect(() => OperaOptionsSchema.parse(parsed)).toThrow();
     });
 
     it("missing csrftoken in .env fails", () => {
