@@ -8,16 +8,10 @@ export function storeError(message: string) {
 
 export const OperaOptionsSchema = z
   .object({
-    packageId: z.coerce
-      .number({
-        message: storeError(
-          "No package ID is provided, e.g. https://addons.opera.com/developer/package/PACKAGE_ID"
-        )
-      })
-      .describe("Package ID from https://addons.opera.com/developer/package/PACKAGE_ID"),
-    sessionid: z.string().nonempty(storeError("No sessionid is provided")).describe("Get it by running --auto-fetch-cookies"),
-    csrftoken: z.string().nonempty(storeError("No csrftoken is provided")).describe("Get it by running --auto-fetch-cookies"),
-    zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
+    packageId: z.coerce.number().describe("Get it from https://addons.opera.com/developer/package/PACKAGE_ID"),
+    sessionid: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
+    csrftoken: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
+    zip: z.string().nonempty().describe("Path to the ZIP file"),
     changelog: z.string().optional().describe("Changelog for this version")
   })
   .check(ctx => {

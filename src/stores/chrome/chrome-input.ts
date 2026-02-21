@@ -8,10 +8,10 @@ export function storeError(message: string) {
 
 export const ChromeOptionsSchema = z
   .object({
-    extId: z.string().nonempty(storeError("No extension ID is provided")).describe("Get it from https://chromewebstore.google.com/detail/EXT_ID"),
-    publisherId: z.string().nonempty(storeError("No publisher ID is provided")).describe("Chrome Web Store publisher ID"),
-    refreshToken: z.string().nonempty(storeError("No refresh token is provided")).describe("OAuth refresh token"),
-    zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
+    extId: z.string().nonempty().describe("Get it from https://chromewebstore.google.com/detail/EXT_ID"),
+    publisherId: z.string().nonempty().describe("Chrome Web Store publisher ID"),
+    refreshToken: z.string().nonempty().describe("OAuth refresh token"),
+    zip: z.string().nonempty().describe("Path to the ZIP file"),
     skipReview: z.boolean().optional().default(false).describe("Publish without waiting for a review"),
     deployPercentage: z.number().int().min(1).max(100).optional().describe("Staged rollout percentage (1–100) (default: 100)")
   })

@@ -8,31 +8,10 @@ export function storeError(message: string) {
 
 export const EdgeOptionsPublishApiSchema = z
   .object({
-    productId: z
-      .string()
-      .nonempty(
-        storeError(
-          "No product ID is provided, e.g. https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"
-        )
-      )
-      .describe("Get it from https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"),
-    clientId: z
-      .string()
-      .nonempty(
-        storeError(
-          "No client ID is provided. To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
-        )
-      )
-      .describe("Get it from https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"),
-    apiKey: z
-      .string()
-      .nonempty(
-        storeError(
-          "No API key is provided. To obtain one, follow https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"
-        )
-      )
-      .describe("Get it from https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"),
-    zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
+    productId: z.string().nonempty().describe("Get it from https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"),
+    clientId: z.string().nonempty().describe("Get it from https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"),
+    apiKey: z.string().nonempty().describe("Get it from https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md"),
+    zip: z.string().nonempty().describe("Path to the ZIP file"),
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })
   .check(ctx => {
