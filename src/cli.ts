@@ -349,4 +349,3 @@ export function createCookieRefreshCallback(store: string, cookieFields: string[
     return readCookiesFromEnv(store, cookieFields);
   };
 }
-// trigger

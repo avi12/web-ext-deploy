@@ -16,7 +16,6 @@ import { z } from "zod";
 const BASE_URL = "https://addons.opera.com/api/";
 
 let defaultHeaders: Record<string, string> = {};
-let hasCookieRefreshBeenAttempted = false;
 
 function updateCookieHeaders(freshCookies: Record<string, string>) {
   const csrftoken = freshCookies["csrftoken"] || "";
@@ -43,8 +42,7 @@ async function fetchWithAuth(
   });
 
   const isAuthFailure = response.status === 401 || response.status === 403;
-  if (isAuthFailure && onCookieExpired && !hasCookieRefreshBeenAttempted) {
-    hasCookieRefreshBeenAttempted = true;
+  if (isAuthFailure && onCookieExpired) {
     logger?.warning("Cookies expired, refreshing...");
     const freshCookies = await onCookieExpired();
     updateCookieHeaders(freshCookies);
@@ -62,9 +60,8 @@ async function fetchWithAuth(
     throw new CookieAuthError("Opera");
   }
 
-  const data: unknown = await response.json();
   return {
-    data,
+    data: await response.json(),
     status: response.status,
     statusText: response.statusText
   };
@@ -383,8 +380,6 @@ export async function deployToOpera(
     logger, onCookieExpired, isVerbose, setStatus, setZipPath
   }: DeployContext = {}
 ) {
-  hasCookieRefreshBeenAttempted = false;
-
   defaultHeaders = {
     Accept: "application/json; version=1.0",
     Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}`,

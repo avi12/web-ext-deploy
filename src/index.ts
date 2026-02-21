@@ -13,12 +13,13 @@ async function runStoreDeploy(
   json: Record<string, unknown>,
   inkLogger: ReturnType<typeof createInkLogger>,
   isDryRun?: boolean,
-  isVerbose?: boolean
+  isVerbose?: boolean,
+  isAutoFetchCookies?: boolean
 ) {
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
-  const onCookieExpired = storeDef?.cookieFields
+  const onCookieExpired = isAutoFetchCookies && storeDef?.cookieFields
     ? createCookieRefreshCallback(store, storeDef.cookieFields)
     : undefined;
 
@@ -54,9 +55,10 @@ async function initCli() {
   }
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
   const isVerbose = z.boolean().safeParse(argv.verbose).data;
+  const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
 
   const results = await Promise.allSettled(
-    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose))
+    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCookies))
   );
 
   const failures: string[] = [];
