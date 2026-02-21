@@ -5,7 +5,7 @@ interface FetchOptions extends RequestInit {
   params?: Record<string, string | number>;
 }
 
-function streamToBuffer(stream: ReadStream) {
+function streamToBuffer (stream: ReadStream) {
   return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
     const chunks: Buffer[] = [];
     stream.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -20,12 +20,12 @@ function streamToBuffer(stream: ReadStream) {
   });
 }
 
-function stringifyParams(params: Record<string, string | number>) {
+function stringifyParams (params: Record<string, string | number>) {
   const entries = Object.entries(params).map(([key, value]) => [key, String(value)]);
   return new URLSearchParams(entries).toString();
 }
 
-async function fetchResponse(url: string, options: RequestInit) {
+async function fetchResponse (url: string, options: RequestInit) {
   const response = await fetch(url, options);
   const contentType = response.headers.get("content-type");
   const data: unknown =
@@ -39,8 +39,8 @@ async function fetchResponse(url: string, options: RequestInit) {
   };
 }
 
-export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
-  function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
+export function createHttpClient (baseURL: string, defaultHeaders: Record<string, string> = {}) {
+  function request (method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
     const base = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
     const url = options.params ? `${base}?${stringifyParams(options.params)}` : base;
 
@@ -58,16 +58,16 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
     return fetchResponse(url, fetchOptions);
   }
 
-  async function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
+  async function post (endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
     const finalBody = body instanceof ReadStream ? await streamToBuffer(body) : body;
     return request("POST", endpoint, { ...options, body: finalBody });
   }
 
-  function get(endpoint: string, options: FetchOptions = {}) {
+  function get (endpoint: string, options: FetchOptions = {}) {
     return request("GET", endpoint, options);
   }
 
-  function patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
+  function patch (endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
     return request("PATCH", endpoint, { ...options, body });
   }
 

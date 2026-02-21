@@ -13,7 +13,7 @@ let uploadHttpClient: ReturnType<typeof createHttpClient>;
 
 const PENDING_REVIEW_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED];
 
-function fetchStatus({
+function fetchStatus ({
   extId,
   publisherId,
   logger
@@ -24,7 +24,7 @@ function fetchStatus({
 }) {
   return requestWithRetry({
     sendRequest: () => httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`),
-    parseResponse(response) {
+    parseResponse (response) {
       const result = FetchStatusSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -37,7 +37,7 @@ function fetchStatus({
   });
 }
 
-async function cancelSubmissionIfPending({
+async function cancelSubmissionIfPending ({
   extId,
   publisherId,
   logger,
@@ -70,7 +70,7 @@ async function cancelSubmissionIfPending({
   await setTimeout(60_000);
 }
 
-async function waitForUpload({
+async function waitForUpload ({
   extId,
   publisherId,
   logger
@@ -84,7 +84,7 @@ async function waitForUpload({
   for (;;) {
     const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`),
-      parseResponse(response) {
+      parseResponse (response) {
         const result = FetchStatusSchema.safeParse(response.data);
         if (!result.success) {
           throw result.error;
@@ -107,7 +107,7 @@ async function waitForUpload({
   }
 }
 
-async function uploadZip({
+async function uploadZip ({
   zip,
   extId,
   publisherId,
@@ -124,7 +124,7 @@ async function uploadZip({
       fs.createReadStream(zip),
       { headers: { "Content-Type": "application/zip" } }
     ),
-    parseResponse(response) {
+    parseResponse (response) {
       const result = UploadResponseSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -149,7 +149,7 @@ async function uploadZip({
 
 const PUBLISH_SUCCESS_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED, ItemState.PUBLISHED, ItemState.PUBLISHED_TO_TESTERS];
 
-async function publishExtension({
+async function publishExtension ({
   extId,
   publisherId,
   skipReview,
@@ -174,7 +174,7 @@ async function publishExtension({
       hasBody ? JSON.stringify(body) : undefined,
       hasBody ? { headers: { "Content-Type": "application/json" } } : {}
     ),
-    parseResponse(response) {
+    parseResponse (response) {
       const result = PublishResponseSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -192,7 +192,7 @@ async function publishExtension({
   }
 }
 
-async function verifySubmission({
+async function verifySubmission ({
   extId,
   publisherId,
   logger
@@ -218,7 +218,7 @@ async function verifySubmission({
   throw new Error(storeError(`Submission verification failed (state: ${state})`));
 }
 
-export async function deployToChrome(
+export async function deployToChrome (
   {
     extId, publisherId, refreshToken, zip, skipReview, deployPercentage
   }: ChromeOptions,

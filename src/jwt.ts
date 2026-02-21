@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-export function generateJwt({
+export function generateJwt ({
   jwtIssuer,
   jwtSecret,
   expiresInSeconds = 60 * 3

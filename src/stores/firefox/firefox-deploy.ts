@@ -13,8 +13,8 @@ const SECONDS_TO_TOKEN_EXPIRY = 60 * 3;
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
-function handleFirefoxRateLimit(extId: string, errorContext: string, logger?: DeployContext["logger"]) {
-  return async(response: HttpLikeResponse) => {
+function handleFirefoxRateLimit (extId: string, errorContext: string, logger?: DeployContext["logger"]) {
+  return async (response: HttpLikeResponse) => {
     const detail = z.object({ detail: z.string() }).safeParse(response.data).data?.detail ?? "";
     const secondsToWait = Number(detail.match(/\d+/)?.[0] || "60");
     if (secondsToWait > 60) {
@@ -32,7 +32,7 @@ function handleFirefoxRateLimit(extId: string, errorContext: string, logger?: De
   };
 }
 
-function uploadZip({
+function uploadZip ({
   zip,
   extId,
   jwtIssuer,
@@ -52,7 +52,7 @@ function uploadZip({
 
   return requestWithRetry({
     sendRequest: () => httpClient.post("upload/", formData.body, { headers: { ...formData.headers, Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` } }),
-    parseResponse(response) {
+    parseResponse (response) {
       const result = FirefoxUploadDetailSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -66,7 +66,7 @@ function uploadZip({
   });
 }
 
-async function createNewVersion({
+async function createNewVersion ({
   slug,
   uuid,
   changelog,
@@ -104,7 +104,7 @@ async function createNewVersion({
       }),
       { headers: { "Content-Type": "application/json" } }
     ),
-    parseResponse(response) {
+    parseResponse (response) {
       const result = FirefoxCreateNewVersionSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -118,7 +118,7 @@ async function createNewVersion({
   });
 }
 
-async function validateUpload({ uuid, logger }: {
+async function validateUpload ({ uuid, logger }: {
   uuid: string;
   logger?: DeployContext["logger"];
 }) {
@@ -127,7 +127,7 @@ async function validateUpload({ uuid, logger }: {
   for (;;) {
     const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`upload/${uuid}/`),
-      parseResponse(response) {
+      parseResponse (response) {
         const result = FirefoxUploadDetailSchema.safeParse(response.data);
         if (!result.success) {
           throw result.error;
@@ -153,7 +153,7 @@ async function validateUpload({ uuid, logger }: {
   }
 }
 
-function uploadSourceCodeIfNeeded({
+function uploadSourceCodeIfNeeded ({
   slug,
   zipSource,
   version,
@@ -170,7 +170,7 @@ function uploadSourceCodeIfNeeded({
 
   return requestWithRetry({
     sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.body, { headers: formData.headers }),
-    parseResponse(response) {
+    parseResponse (response) {
       const result = FirefoxUploadSourceSchema.safeParse(response.data);
       if (!result.success) {
         throw result.error;
@@ -184,7 +184,7 @@ function uploadSourceCodeIfNeeded({
   });
 }
 
-export async function deployToFirefox(
+export async function deployToFirefox (
   {
     extId,
     jwtIssuer,

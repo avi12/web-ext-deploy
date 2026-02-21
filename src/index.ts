@@ -7,7 +7,7 @@ import { getStore, isSupportedStore } from "./stores/registry.js";
 import { toError } from "./utils.js";
 import { z } from "zod";
 
-async function runStoreDeploy(
+async function runStoreDeploy (
   store: string,
   json: Record<string, unknown>,
   inkLogger: ReturnType<typeof createInkLogger>,
@@ -31,7 +31,7 @@ async function runStoreDeploy(
   });
 }
 
-async function initCli() {
+async function initCli () {
   const argv = parser.parseSync();
   const preDeployLogs: string[] = [];
   const storeJsons = await getJsonStoresFromCli(argv, msg => preDeployLogs.push(msg));

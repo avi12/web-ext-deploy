@@ -12,11 +12,11 @@ export const storeRegistry: StoreDefinition[] = [...stores];
 export type StoreName = (typeof stores)[number]["name"];
 export const storeNames: StoreName[] = stores.map(store => store.name);
 
-export function getStore(name: string) {
+export function getStore (name: string) {
   return storeRegistry.find(store => store.name === name);
 }
 
-export function isSupportedStore(value: unknown): value is StoreName {
+export function isSupportedStore (value: unknown): value is StoreName {
   const result = z.string().safeParse(value);
   return result.success && storeNames.some(name => name === result.data);
 }

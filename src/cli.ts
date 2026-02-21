@@ -21,7 +21,7 @@ const EnvOptionsSchema = z.object({
   ...BaseOptionsSchema.shape
 });
 
-function getZodBaseType(value: unknown): Options["type"] {
+function getZodBaseType (value: unknown): Options["type"] {
   const inner = unwrapZod(value);
   if (inner instanceof z.ZodBoolean) {
     return "boolean";
@@ -35,7 +35,7 @@ function getZodBaseType(value: unknown): Options["type"] {
   return "string";
 }
 
-function unwrapZod(value: unknown): unknown {
+function unwrapZod (value: unknown): unknown {
   if (value instanceof z.ZodDefault) {
     return unwrapZod(value.removeDefault());
   }
@@ -45,7 +45,7 @@ function unwrapZod(value: unknown): unknown {
   return value;
 }
 
-function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
+function schemaToOptions (store: string | "base", schema: z.ZodTypeAny) {
   const options: Record<string, Options> = {};
   if (!(schema instanceof z.ZodObject)) {
     return options;
@@ -95,14 +95,14 @@ const EPILOGUE =
 
 const envStoreHelp = storeRegistry.map(store => renderStoreHelp(store.name, store.schema, "env")).join("");
 
-function applyStoreGroups(builder: ReturnType<typeof yargs>) {
+function applyStoreGroups (builder: ReturnType<typeof yargs>) {
   for (const [store, keys] of Object.entries(storeOptionGroups)) {
     builder = builder.group(keys, `${capitalCase(store)} Store:`);
   }
   return builder;
 }
 
-function stripCamelCaseArgs(message: string) {
+function stripCamelCaseArgs (message: string) {
   return message.replace(
     /Unknown arguments?: (.+)/,
     (_, args: string) => {
@@ -161,7 +161,7 @@ type Argv = ReturnType<typeof parser.parseSync>;
 type StoreConfig = Record<string, unknown>;
 type StoreConfigMap = Partial<Record<string, StoreConfig>>;
 
-function getJsons(command: string, argv: Argv) {
+function getJsons (command: string, argv: Argv) {
   if (command === "env") {
     const publishOnly = z.array(z.string()).safeParse(argv.publishOnly).data;
     const stores = (publishOnly && publishOnly.length > 0 ? publishOnly : storeNames).filter(isSupportedStore);
@@ -198,11 +198,11 @@ function getJsons(command: string, argv: Argv) {
 
 export { mapStoreArgs };
 
-function getJsonsFromArgs(store: string, argv: Argv) {
+function getJsonsFromArgs (store: string, argv: Argv) {
   return mapStoreArgs(Object.fromEntries(Object.entries(argv)), store);
 }
 
-async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void) {
+async function fetchMissingCookies (jsonStoresRaw: StoreConfigMap, log?: (message: string) => void) {
   for (const store of storeRegistry) {
     const fields = store.cookieFields;
     if (!fields || fields.length === 0) {
@@ -229,7 +229,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
     log?.(`${capitalCase(store.name)}: Fetching cookies...`);
     try {
       await getCookies([store.name]);
-    } catch(error) {
+    } catch (error) {
       throw new Error(red(`Failed to fetch cookies: ${error}`), { cause: error });
     }
 
@@ -242,7 +242,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
   }
 }
 
-function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: boolean) {
+function collectMissingArgs (jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: boolean) {
   const missingArgs: Record<string, { required: string[]; optional?: string[] }> = {};
 
   for (const store of storeRegistry) {
@@ -291,7 +291,7 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
   return missingArgs;
 }
 
-function collectMissingGlobalArgs(argv: Argv) {
+function collectMissingGlobalArgs (argv: Argv) {
   const globalSchema = BaseOptionsSchema.shape;
   const missingGlobal: string[] = [];
 
@@ -304,7 +304,7 @@ function collectMissingGlobalArgs(argv: Argv) {
   return missingGlobal;
 }
 
-export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) => void) {
+export async function getJsonStoresFromCli (argv: Argv, log?: (message: string) => void) {
   const command = z.string().safeParse(argv._[0]).data ?? "";
   const jsonStoresRaw = getJsons(command, argv);
 
@@ -351,11 +351,11 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
 
 export type { StoreConfigMap };
 
-export function getCookies(siteNames: Array<string>) {
+export function getCookies (siteNames: Array<string>) {
   return getSignInCookie(siteNames);
 }
 
-export function readCookiesFromEnv(storeName: string, cookieFields: string[]) {
+export function readCookiesFromEnv (storeName: string, cookieFields: string[]) {
   const { parsed = {} } = config({ path: `${storeName}.env` });
   const result: Record<string, string> = {};
   for (const field of cookieFields) {
@@ -366,8 +366,8 @@ export function readCookiesFromEnv(storeName: string, cookieFields: string[]) {
   return result;
 }
 
-export function createCookieRefreshCallback(store: string, cookieFields: string[]) {
-  return async() => {
+export function createCookieRefreshCallback (store: string, cookieFields: string[]) {
+  return async () => {
     await getCookies([store]);
     return readCookiesFromEnv(store, cookieFields);
   };

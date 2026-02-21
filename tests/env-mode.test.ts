@@ -13,7 +13,7 @@ const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 describe("Env mode - .env parsing + validation", () => {
   const tmpFiles: string[] = [];
 
-  function writeEnv(content: string): Record<string, string> {
+  function writeEnv (content: string): Record<string, string> {
     const tmpFile = path.join(os.tmpdir(), `web-ext-test-${Date.now()}-${Math.random()}.env`);
     fs.writeFileSync(tmpFile, content, "utf8");
     tmpFiles.push(tmpFile);

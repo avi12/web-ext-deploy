@@ -2,7 +2,7 @@ import { red } from "../../logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 import { z } from "zod";
 
-export function storeError(message: string) {
+export function storeError (message: string) {
   return red(`Firefox: ${message}`);
 }
 
@@ -36,7 +36,7 @@ export const FirefoxOptionsSubmissionApiSchema = z
 
 export type FirefoxOptionsSubmissionApi = z.infer<typeof FirefoxOptionsSubmissionApiSchema>;
 
-export function prepareFirefoxOptions(options: FirefoxOptionsSubmissionApi) {
+export function prepareFirefoxOptions (options: FirefoxOptionsSubmissionApi) {
   const correctedOptions = {
     ...options,
     zip: getCorrectZip(options.zip),

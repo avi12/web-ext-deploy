@@ -3,7 +3,7 @@ import { red } from "./logging.js";
 import { storeRegistry } from "./stores/registry.js";
 import type { DeployContext } from "./types.js";
 
-export function deployStore(
+export function deployStore (
   options: unknown,
   storeName: string,
   context?: DeployContext & { isDryRun?: boolean }

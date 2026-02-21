@@ -12,7 +12,7 @@ interface LogEntry {
   timestamp: Date;
 }
 
-function createDeploymentUI(storeStatuses: Map<string, StoreStatus>, logEntries: LogEntry[]) {
+function createDeploymentUI (storeStatuses: Map<string, StoreStatus>, logEntries: LogEntry[]) {
   const completedCount = Array.from(storeStatuses.values()).filter(
     status => status === "success" || status === "error"
   ).length;
@@ -45,7 +45,7 @@ function createDeploymentUI(storeStatuses: Map<string, StoreStatus>, logEntries:
   return lines.join("\n");
 }
 
-function getStatusSymbol(status: StoreStatus) {
+function getStatusSymbol (status: StoreStatus) {
   switch (status) {
     case "pending":
       return "\x1b[34m○\x1b[0m";
@@ -58,7 +58,7 @@ function getStatusSymbol(status: StoreStatus) {
   }
 }
 
-function getStatusText(status: StoreStatus) {
+function getStatusText (status: StoreStatus) {
   switch (status) {
     case "pending":
       return "Waiting...";
@@ -71,7 +71,7 @@ function getStatusText(status: StoreStatus) {
   }
 }
 
-function renderProgressBar(current: number, total: number) {
+function renderProgressBar (current: number, total: number) {
   const percentage = Math.round((current / total) * 100);
   const barWidth = 30;
   const filled = Math.round((current / total) * barWidth);
@@ -79,7 +79,7 @@ function renderProgressBar(current: number, total: number) {
   return `[${"█".repeat(filled)}${"░".repeat(barWidth - filled)}] ${percentage}%`;
 }
 
-export function createInkLogger(storeNames: string[]) {
+export function createInkLogger (storeNames: string[]) {
   const storeStatuses = new Map<string, StoreStatus>();
   for (const store of storeNames) {
     storeStatuses.set(store, "pending");
@@ -88,7 +88,7 @@ export function createInkLogger(storeNames: string[]) {
   const logEntries: LogEntry[] = [];
   let isMounted = true;
 
-  function renderUI() {
+  function renderUI () {
     if (!isMounted) {
       return;
     }
@@ -99,7 +99,7 @@ export function createInkLogger(storeNames: string[]) {
   }
 
   const logger = {
-    info(store: string, message: string) {
+    info (store: string, message: string) {
       logEntries.push({
         store, level: "info", message, timestamp: new Date()
       });
@@ -108,7 +108,7 @@ export function createInkLogger(storeNames: string[]) {
       }
       renderUI();
     },
-    warning(store: string, message: string) {
+    warning (store: string, message: string) {
       logEntries.push({
         store, level: "warning", message: `Warning: ${message}`, timestamp: new Date()
       });
@@ -117,7 +117,7 @@ export function createInkLogger(storeNames: string[]) {
       }
       renderUI();
     },
-    error(store: string, message: string) {
+    error (store: string, message: string) {
       logEntries.push({
         store, level: "error", message, timestamp: new Date()
       });
@@ -127,7 +127,7 @@ export function createInkLogger(storeNames: string[]) {
   };
 
   const monitor = {
-    updateStore(store: string, status: StoreStatus, message?: string) {
+    updateStore (store: string, status: StoreStatus, message?: string) {
       if (storeStatuses.get(store) === status) {
         return;
       }
@@ -139,7 +139,7 @@ export function createInkLogger(storeNames: string[]) {
       }
       renderUI();
     },
-    setZipPath(store: string, zipPath: string) {
+    setZipPath (store: string, zipPath: string) {
       logEntries.push({
         store, level: "info", message: `ZIP: ${zipPath}`, timestamp: new Date()
       });
@@ -158,13 +158,13 @@ export function createInkLogger(storeNames: string[]) {
       warning: msg => logger.warning(capitalCase(store), msg),
       error: msg => logger.error(capitalCase(store), msg)
     } satisfies StoreLogger),
-    unmount() {
+    unmount () {
       isMounted = false;
     }
   };
 }
 
-function unwrapZodType(zodValue: z.ZodTypeAny) {
+function unwrapZodType (zodValue: z.ZodTypeAny) {
   const unwrapped = unwrapZodWrappers(zodValue);
   const rawDescription = zodValue.description || "";
   const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
@@ -185,7 +185,7 @@ function unwrapZodType(zodValue: z.ZodTypeAny) {
   };
 }
 
-function unwrapZodWrappers(zodValue: unknown): { inner: unknown; defaultValue: unknown } {
+function unwrapZodWrappers (zodValue: unknown): { inner: unknown; defaultValue: unknown } {
   if (zodValue instanceof z.ZodDefault) {
     const result = unwrapZodWrappers(zodValue.removeDefault());
     return { inner: result.inner, defaultValue: zodValue._def.defaultValue };
@@ -196,13 +196,13 @@ function unwrapZodWrappers(zodValue: unknown): { inner: unknown; defaultValue: u
   return { inner: zodValue, defaultValue: undefined };
 }
 
-export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
+export function renderStoreHelp (storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
   if (!(schema instanceof z.ZodObject)) {
     return "";
   }
 
   const shape = schema.shape;
-  function formatFieldName(key: string) {
+  function formatFieldName (key: string) {
     const isDynamic = dynamicFields?.includes(key);
     const isOverridable = cliOverridableFields?.includes(key);
     if (mode === "cli" || (mode === "env" && isDynamic)) {
@@ -269,16 +269,16 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   return `\n${header}${colHeader}${separator}${rows}\n`;
 }
 
-export function renderFatalError(message: string) {
+export function renderFatalError (message: string) {
   process.stdout.write(`\x1b[31m✖\x1b[0m ${message}\n`);
 }
 
-export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
+export function renderGlobalArgsHelp (schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
   if (missingArgs.length === 0 || !(schema instanceof z.ZodObject)) {
     return "";
   }
 
-  function formatFieldName(key: string) {
+  function formatFieldName (key: string) {
     if (mode === "cli") {
       return `--${kebabCase(key)}`;
     }

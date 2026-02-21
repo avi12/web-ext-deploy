@@ -26,7 +26,7 @@ export type StoreDefinition = {
   cliOverridableFields?: string[];
 };
 
-export function defineStore<T, Name extends string>(config: {
+export function defineStore<T, Name extends string> (config: {
   name: Name;
   schema: z.ZodType<T>;
   prepare: (options: T) => T;
@@ -38,14 +38,14 @@ export function defineStore<T, Name extends string>(config: {
   return {
     name: config.name,
     schema: config.schema,
-    prepare(options: unknown) {
+    prepare (options: unknown) {
       const result = config.schema.safeParse(options);
       if (!result.success) {
         throw result.error;
       }
       return config.prepare(result.data);
     },
-    deploy(options: unknown, context?: DeployContext) {
+    deploy (options: unknown, context?: DeployContext) {
       const result = config.schema.safeParse(options);
       if (!result.success) {
         throw result.error;

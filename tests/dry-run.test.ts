@@ -31,10 +31,10 @@ const validInputs: Record<string, Record<string, unknown>> = {
   }
 };
 
-function tryDeployStore(options: unknown, store: string): Promise<boolean> {
+function tryDeployStore (options: unknown, store: string): Promise<boolean> {
   try {
     return deployStore(options, store, { isDryRun: true });
-  } catch(error) {
+  } catch (error) {
     return Promise.reject(error);
   }
 }
@@ -43,7 +43,7 @@ describe("dry-run mode", () => {
   describe("single store validation", () => {
     for (const [store,
       options] of Object.entries(validInputs)) {
-      it(`validates ${store} options without deploying`, async() => {
+      it(`validates ${store} options without deploying`, async () => {
         const result = await deployStore(options, store, { isDryRun: true });
         expect(result).toBe(true);
       });
@@ -55,7 +55,7 @@ describe("dry-run mode", () => {
   });
 
   describe("multi-store validation", () => {
-    it("validates all four stores simultaneously", async() => {
+    it("validates all four stores simultaneously", async () => {
       const results = await Promise.allSettled(
         Object.entries(validInputs).map(([store,
           options]) => tryDeployStore(options, store))
@@ -68,7 +68,7 @@ describe("dry-run mode", () => {
       }
     });
 
-    it("validates chrome + firefox together", async() => {
+    it("validates chrome + firefox together", async () => {
       const [chrome,
         firefox] = await Promise.all([
         deployStore(validInputs.chrome, "chrome", { isDryRun: true }),
@@ -78,7 +78,7 @@ describe("dry-run mode", () => {
       expect(firefox).toBe(true);
     });
 
-    it("validates edge + opera together", async() => {
+    it("validates edge + opera together", async () => {
       const [edge,
         opera] = await Promise.all([
         deployStore(validInputs.edge, "edge", { isDryRun: true }),
@@ -206,7 +206,7 @@ describe("dry-run mode", () => {
   });
 
   describe("mixed valid and invalid stores", () => {
-    it("chrome succeeds while firefox fails (missing jwtSecret)", async() => {
+    it("chrome succeeds while firefox fails (missing jwtSecret)", async () => {
       const results = await Promise.allSettled([
         tryDeployStore(validInputs.chrome, "chrome"),
         tryDeployStore({
@@ -218,7 +218,7 @@ describe("dry-run mode", () => {
       expect(results[1].status).toBe("rejected");
     });
 
-    it("edge succeeds while opera fails (missing csrftoken)", async() => {
+    it("edge succeeds while opera fails (missing csrftoken)", async () => {
       const results = await Promise.allSettled([
         tryDeployStore(validInputs.edge, "edge"),
         tryDeployStore({
@@ -230,7 +230,7 @@ describe("dry-run mode", () => {
       expect(results[1].status).toBe("rejected");
     });
 
-    it("three stores succeed while one fails", async() => {
+    it("three stores succeed while one fails", async () => {
       const results = await Promise.allSettled([
         tryDeployStore(validInputs.chrome, "chrome"),
         tryDeployStore(validInputs.firefox, "firefox"),
@@ -243,7 +243,7 @@ describe("dry-run mode", () => {
       expect(results[3].status).toBe("fulfilled");
     });
 
-    it("all stores fail with empty configs", async() => {
+    it("all stores fail with empty configs", async () => {
       const results = await Promise.allSettled([
         tryDeployStore({}, "chrome"),
         tryDeployStore({}, "firefox"),

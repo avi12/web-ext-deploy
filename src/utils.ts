@@ -12,20 +12,20 @@ const ExtensionManifestSchema = z.object({
   default_locale: z.string().optional()
 });
 
-export function getFullPath(file: string) {
+export function getFullPath (file: string) {
   return path.resolve(process.cwd(), file);
 }
 
-export function getIsFileExists(file: string) {
+export function getIsFileExists (file: string) {
   const correctedFile = file.includes("{version}") ? getCorrectZip(file) : file;
   return fs.existsSync(getFullPath(correctedFile));
 }
 
-export function isObjectEmpty(object: object) {
+export function isObjectEmpty (object: object) {
   return Object.keys(object).length === 0;
 }
 
-export function getCorrectZip(zipName: string) {
+export function getCorrectZip (zipName: string) {
   const packageJsonPath = getFullPath("package.json");
   if (!fs.existsSync(packageJsonPath)) {
     return zipName;
@@ -35,7 +35,7 @@ export function getCorrectZip(zipName: string) {
   return zipName.replace("{version}", version);
 }
 
-export async function getExtJson(zip: string) {
+export async function getExtJson (zip: string) {
   const blob = new Blob([fs.readFileSync(zip)]);
   const reader = new ZipReader(new BlobReader(blob));
   const entries = await reader.getEntries();
@@ -53,7 +53,7 @@ export async function getExtJson(zip: string) {
   return manifest.data;
 }
 
-export function createGitIgnoreIfNeeded(stores: Array<string>) {
+export function createGitIgnoreIfNeeded (stores: Array<string>) {
   const filename = ".gitignore";
   if (!fs.existsSync(filename)) {
     fs.writeFileSync(filename, "*.env");
@@ -74,7 +74,7 @@ export function createGitIgnoreIfNeeded(stores: Array<string>) {
   fs.appendFileSync(filename, storesToAppend.map(store => `${store}.env`).join("\n"));
 }
 
-export function mapStoreArgs(rawArgs: Record<string, unknown>, store: string) {
+export function mapStoreArgs (rawArgs: Record<string, unknown>, store: string) {
   const prefix = `${store}-`;
   return Object.fromEntries(
     Object.entries(rawArgs)
@@ -83,22 +83,22 @@ export function mapStoreArgs(rawArgs: Record<string, unknown>, store: string) {
   );
 }
 
-export function headersToEnv(headersTotal: Record<string, unknown>) {
+export function headersToEnv (headersTotal: Record<string, unknown>) {
   return Object.entries(headersTotal)
     .map(([header, value]) => `${header}="${value}"`)
     .join("\n");
 }
 
-function getBackoffDelayMs(attempt: number) {
+function getBackoffDelayMs (attempt: number) {
   return Math.min(2 ** attempt, 5) * 1000;
 }
 
-export function toError(value: unknown) {
+export function toError (value: unknown) {
   return value instanceof Error ? value : new Error(String(value));
 }
 
 export class CookieAuthError extends Error {
-  constructor(store: string) {
+  constructor (store: string) {
     super(`${store}: Authentication failed — cookies may be expired`);
     this.name = "CookieAuthError";
   }
@@ -111,7 +111,7 @@ export type HttpLikeResponse = {
   headers?: Record<string, string>;
 };
 
-export async function requestWithRetry<T>({
+export async function requestWithRetry<T> ({
   sendRequest,
   parseResponse,
   formatError,
@@ -126,7 +126,7 @@ export async function requestWithRetry<T>({
   logger?: StoreLogger;
   onRateLimit?: (response: HttpLikeResponse) => Promise<void>;
 }): Promise<T> {
-  async function attempt(count: number): Promise<T> {
+  async function attempt (count: number): Promise<T> {
     const response = await sendRequest().catch((error: unknown): undefined => {
       if (error instanceof CookieAuthError) {
         throw error;

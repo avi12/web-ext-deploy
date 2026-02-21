@@ -3,11 +3,11 @@ import { createGitIgnoreIfNeeded, headersToEnv } from "./utils.js";
 import fs from "node:fs";
 import { chromium, Page } from "playwright";
 
-function getFilename(site: string) {
+function getFilename (site: string) {
   return `./${site}.env`;
 }
 
-function extractCookies(cookiesInput: string, cookiesToLogin: Array<string>) {
+function extractCookies (cookiesInput: string, cookiesToLogin: Array<string>) {
   return cookiesInput
     .split("; ")
     .filter(cookieName => cookieName.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
@@ -18,7 +18,7 @@ function extractCookies(cookiesInput: string, cookiesToLogin: Array<string>) {
     .join("\n");
 }
 
-async function addNavigationListener({
+async function addNavigationListener ({
   page,
   cookiesToLogin,
   urlToEnd,
@@ -41,7 +41,7 @@ async function addNavigationListener({
   });
 }
 
-async function saveOperaHeaders(page: Page) {
+async function saveOperaHeaders (page: Page) {
   const cookiesToLogin = ["sessionid", "csrftoken"];
   const url = "https://addons.opera.com/developer/";
   const cookiePromise = new Promise<string>(resolve => {
@@ -58,7 +58,7 @@ async function saveOperaHeaders(page: Page) {
 
 const siteFuncs: Record<string, typeof saveOperaHeaders> = { opera: saveOperaHeaders } as const;
 
-function appendToEnv(filename: string, headers: string) {
+function appendToEnv (filename: string, headers: string) {
   const { parsed: envCurrent = {} } = config({ path: filename });
   const envHeaders = parse(headers);
   const envNew = {
@@ -68,11 +68,11 @@ function appendToEnv(filename: string, headers: string) {
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
-function getInvalidSite(siteNames: Array<string>) {
+function getInvalidSite (siteNames: Array<string>) {
   return siteNames.find(site => !siteFuncs[site]);
 }
 
-export async function getSignInCookie(siteNames: Array<string>) {
+export async function getSignInCookie (siteNames: Array<string>) {
   const invalidSite = getInvalidSite(siteNames);
   if (invalidSite) {
     throw new Error(`Invalid site: ${invalidSite}`);

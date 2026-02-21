@@ -2,7 +2,7 @@ import { red } from "../../logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils.js";
 import { z } from "zod";
 
-export function storeError(message: string) {
+export function storeError (message: string) {
   return red(`Chrome: ${message}`);
 }
 
@@ -27,7 +27,7 @@ export const ChromeOptionsSchema = z
 
 export type ChromeOptions = z.infer<typeof ChromeOptionsSchema>;
 
-export function prepareChromeOptions(options: ChromeOptions) {
+export function prepareChromeOptions (options: ChromeOptions) {
   const correctedOptions = { ...options, zip: getCorrectZip(options.zip) };
   const result = ChromeOptionsSchema.safeParse(correctedOptions);
   if (!result.success) {
