@@ -6,6 +6,7 @@ export function storeError(message: string) {
   return red(`Firefox: ${message}`);
 }
 
+// https://mozilla.github.io/addons-server/topics/api/addons.html
 export const FirefoxOptionsSubmissionApiSchema = z
   .object({
     extId: z.string().nonempty().describe("Get it from https://addons.mozilla.org/addon/EXT_ID"),
@@ -41,8 +42,8 @@ export function prepareFirefoxOptions(options: FirefoxOptionsSubmissionApi) {
     ...options,
     zip: getCorrectZip(options.zip),
     zipSource: options.zipSource ? getCorrectZip(options.zipSource) : undefined,
-    changelog: options.changelog?.replace(/\/\/n/g, "\n"),
-    devChangelog: options.devChangelog?.replace(/\/\/n/g, "\n")
+    changelog: options.changelog?.replaceAll("\\n", "\n"),
+    devChangelog: options.devChangelog?.replaceAll("\\n", "\n")
   };
 
   const result = FirefoxOptionsSubmissionApiSchema.safeParse(correctedOptions);

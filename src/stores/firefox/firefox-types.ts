@@ -9,6 +9,7 @@ const FirefoxErrorMessageSchema = z.object({
   tier: z.number()
 });
 
+// https://mozilla.github.io/addons-server/topics/api/addons.html#upload-detail
 export const FirefoxUploadDetailSchema = z.object({
   uuid: z.string(),
   channel: z.enum(["listed", "unlisted"]),
@@ -21,10 +22,9 @@ export const FirefoxUploadDetailSchema = z.object({
   detail: z.string().optional()
 });
 
-export type FirefoxUploadDetail = z.infer<typeof FirefoxUploadDetailSchema>;
-
+// https://mozilla.github.io/addons-server/topics/api/addons.html#version-create
 export const FirefoxCreateNewVersionSchema = z
-  .object({
+  .looseObject({
     id: z.number(),
     approval_notes: z.string(),
     channel: z.enum(["listed", "unlisted"]),
@@ -61,7 +61,7 @@ export const FirefoxCreateNewVersionSchema = z
     reviewed: z.string().nullable(),
     source: z.string().nullable(),
     version: z.string()
-  })
-  .passthrough();
+  });
 
+// https://mozilla.github.io/addons-server/topics/api/addons.html#version-sources
 export const FirefoxUploadSourceSchema = FirefoxCreateNewVersionSchema;

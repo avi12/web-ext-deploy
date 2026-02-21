@@ -6,6 +6,7 @@ export function storeError(message: string) {
   return red(`Chrome: ${message}`);
 }
 
+// https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/publish
 export const ChromeOptionsSchema = z
   .object({
     extId: z.string().nonempty().describe("Get it from https://chromewebstore.google.com/detail/EXT_ID"),

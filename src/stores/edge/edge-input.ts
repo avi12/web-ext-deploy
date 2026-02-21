@@ -6,6 +6,7 @@ export function storeError(message: string) {
   return red(`Edge: ${message}`);
 }
 
+// https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/using-addons-api
 export const EdgeOptionsPublishApiSchema = z
   .object({
     productId: z.string().nonempty().describe("Get it from https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID"),
@@ -30,7 +31,7 @@ export function prepareEdgeOptions(options: EdgeOptionsPublishApi) {
   const correctedOptions = {
     ...options,
     zip: getCorrectZip(options.zip),
-    devChangelog: options.devChangelog?.replace(/\/\n/g, "\n")
+    devChangelog: options.devChangelog?.replaceAll("\\n", "\n")
   };
 
   const result = EdgeOptionsPublishApiSchema.safeParse(correctedOptions);
