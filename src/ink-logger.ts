@@ -227,7 +227,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   const label = missingFields ? "Missing arguments" : "Arguments";
   const header = `${Colors.Yellow}${title}${Colors.Reset} - ${label}:\n`;
   const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
-  const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
+  const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
   let rows = "";
   for (const field of fields) {
@@ -315,7 +315,7 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
 
   const header = `${Colors.Yellow}Global Arguments${Colors.Reset}:\n`;
   const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
-  const separator = `  ${"─".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
+  const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
   let rows = "";
   for (const field of fields) {
