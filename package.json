@@ -76,7 +76,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "reinstall-locally": "pnpm unlink -g && pnpm i && pnpm link -g",
-    "chrome:token": "tsx scripts/get-chrome-refresh-token.tsx --"
+    "chrome:token": "tsx scripts/get-chrome-refresh-token.tsx"
   },
   "lint-staged": {
     "*.ts": [
