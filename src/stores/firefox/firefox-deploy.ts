@@ -88,13 +88,13 @@ async function createNewVersion({
   slug: string;
   uuid: string;
   changelog: string;
-  changelogLang?: string;
+  changelogLang: string;
   devChangelog: string;
   zip: string;
   logger?: DeployContext["logger"];
 }) {
   const { default_locale } = await getExtJson(zip);
-  const locale = changelogLang ?? default_locale ?? "en-US";
+  const locale = default_locale ?? changelogLang;
 
   if (changelog) {
     logger?.info(`Adding changelog: ${changelog}`);

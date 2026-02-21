@@ -29,7 +29,7 @@ export const FirefoxOptionsSubmissionApiSchema = z
     zip: z.string().min(1, storeError("No zip is provided")).describe("Path to the ZIP file"),
     zipSource: z.string().optional().describe("Path to the source code ZIP"),
     changelog: z.string().optional().describe("Changelog for this version"),
-    changelogLang: z.string().optional().describe("Changelog language code (default: default_locale || en-US)"),
+    changelogLang: z.string().default("en-US").describe("Changelog language code (default: manifest.json's default_locale or en-US)"),
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })
   .check(ctx => {

@@ -205,13 +205,10 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     let defaultValue = zodValue instanceof z.ZodDefault ? String(zodValue._def.defaultValue) : "";
     let description = zodValue.description || "";
 
-    // Extract (default: ...) from description into the Default column
-    if (!defaultValue) {
-      const defaultMatch = description.match(/\s*\(default:\s*(.+?)\)\s*$/i);
-      if (defaultMatch) {
-        defaultValue = defaultMatch[1];
-        description = description.slice(0, defaultMatch.index);
-      }
+    const defaultMatch = description.match(/\s*\(default:\s*(.+?)\)\s*$/i);
+    if (defaultMatch) {
+      defaultValue = defaultMatch[1];
+      description = description.slice(0, defaultMatch.index);
     }
 
     fields.push({ name: formatFieldName(key),
