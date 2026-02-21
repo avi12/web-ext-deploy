@@ -1,4 +1,4 @@
-import { FormData } from "../../form-data.js";
+import { buildFormData } from "../../form-data.js";
 import { createHttpClient } from "../../http-client.js";
 import { generateJwt } from "../../jwt.js";
 import type { DeployContext } from "../../types.js";
@@ -45,12 +45,13 @@ function uploadZip({
   jwtSecret: string;
   logger?: DeployContext["logger"];
 }) {
-  const formData = new FormData();
-  formData.append("upload", fs.createReadStream(zip));
-  formData.append("channel", "listed");
+  const formData = buildFormData([
+    { name: "upload", value: fs.createReadStream(zip) },
+    { name: "channel", value: "listed" }
+  ]);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.post("upload/", formData.getBody(), { headers: { ...formData.getHeaders(), Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` } }),
+    sendRequest: () => httpClient.post("upload/", formData.body, { headers: { ...formData.headers, Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` } }),
     parseResponse(response) {
       const result = FirefoxUploadDetailSchema.safeParse(response.data);
       if (!result.success) {
@@ -163,11 +164,12 @@ function uploadSourceCodeIfNeeded({
   version: string;
   logger?: DeployContext["logger"];
 }) {
-  const formData = new FormData();
-  formData.append("source", fs.createReadStream(zipSource));
+  const formData = buildFormData([
+    { name: "source", value: fs.createReadStream(zipSource) }
+  ]);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.getBody(), { headers: formData.getHeaders() }),
+    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.body, { headers: formData.headers }),
     parseResponse(response) {
       const result = FirefoxUploadSourceSchema.safeParse(response.data);
       if (!result.success) {
