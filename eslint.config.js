@@ -111,5 +111,16 @@ export default [
         }
       ]
     }
+  },
+  {
+    files: ["*.config.ts", "*.config.js"],
+    rules: {
+      "@stylistic/object-curly-newline": ["error", {
+        ObjectExpression: { multiline: true, consistent: true },
+        ObjectPattern: { multiline: true, consistent: true },
+        ImportDeclaration: "never",
+        ExportDeclaration: "never"
+      }]
+    }
   }
 ];

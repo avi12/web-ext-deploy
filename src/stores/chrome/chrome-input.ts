@@ -8,7 +8,7 @@ export function storeError(message: string) {
 
 export const ChromeOptionsSchema = z
   .object({
-    extId: z.string().nonempty(storeError("No extension ID is provided")).describe("Chrome Web Store extension ID"),
+    extId: z.string().nonempty(storeError("No extension ID is provided")).describe("Get it from https://chromewebstore.google.com/detail/EXT_ID"),
     publisherId: z.string().nonempty(storeError("No publisher ID is provided")).describe("Chrome Web Store publisher ID"),
     refreshToken: z.string().nonempty(storeError("No refresh token is provided")).describe("OAuth refresh token"),
     zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),

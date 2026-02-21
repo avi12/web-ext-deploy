@@ -18,31 +18,31 @@ function createDeploymentUI(storeStatuses: Map<string, StoreStatus>, logEntries:
   ).length;
   const totalCount = storeStatuses.size;
 
-  let output = "\x1b[36m\x1b[1mWeb Extension Deployment\x1b[0m\n\n";
+  const lines = ["\x1b[36m\x1b[1mWeb Extension Deployment\x1b[0m\n"];
 
   // Store Status Section
   for (const [store, status] of storeStatuses.entries()) {
     const symbol = getStatusSymbol(status);
     const statusText = getStatusText(status);
-    output += `${symbol} ${store}: ${statusText}\n`;
+    lines.push(`${symbol} ${store}: ${statusText}`);
   }
 
-  output += "\n";
+  lines.push("");
 
   // Progress Bar
-  output += renderProgressBar(completedCount, totalCount) + "\n\n";
+  lines.push(renderProgressBar(completedCount, totalCount), "");
 
   // Recent Logs Section
   if (logEntries.length > 0) {
-    output += "\x1b[90m\x1b[1mRecent Activity:\x1b[0m\n";
+    lines.push("\x1b[90m\x1b[1mRecent Activity:\x1b[0m");
 
     for (const entry of logEntries.slice(-5)) {
       const color = entry.level === "error" ? "\x1b[31m" : entry.level === "warning" ? "\x1b[33m" : "\x1b[37m";
-      output += `${color}[${entry.timestamp.toLocaleTimeString()}] ${entry.store}: ${entry.message}\x1b[0m\n`;
+      lines.push(`${color}[${entry.timestamp.toLocaleTimeString()}] ${entry.store}: ${entry.message}\x1b[0m`);
     }
   }
 
-  return output;
+  return lines.join("\n");
 }
 
 function getStatusSymbol(status: StoreStatus) {
@@ -164,6 +164,38 @@ export function createInkLogger(storeNames: string[]) {
   };
 }
 
+function unwrapZodType(zodValue: z.ZodTypeAny) {
+  const unwrapped = unwrapZodWrappers(zodValue);
+  const rawDescription = zodValue.description || "";
+  const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
+
+  const type = unwrapped.inner instanceof z.ZodBoolean ? "boolean"
+    : unwrapped.inner instanceof z.ZodNumber ? "number"
+      : unwrapped.inner instanceof z.ZodArray ? "array"
+        : "string";
+
+  const defaultValue = defaultMatch
+    ? defaultMatch[1]
+    : unwrapped.defaultValue !== undefined ? String(unwrapped.defaultValue) : "";
+
+  const description = defaultMatch ? rawDescription.slice(0, defaultMatch.index) : rawDescription;
+
+  return {
+    type, defaultValue, description
+  };
+}
+
+function unwrapZodWrappers(zodValue: unknown): { inner: unknown; defaultValue: unknown } {
+  if (zodValue instanceof z.ZodDefault) {
+    const result = unwrapZodWrappers(zodValue.removeDefault());
+    return { inner: result.inner, defaultValue: zodValue._def.defaultValue };
+  }
+  if (zodValue instanceof z.ZodOptional || zodValue instanceof z.ZodNullable) {
+    return unwrapZodWrappers(zodValue.unwrap());
+  }
+  return { inner: zodValue, defaultValue: undefined };
+}
+
 export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
   if (!(schema instanceof z.ZodObject)) {
     return "";
@@ -200,33 +232,9 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     const zodValue = shape[key];
     const isOptional =
       zodValue instanceof z.ZodOptional || zodValue instanceof z.ZodNullable || zodValue instanceof z.ZodDefault;
-
-    let defaultValue = "";
-    let unwrapped = zodValue;
-    while (unwrapped instanceof z.ZodOptional || unwrapped instanceof z.ZodNullable || unwrapped instanceof z.ZodDefault) {
-      if (unwrapped instanceof z.ZodDefault) {
-        defaultValue = String(unwrapped._def.defaultValue);
-        unwrapped = unwrapped.removeDefault();
-      } else {
-        unwrapped = unwrapped.unwrap();
-      }
-    }
-
-    let type = "string";
-    if (unwrapped instanceof z.ZodBoolean) {
-      type = "boolean";
-    } else if (unwrapped instanceof z.ZodNumber) {
-      type = "number";
-    } else if (unwrapped instanceof z.ZodArray) {
-      type = "array";
-    }
-    let description = zodValue.description || "";
-
-    const defaultMatch = description.match(/\s*\(default:\s*(.+?)\)\s*$/i);
-    if (defaultMatch) {
-      defaultValue = defaultMatch[1];
-      description = description.slice(0, defaultMatch.index);
-    }
+    const {
+      type, defaultValue, description
+    } = unwrapZodType(zodValue);
 
     fields.push({
       name: formatFieldName(key),
@@ -249,17 +257,16 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
   const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
-  let rows = "";
-  for (const field of fields) {
+  const rows = fields.map(field => {
     const reqMark = field.isMissing ? `${Colors.Green}✔${Colors.Reset}` : "";
     const reqPad = " ".repeat(field.isMissing ? reqWidth - 1 : reqWidth);
     const nameStr = field.isMissing ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
     const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
     const defaultStr = field.defaultValue.padEnd(defaultWidth);
-    rows += `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark}${reqPad}${defaultStr}${field.description}\n`;
-  }
+    return `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark}${reqPad}${defaultStr}${field.description}`;
+  }).join("\n");
 
-  return `\n${header}${colHeader}${separator}${rows}`;
+  return `\n${header}${colHeader}${separator}${rows}\n`;
 }
 
 export function renderFatalError(message: string) {
@@ -290,32 +297,9 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
       continue;
     }
     const zodValue = shape[key];
-    let defaultValue = "";
-    let unwrapped = zodValue;
-    while (unwrapped instanceof z.ZodOptional || unwrapped instanceof z.ZodNullable || unwrapped instanceof z.ZodDefault) {
-      if (unwrapped instanceof z.ZodDefault) {
-        defaultValue = String(unwrapped._def.defaultValue);
-        unwrapped = unwrapped.removeDefault();
-      } else {
-        unwrapped = unwrapped.unwrap();
-      }
-    }
-
-    let type = "string";
-    if (unwrapped instanceof z.ZodBoolean) {
-      type = "boolean";
-    } else if (unwrapped instanceof z.ZodNumber) {
-      type = "number";
-    } else if (unwrapped instanceof z.ZodArray) {
-      type = "array";
-    }
-    let description = zodValue.description || "";
-
-    const defaultMatch = description.match(/\s*\(default:\s*(.+?)\)\s*$/i);
-    if (defaultMatch) {
-      defaultValue = defaultMatch[1];
-      description = description.slice(0, defaultMatch.index);
-    }
+    const {
+      type, defaultValue, description
+    } = unwrapZodType(zodValue);
 
     fields.push({
       name: formatFieldName(key),
@@ -339,11 +323,10 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
   const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
   const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
-  let rows = "";
-  for (const field of fields) {
+  const rows = fields.map(field => {
     const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
-    rows += `  ${field.name}${namePad}${field.type.padEnd(typeWidth)}${"".padEnd(reqWidth)}${field.defaultValue.padEnd(defaultWidth)}${field.description}\n`;
-  }
+    return `  ${field.name}${namePad}${field.type.padEnd(typeWidth)}${"".padEnd(reqWidth)}${field.defaultValue.padEnd(defaultWidth)}${field.description}`;
+  }).join("\n");
 
-  return `\n${header}${colHeader}${separator}${rows}`;
+  return `\n${header}${colHeader}${separator}${rows}\n`;
 }

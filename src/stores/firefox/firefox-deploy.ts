@@ -4,10 +4,7 @@ import { generateJwt } from "../../jwt.js";
 import type { DeployContext } from "../../types.js";
 import { getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
 import { FirefoxOptionsSubmissionApi, storeError } from "./firefox-input.js";
-import { FirefoxUploadDetailSchema,
-  FirefoxCreateNewVersionSchema,
-  FirefoxUploadSourceSchema,
-  type FirefoxUploadDetail } from "./firefox-types.js";
+import { FirefoxUploadDetailSchema, FirefoxCreateNewVersionSchema, FirefoxUploadSourceSchema } from "./firefox-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
@@ -126,9 +123,8 @@ async function validateUpload({ uuid, logger }: {
 }) {
   const pollIntervalMs = 5_000;
 
-  let data: FirefoxUploadDetail;
-  do {
-    data = await requestWithRetry({
+  for (;;) {
+    const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`upload/${uuid}/`),
       parseResponse(response) {
         const result = FirefoxUploadDetailSchema.safeParse(response.data);
@@ -141,21 +137,19 @@ async function validateUpload({ uuid, logger }: {
       errorContext: "Upload verification failed",
       logger
     });
-    await setTimeout(pollIntervalMs);
-  } while (!data.processed);
 
-  const errors: Array<string> = [];
-  for (const message of data.validation.messages || []) {
-    if (message.type === "error") {
-      errors.push(message.message);
+    if (data.processed) {
+      const errors = (data.validation.messages || [])
+        .filter(message => message.type === "error")
+        .map(message => message.message);
+      if (errors.length > 0) {
+        throw new Error(storeError(errors.join("\n")));
+      }
+      return data;
     }
-  }
 
-  if (errors.length > 0) {
-    throw new Error(storeError(errors.join("\n")));
+    await setTimeout(pollIntervalMs);
   }
-
-  return data;
 }
 
 function uploadSourceCodeIfNeeded({

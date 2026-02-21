@@ -40,13 +40,10 @@ export async function getExtJson(zip: string) {
   const reader = new ZipReader(new BlobReader(blob));
   const entries = await reader.getEntries();
 
-  let manifestContent = "";
-  for (const entry of entries) {
-    if (entry.filename === "manifest.json" && "getData" in entry) {
-      manifestContent = await entry.getData(new TextWriter());
-      break;
-    }
-  }
+  const manifestEntry = entries.find(entry => entry.filename === "manifest.json" && "getData" in entry);
+  const manifestContent = manifestEntry && "getData" in manifestEntry
+    ? await manifestEntry.getData(new TextWriter())
+    : "";
 
   await reader.close();
   const manifest = ExtensionManifestSchema.safeParse(JSON.parse(manifestContent));
@@ -129,29 +126,26 @@ export async function requestWithRetry<T>({
   logger?: StoreLogger;
   onRateLimit?: (response: HttpLikeResponse) => Promise<void>;
 }): Promise<T> {
-  let attempt = 0;
-
-  for (;;) {
-    let response: HttpLikeResponse;
-    try {
-      response = await sendRequest();
-    } catch(error) {
+  async function attempt(count: number): Promise<T> {
+    const response = await sendRequest().catch((error: unknown): undefined => {
       if (error instanceof CookieAuthError) {
         throw error;
       }
-      await setTimeout(getBackoffDelayMs(attempt));
-      attempt++;
-      continue;
+      return undefined;
+    });
+
+    if (!response) {
+      await setTimeout(getBackoffDelayMs(count));
+      return attempt(count + 1);
     }
 
     if (response.status === 429) {
       if (onRateLimit) {
         await onRateLimit(response);
       } else {
-        await setTimeout(getBackoffDelayMs(attempt));
+        await setTimeout(getBackoffDelayMs(count));
       }
-      attempt++;
-      continue;
+      return attempt(count + 1);
     }
 
     if (response.status >= 400 && response.status < 500) {
@@ -161,11 +155,12 @@ export async function requestWithRetry<T>({
     }
 
     if (response.status >= 500) {
-      await setTimeout(getBackoffDelayMs(attempt));
-      attempt++;
-      continue;
+      await setTimeout(getBackoffDelayMs(count));
+      return attempt(count + 1);
     }
 
     return parseResponse(response);
   }
+
+  return attempt(0);
 }

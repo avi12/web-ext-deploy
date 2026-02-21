@@ -41,11 +41,8 @@ async function fetchResponse(url: string, options: RequestInit) {
 
 export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
   function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
-    let url = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
-
-    if (options.params) {
-      url += `?${stringifyParams(options.params)}`;
-    }
+    const base = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
+    const url = options.params ? `${base}?${stringifyParams(options.params)}` : base;
 
     const headers = {
       ...defaultHeaders,

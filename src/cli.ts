@@ -21,6 +21,30 @@ const EnvOptionsSchema = z.object({
   ...BaseOptionsSchema.shape
 });
 
+function getZodBaseType(value: unknown): Options["type"] {
+  const inner = unwrapZod(value);
+  if (inner instanceof z.ZodBoolean) {
+    return "boolean";
+  }
+  if (inner instanceof z.ZodNumber) {
+    return "number";
+  }
+  if (inner instanceof z.ZodArray) {
+    return "array";
+  }
+  return "string";
+}
+
+function unwrapZod(value: unknown): unknown {
+  if (value instanceof z.ZodDefault) {
+    return unwrapZod(value.removeDefault());
+  }
+  if (value instanceof z.ZodOptional || value instanceof z.ZodNullable) {
+    return unwrapZod(value.unwrap());
+  }
+  return value;
+}
+
 function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
   const options: Record<string, Options> = {};
   if (!(schema instanceof z.ZodObject)) {
@@ -32,26 +56,10 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
       continue;
     }
     const optionName = store === "base" ? kebabCase(key) : `${store}-${kebabCase(key)}`;
-    let type: Options["type"] = "string";
     const isOptional =
       value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
 
-    let valueType = value;
-    while (valueType instanceof z.ZodOptional || valueType instanceof z.ZodNullable || valueType instanceof z.ZodDefault) {
-      if (valueType instanceof z.ZodDefault) {
-        valueType = valueType.removeDefault();
-      } else {
-        valueType = valueType.unwrap();
-      }
-    }
-
-    if (valueType instanceof z.ZodBoolean) {
-      type = "boolean";
-    } else if (valueType instanceof z.ZodNumber) {
-      type = "number";
-    } else if (valueType instanceof z.ZodArray) {
-      type = "array";
-    }
+    const type = getZodBaseType(value);
 
     const description = value.description || "";
     options[optionName] = { type, description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description };
@@ -302,14 +310,11 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
 
   if (isObjectEmpty(jsonStoresRaw)) {
     if (command === "env") {
-      let errorContent = red("No .env files found. In env mode, store credentials are read from .env files.\n");
-      for (const store of storeRegistry) {
-        errorContent += renderStoreHelp(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields);
-      }
+      const storeHelp = storeRegistry.map(store => renderStoreHelp(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields)).join("");
       const hasCookieStores = storeRegistry.some(store => store.cookieFields && store.cookieFields.length > 0);
       const allGlobalKeys = ["publishOnly", ...(hasCookieStores ? ["autoFetchCookies"] : []), "dryRun", "verbose"];
-      errorContent += renderGlobalArgsHelp(EnvOptionsSchema, allGlobalKeys, "cli");
-      throw new Error(errorContent);
+      const globalHelp = renderGlobalArgsHelp(EnvOptionsSchema, allGlobalKeys, "cli");
+      throw new Error(red("No .env files found. In env mode, store credentials are read from .env files.\n") + storeHelp + globalHelp);
     }
     throw new Error(red("Supply arguments for at least one store."));
   }
@@ -322,27 +327,23 @@ export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) =
   const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCookies);
   if (Object.keys(missingArgs).length > 0) {
     const isCliMode = command === "cli";
-    let errorContent = red("Missing required arguments:\n");
+    const storeHelpParts: string[] = [];
     for (const storeName in missingArgs) {
       const store = getStore(storeName);
       if (store) {
         const { required, optional = [] } = missingArgs[storeName];
-        errorContent += renderStoreHelp(storeName, store.schema, isCliMode ? "cli" : "env", [...required, ...optional], store.dynamicFields, store.cliOverridableFields);
+        storeHelpParts.push(renderStoreHelp(storeName, store.schema, isCliMode ? "cli" : "env", [...required, ...optional], store.dynamicFields, store.cliOverridableFields));
       }
     }
     const hasCookieStores = Object.keys(missingArgs).some(storeName => {
       const store = getStore(storeName);
       return store?.cookieFields && store.cookieFields.length > 0;
     });
-    let missingGlobalArgs = collectMissingGlobalArgs(argv);
-    if (!hasCookieStores) {
-      missingGlobalArgs = missingGlobalArgs.filter(key => key !== "autoFetchCookies");
-    }
-    if (missingGlobalArgs.length > 0) {
-      const globalSchema = isCliMode ? BaseOptionsSchema : EnvOptionsSchema;
-      errorContent += renderGlobalArgsHelp(globalSchema, missingGlobalArgs, "cli");
-    }
-    throw new Error(errorContent);
+    const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
+    const globalHelp = missingGlobalArgs.length > 0
+      ? renderGlobalArgsHelp(isCliMode ? BaseOptionsSchema : EnvOptionsSchema, missingGlobalArgs, "cli")
+      : "";
+    throw new Error(red("Missing required arguments:\n") + storeHelpParts.join("") + globalHelp);
   }
 
   return jsonStoresRaw;
@@ -371,3 +372,4 @@ export function createCookieRefreshCallback(store: string, cookieFields: string[
     return readCookiesFromEnv(store, cookieFields);
   };
 }
+// trigger

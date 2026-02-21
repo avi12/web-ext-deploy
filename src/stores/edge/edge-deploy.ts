@@ -2,7 +2,7 @@ import { createHttpClient } from "../../http-client.js";
 import type { DeployContext } from "../../types.js";
 import { getExtJson, requestWithRetry, type HttpLikeResponse } from "../../utils.js";
 import { EdgeOptionsPublishApi, storeError } from "./edge-input.js";
-import { PublishOperationStatusSchema, StatusPackageUploadSchema, type StatusPackageUpload } from "./edge-types.js";
+import { PublishOperationStatusSchema, StatusPackageUploadSchema } from "./edge-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
@@ -34,9 +34,8 @@ async function checkStatusOfPackageUpload({
 }) {
   const pollIntervalMs = 5_000;
 
-  let data: StatusPackageUpload;
-  do {
-    data = await requestWithRetry({
+  for (;;) {
+    const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`),
       parseResponse(response) {
         const result = StatusPackageUploadSchema.safeParse(response.data);
@@ -54,10 +53,11 @@ async function checkStatusOfPackageUpload({
       const errors = (data.errors || []).map(({ message }) => message).join("\n");
       throw new Error(storeError(errors));
     }
+    if (data.status !== "InProgress") {
+      return data;
+    }
     await setTimeout(pollIntervalMs);
-  } while (data.status === "InProgress");
-
-  return data;
+  }
 }
 
 function parseLocation(response: HttpLikeResponse) {

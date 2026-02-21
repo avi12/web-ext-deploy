@@ -81,8 +81,7 @@ async function waitForUpload({
 }) {
   const pollIntervalMs = 5_000;
 
-  let uploadState;
-  do {
+  for (;;) {
     const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`),
       parseResponse(response) {
@@ -97,15 +96,15 @@ async function waitForUpload({
       logger
     });
 
-    uploadState = data.lastAsyncUploadState;
-    if (uploadState === UploadState.SUCCEEDED) {
+    const { lastAsyncUploadState } = data;
+    if (lastAsyncUploadState === UploadState.SUCCEEDED) {
       return;
     }
-    if (uploadState !== UploadState.IN_PROGRESS) {
-      throw new Error(storeError(`Upload failed with state: ${uploadState}`));
+    if (lastAsyncUploadState !== UploadState.IN_PROGRESS) {
+      throw new Error(storeError(`Upload failed with state: ${lastAsyncUploadState}`));
     }
     await setTimeout(pollIntervalMs);
-  } while (uploadState === UploadState.IN_PROGRESS);
+  }
 }
 
 async function uploadZip({

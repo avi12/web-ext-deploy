@@ -16,11 +16,9 @@ export function parse(envContent: string) {
     }
 
     const key = trimmed.slice(0, equalsIndex).trim();
-    let value = trimmed.slice(equalsIndex + 1).trim();
-
-    if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
+    const raw = trimmed.slice(equalsIndex + 1).trim();
+    const isQuoted = (raw.startsWith("\"") && raw.endsWith("\"")) || (raw.startsWith("'") && raw.endsWith("'"));
+    const value = isQuoted ? raw.slice(1, -1) : raw;
 
     result[key] = value;
   }

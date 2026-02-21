@@ -14,9 +14,9 @@ export const OperaOptionsSchema = z
           "No package ID is provided, e.g. https://addons.opera.com/developer/package/PACKAGE_ID"
         )
       })
-      .describe("Package ID from addons.opera.com/developer/package/PACKAGE_ID"),
-    sessionid: z.string().nonempty(storeError("No sessionid is provided")).describe("Opera session cookie"),
-    csrftoken: z.string().nonempty(storeError("No csrftoken is provided")).describe("Opera CSRF token cookie"),
+      .describe("Package ID from https://addons.opera.com/developer/package/PACKAGE_ID"),
+    sessionid: z.string().nonempty(storeError("No sessionid is provided")).describe("Get it by running --auto-fetch-cookies"),
+    csrftoken: z.string().nonempty(storeError("No csrftoken is provided")).describe("Get it by running --auto-fetch-cookies"),
     zip: z.string().nonempty(storeError("No zip is provided")).describe("Path to the ZIP file"),
     changelog: z.string().optional().describe("Changelog for this version")
   })

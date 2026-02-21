@@ -58,28 +58,25 @@ async function initCli() {
     storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose))
   );
 
-  let successes = 0;
-  let failures = 0;
-
-  for (let i = 0; i < storeEntries.length; i++) {
-    const [store] = storeEntries[i];
-    const result = results[i];
+  const failures: string[] = [];
+  for (const [idx, result] of results.entries()) {
+    const [store] = storeEntries[idx];
     if (result.status === "fulfilled") {
       inkLogger.logger.info(store, "Published!");
       inkLogger.monitor.updateStore(store, "success");
-      successes++;
     } else {
       inkLogger.logger.error(store, toError(result.reason).message);
       inkLogger.monitor.updateStore(store, "error");
-      failures++;
+      failures.push(store);
     }
   }
 
-  inkLogger.logger.info("System", `Deployments complete! ${successes} succeeded, ${failures} failed`);
+  const successes = results.length - failures.length;
+  inkLogger.logger.info("System", `Deployments complete! ${successes} succeeded, ${failures.length} failed`);
   inkLogger.unmount();
 
-  if (failures > 0) {
-    throw new Error(red(`${failures} deployment(s) failed`));
+  if (failures.length > 0) {
+    throw new Error(red(`${failures.length} deployment(s) failed`));
   }
 }
 
