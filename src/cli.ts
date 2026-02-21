@@ -101,7 +101,7 @@ export const parser = yargs(process.argv.slice(2))
       builder = builder.options({
         ...otherBaseOptions,
         "publish-only": {
-          type: "array" as const,
+          type: "array",
           description: publishOnlyDescription
         },
         ...envOverrideStoreOptions
