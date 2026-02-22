@@ -107,7 +107,7 @@ export const parser = yargs(process.argv.slice(2))
         ...envOverrideStoreOptions
       });
       builder = applyStoreGroups(builder);
-      return builder.epilogue(EPILOGUE + envStoreHelp);
+      return builder.version(false).epilogue(EPILOGUE + envStoreHelp);
     },
     handleDeploy
   )
@@ -117,16 +117,16 @@ export const parser = yargs(process.argv.slice(2))
     builder => {
       builder = builder.options({ ...baseOptions, ...allStoreOptions });
       builder = applyStoreGroups(builder);
-      return builder.epilogue(EPILOGUE);
+      return builder.version(false).epilogue(EPILOGUE);
     },
     handleDeploy
   )
   .command(
     "chrome-token",
     "Get a Chrome Web Store refresh token",
-    builder => builder.options({
-      "client-id": { type: "string", description: "OAuth client ID [required]", demandOption: true },
-      "client-secret": { type: "string", description: "OAuth client secret [required]", demandOption: true }
+    builder => builder.version(false).options({
+      "client-id": { type: "string", description: "OAuth client ID", demandOption: true },
+      "client-secret": { type: "string", description: "OAuth client secret", demandOption: true }
     }),
     async argv => {
       const { runChromeToken } = await import("./stores/chrome/chrome-token.js");
