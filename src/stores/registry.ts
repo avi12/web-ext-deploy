@@ -6,10 +6,9 @@ import { opera } from "./opera/index.js";
 import { z } from "zod";
 
 // To add a new store: import it and add it to this array.
-const stores = [chrome, firefox, edge, opera];
-export const storeRegistry: StoreDefinition[] = [...stores];
+export const storeRegistry: StoreDefinition[] = [chrome, firefox, edge, opera];
 
-export const storeNames = stores.map(store => store.name);
+export const storeNames = storeRegistry.map(store => store.name);
 
 export function getStore(name: string) {
   return storeRegistry.find(store => store.name === name);
