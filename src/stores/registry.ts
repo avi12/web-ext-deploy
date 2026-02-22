@@ -9,8 +9,7 @@ import { z } from "zod";
 const stores = [chrome, firefox, edge, opera];
 export const storeRegistry: StoreDefinition[] = [...stores];
 
-export type StoreName = (typeof stores)[number]["name"];
-export const storeNames: StoreName[] = stores.map(store => store.name);
+export const storeNames = stores.map(store => store.name);
 
 export function getStore(name: string) {
   return storeRegistry.find(store => store.name === name);
