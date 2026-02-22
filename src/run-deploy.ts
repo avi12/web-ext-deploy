@@ -5,8 +5,8 @@ import { StoreStatus } from "./types.js";
 import { createInkLogger } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 import { toError } from "./utils/retry.js";
-import { z } from "zod";
 import type { Arguments } from "yargs";
+import { z } from "zod";
 
 async function runStoreDeploy(
   store: string,
