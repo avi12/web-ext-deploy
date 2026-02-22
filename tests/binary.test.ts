@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, it, expect, beforeAll } from "vitest";
 
 const ROOT = path.resolve(__dirname, "..");
-const BINARY = path.join(ROOT, "dist-esm/index.js");
+const BINARY = path.join(ROOT, "dist-esm/cli.js");
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 
 beforeAll(() => {

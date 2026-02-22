@@ -1,9 +1,8 @@
-#!/usr/bin/env node
-import { createCookieRefreshCallback, getJsonStoresFromCli, parser } from "./cli.js";
+import { type Argv, createCookieRefreshCallback, getJsonStoresFromCli } from "./cli.js";
 import { deployStore } from "./deploy-store.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus } from "./types.js";
-import { createInkLogger, renderFatalError } from "./ui/ink-logger.js";
+import { createInkLogger } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 import { toError } from "./utils/retry.js";
 import { z } from "zod";
@@ -33,8 +32,7 @@ async function runStoreDeploy(
   });
 }
 
-async function initCli() {
-  const argv = parser.parseSync();
+export async function runDeploy(argv: Argv) {
   const preDeployLogs: string[] = [];
   const storeJsons = await getJsonStoresFromCli(argv, msg => preDeployLogs.push(msg));
 
@@ -82,8 +80,3 @@ async function initCli() {
     throw new Error(red(`${failures.length} deployment(s) failed`));
   }
 }
-
-initCli().catch((err: Error) => {
-  renderFatalError(err.message);
-  process.exitCode = 1;
-});

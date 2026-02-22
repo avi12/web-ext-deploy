@@ -11,9 +11,9 @@
     }
   },
   "bin": {
-    "web-ext-deploy": "dist-esm/index.js"
+    "web-ext-deploy": "dist-esm/cli.js"
   },
-  "types": "./dist-esm/index.d.ts",
+  "types": "./dist-esm/cli.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/avi12/web-ext-deploy"
@@ -71,15 +71,14 @@
     "build:esm": "tsc",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",
-    "lint": "eslint \"src/**/*.ts\"",
-    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "reinstall-locally": "pnpm unlink -g && pnpm i && pnpm link -g",
-    "chrome:token": "tsx scripts/get-chrome-refresh-token.tsx"
+    "reinstall-locally": "pnpm unlink -g && pnpm i && pnpm link -g"
   },
   "lint-staged": {
-    "*.ts": [
+    "*.{ts,tsx}": [
       "pnpm lint:fix",
       "git add"
     ]

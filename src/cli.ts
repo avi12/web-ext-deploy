@@ -1,6 +1,7 @@
+#!/usr/bin/env node
 import { getSignInCookie } from "./stores/get-sign-in-cookie.js";
 import { getStore, isSupportedStore, storeNames, storeRegistry } from "./stores/registry.js";
-import { renderGlobalArgsHelp, renderStoreHelp } from "./ui/ink-logger.js";
+import { renderFatalError, renderGlobalArgsHelp, renderStoreHelp } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 import { capitalCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
@@ -63,7 +64,6 @@ for (const store of storeRegistry) {
 }
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
-const otherBaseOptions = baseOptions;
 
 const EPILOGUE =
   "Choose which stores to deploy to by supplying their options\n" +
@@ -99,7 +99,7 @@ export const parser = yargs(process.argv.slice(2))
     "Read from .env files",
     builder => {
       builder = builder.options({
-        ...otherBaseOptions,
+        ...baseOptions,
         "publish-only": {
           type: "array",
           description: publishOnlyDescription
@@ -109,31 +109,50 @@ export const parser = yargs(process.argv.slice(2))
       builder = applyStoreGroups(builder);
       return builder.epilogue(EPILOGUE + envStoreHelp);
     },
-    () => {}
+    handleDeploy
   )
   .command(
     "cli",
     "Pass arguments directly",
     builder => {
-      builder = builder.options({ ...otherBaseOptions, ...allStoreOptions });
+      builder = builder.options({ ...baseOptions, ...allStoreOptions });
       builder = applyStoreGroups(builder);
       return builder.epilogue(EPILOGUE);
     },
-    () => {}
+    handleDeploy
+  )
+  .command(
+    "chrome-token",
+    "Get a Chrome Web Store refresh token",
+    builder => builder.options({
+      "client-id": { type: "string", description: "OAuth client ID [required]", demandOption: true },
+      "client-secret": { type: "string", description: "OAuth client secret [required]", demandOption: true }
+    }),
+    async argv => {
+      const { runChromeToken } = await import("./stores/chrome/chrome-token.js");
+      await runChromeToken(argv.clientId, argv.clientSecret);
+    }
   )
   .demandCommand(1, "You need at least one command before moving on")
   .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options`)
   .strict()
-  .fail((message, _error, instance) => {
+  .fail((message, error, instance) => {
     if (message) {
       instance.showHelp();
       console.error(`\n${stripCamelCaseArgs(message)}`);
+    } else if (error) {
+      renderFatalError(error.message);
     }
     process.exit(1);
   })
   .help();
 
-type Argv = ReturnType<typeof parser.parseSync>;
+export type Argv = { [key: string]: unknown; _: (string | number)[]; $0: string };
+
+async function handleDeploy(argv: Argv) {
+  const { runDeploy } = await import("./run-deploy.js");
+  await runDeploy(argv);
+}
 
 type StoreConfig = Record<string, unknown>;
 type StoreConfigMap = Partial<Record<string, StoreConfig>>;
@@ -349,3 +368,5 @@ export function createCookieRefreshCallback(store: string, cookieFields: string[
     return readCookiesFromEnv(store, cookieFields);
   };
 }
+
+parser.parseAsync();

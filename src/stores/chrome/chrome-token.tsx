@@ -1,5 +1,8 @@
+import { config } from "../../utils/dotenv.js";
+import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
 import { render, Box, Text, Newline, useApp } from "ink";
 import { exec } from "node:child_process";
+import fs from "node:fs";
 import { createServer, type Server } from "node:http";
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
@@ -35,13 +38,6 @@ const SCOPE = "https://www.googleapis.com/auth/chromewebstore";
 const PORT = 8818;
 const REDIRECT_URI = `http://localhost:${PORT}`;
 
-const [,, clientId, clientSecret] = process.argv;
-
-if (!clientId || !clientSecret) {
-  console.error("Usage: pnpm chrome:token <client-id> <client-secret>");
-  process.exit(1);
-}
-
 function getOpenCommand(url: string) {
   if (process.platform === "win32") {
     return `start "" "${url}"`;
@@ -57,7 +53,7 @@ function openBrowser(url: string) {
   exec(getOpenCommand(url));
 }
 
-async function exchangeCodeForToken(code: string) {
+async function exchangeCodeForToken(code: string, clientId: string, clientSecret: string) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -76,15 +72,17 @@ async function exchangeCodeForToken(code: string) {
   return result.data;
 }
 
-const authParams = new URLSearchParams(AuthRequestSchema.parse({
-  client_id: clientId,
-  redirect_uri: REDIRECT_URI,
-  response_type: "code",
-  access_type: "offline",
-  scope: SCOPE,
-  prompt: "consent"
-}));
-const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams}`;
+function buildAuthUrl(clientId: string) {
+  const authParams = new URLSearchParams(AuthRequestSchema.parse({
+    client_id: clientId,
+    redirect_uri: REDIRECT_URI,
+    response_type: "code",
+    access_type: "offline",
+    scope: SCOPE,
+    prompt: "consent"
+  }));
+  return `https://accounts.google.com/o/oauth2/v2/auth?${authParams}`;
+}
 
 type Step = "waiting" | "exchanging" | "success" | "error";
 
@@ -112,11 +110,23 @@ function StatusLine({ step, label }: { step: Step; label: string }) {
   return <Text>{getSymbol(step)} {label}</Text>;
 }
 
-function App() {
+interface AppProps {
+  clientId: string;
+  clientSecret: string;
+  onSuccess: (refreshToken: string) => void;
+  onError: (error: Error) => void;
+}
+
+function App({
+  clientId,
+  clientSecret,
+  onSuccess,
+  onError
+}: AppProps) {
   const { exit } = useApp();
   const [step, setStep] = useState<Step>("waiting");
-  const [refreshToken, setRefreshToken] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const authUrl = buildAuthUrl(clientId);
 
   useEffect(() => {
     const server: Server = createServer(async (req, res) => {
@@ -127,7 +137,9 @@ function App() {
       if (authError) {
         res.writeHead(200, { "Content-Type": "text/html" });
         res.end("<h1>Authorization failed</h1><p>Check the terminal for details</p>");
-        setErrorMessage(`Authorization failed: ${authError}`);
+        const message = `Authorization failed: ${authError}`;
+        onError(new Error(message));
+        setErrorMessage(message);
         setStep("error");
         server.close();
         return;
@@ -140,20 +152,24 @@ function App() {
       }
 
       setStep("exchanging");
-      const data = await exchangeCodeForToken(code);
+      const data = await exchangeCodeForToken(code, clientId, clientSecret);
       res.writeHead(200, { "Content-Type": "text/html" });
 
       if ("error" in data) {
         res.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
-        setErrorMessage(`Token exchange failed: ${JSON.stringify(data.error, null, 2)}`);
+        const message = `Token exchange failed: ${JSON.stringify(data.error, null, 2)}`;
+        onError(new Error(message));
+        setErrorMessage(message);
         setStep("error");
       } else if (data.refresh_token) {
         res.end("<h1>Success!</h1><p>You can close this tab</p>");
-        setRefreshToken(data.refresh_token);
+        onSuccess(data.refresh_token);
         setStep("success");
       } else {
         res.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
-        setErrorMessage("No refresh token in response — try revoking access at https://myaccount.google.com/permissions and retry");
+        const message = "No refresh token in response \u2014 try revoking access at https://myaccount.google.com/permissions and retry";
+        onError(new Error(message));
+        setErrorMessage(message);
         setStep("error");
       }
 
@@ -198,13 +214,6 @@ function App() {
         <Text dimColor>If the browser didn't open, visit:{"\n"}{authUrl}</Text>
       )}
 
-      {step === "success" && (
-        <Box flexDirection="column">
-          <Text color="green" bold>Refresh token:</Text>
-          <Text>{refreshToken}</Text>
-        </Box>
-      )}
-
       {step === "error" && (
         <Text color="red">{errorMessage}</Text>
       )}
@@ -212,4 +221,35 @@ function App() {
   );
 }
 
-render(<App />);
+export async function runChromeToken(clientId: string, clientSecret: string) {
+  const refreshToken = await getChromeRefreshToken(clientId, clientSecret);
+  const { parsed: envCurrent = {} } = config({ path: "chrome.env" });
+  fs.writeFileSync("chrome.env", headersToEnv({ ...envCurrent, REFRESH_TOKEN: refreshToken }));
+  createGitIgnoreIfNeeded(["chrome"]);
+  console.log("\nSaved refresh token to chrome.env");
+}
+
+async function getChromeRefreshToken(clientId: string, clientSecret: string): Promise<string> {
+  let tokenResult = "";
+  let errorResult: Error | undefined;
+
+  const instance = render(
+    <App
+      clientId={clientId}
+      clientSecret={clientSecret}
+      onSuccess={token => {
+        tokenResult = token;
+      }}
+      onError={err => {
+        errorResult = err;
+      }}
+    />
+  );
+
+  await instance.waitUntilExit();
+
+  if (errorResult) {
+    throw errorResult;
+  }
+  return tokenResult;
+}

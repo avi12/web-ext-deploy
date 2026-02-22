@@ -32,10 +32,10 @@
 
 ### 4. Get the refresh token
 
-Run the helper script:
+Run the built-in command:
 
 ```shell
-pnpm chrome:token <client-id> <client-secret>
+web-ext-deploy chrome-token --client-id <client-id> --client-secret <client-secret>
 ```
 
-This opens your browser for Google sign-in, captures the authorization code, and prints the refresh token
+This opens your browser for Google sign-in, captures the authorization code, and saves the refresh token to `chrome.env`
