@@ -35,7 +35,13 @@
 Run the built-in command:
 
 ```shell
-web-ext-deploy chrome-token --client-id <client-id> --client-secret <client-secret>
+web-ext-deploy chrome-token --client-id CLIENT_ID --client-secret CLIENT_SECRET
 ```
 
 This opens your browser for Google sign-in, captures the authorization code, and saves the refresh token to `chrome.env`
+
+Use `--print-only` to print the token to the terminal instead of saving it:
+
+```shell
+web-ext-deploy chrome-token --client-id CLIENT_ID --client-secret CLIENT_SECRET --print-only
+```
