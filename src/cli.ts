@@ -149,7 +149,7 @@ export const parser = yargs(process.argv.slice(2))
   .help();
 
 async function handleDeploy(argv: Arguments) {
-  const { runDeploy } = await import("./run-deploy.js");
+  const { runDeploy } = await import("./deploy-all-stores.js");
   await runDeploy(argv);
 }
 

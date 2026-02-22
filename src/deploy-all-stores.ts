@@ -1,5 +1,5 @@
 import { createCookieRefreshCallback, getJsonStoresFromCli } from "./cli.js";
-import { deployStore } from "./deploy-store.js";
+import { deployStore } from "./deploy-single-store.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus } from "./types.js";
 import { createInkLogger } from "./ui/ink-logger.js";

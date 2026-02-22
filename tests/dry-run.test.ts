@@ -1,4 +1,4 @@
-import { deployStore } from "../src/deploy-store.js";
+import { deployStore } from "../src/deploy-single-store.js";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
 
