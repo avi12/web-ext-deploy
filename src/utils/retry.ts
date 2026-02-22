@@ -51,7 +51,8 @@ export async function requestWithRetry<T>({
       return attempt(count + 1);
     }
 
-    if (response.status === 429) {
+    const isTooManyRetries = response.status === 429;
+    if (isTooManyRetries) {
       if (onRateLimit) {
         await onRateLimit(response);
       } else {
@@ -60,13 +61,15 @@ export async function requestWithRetry<T>({
       return attempt(count + 1);
     }
 
-    if (response.status >= 400 && response.status < 500) {
+    const isClientError = response.status >= 400 && response.status < 500;
+    if (isClientError) {
       const message = formatError(`${errorContext}: ${response.statusText}`);
       logger?.error(message);
       throw new Error(message);
     }
 
-    if (response.status >= 500) {
+    const IsServerError = response.status >= 500;
+    if (IsServerError) {
       await setTimeout(getBackoffDelayMs(count));
       return attempt(count + 1);
     }
