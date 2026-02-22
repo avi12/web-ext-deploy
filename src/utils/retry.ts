@@ -11,7 +11,7 @@ export function toError(value: unknown) {
 
 export class CookieAuthError extends Error {
   constructor(store: string) {
-    super(`${store}: Authentication failed — cookies may be expired`);
+    super(`${store}: Authentication failed - cookies may be expired`);
     this.name = "CookieAuthError";
   }
 }
