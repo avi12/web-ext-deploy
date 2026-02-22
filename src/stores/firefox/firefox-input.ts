@@ -15,7 +15,7 @@ export const FirefoxOptionsSubmissionApiSchema = z
     zip: z.string().nonempty().describe("Path to the ZIP file"),
     zipSource: z.string().optional().describe("Path to the source code ZIP"),
     changelog: z.string().optional().describe("Changelog for this version"),
-    changelogLang: z.string().default("en-US").describe(`Changelog language code (default: manifest.json's "default_locale" or "en-US")`),
+    changelogLang: z.string().default("en-US").describe(`Changelog language code (default: manifest.json's "default_locale" or "en-US"). Full list: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3`),
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })
   .check(ctx => {

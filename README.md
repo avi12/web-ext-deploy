@@ -58,13 +58,7 @@ Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/w
 
 - Opera: `sessionid`, `csrftoken`
 
-If you have a hard time obtaining the cookie(s), you can run:
-
-```shell
-web-ext-deploy --get-cookies=opera
-```
-
-Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API  
+Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API
 As for the Edge Add-ons Store, you'll use the Microsoft Edge Publish API
 
 ## 2. Decide how to access the data & credentials
@@ -76,63 +70,59 @@ As for the Edge Add-ons Store, you'll use the Microsoft Edge Publish API
 
 Use the `.env` [snippet(s)](#possible-env-files) relevant to your extension  
 Include each one in your root directory  
-Make sure to have `*.env` or `chrome.env`, `firefox.env`, `edge.env`, `opera.env` in your `.gitignore`  
-Note that by using the aforementioned `--get-cookies`, it automatically added the `.env` items to it
+Make sure to have `*.env` or `chrome.env`, `firefox.env`, `edge.env`, `opera.env` in your `.gitignore`
 
 Next, in the CLI:
 
 ```shell
-web-ext-deploy --env
+web-ext-deploy env
 ```
 
-### Additional arguments for the `.env` mode:
+### Options for `env` mode
 
-- `--verbose` boolean?
-  If specified, the steps of every store will be logged to the console
+**Global:**
 
-- `--auto-fetch-cookies` boolean?
-  If specified, cookies will be automatically refreshed when they expire mid-deployment (Opera only)
-  Playwright will be auto-installed if needed
-  
-- `--publish-only` `Array<"chrome" | "firefox" | "edge" | "opera">`?  
-  If specified, for each specified store that has an `.env` file, it will be deployed  
-  E.g. if you have `chrome.env`, `firefox.env`, `opera.env`, and you run:
+| Flag | Description |
+|------|-------------|
+| `--publish-only <stores...>` | Only deploy to specific stores (e.g. `--publish-only chrome firefox`) |
+| `--auto-fetch-cookies` | Automatically refresh expired cookies mid-deployment (Opera). Playwright will be auto-installed if needed |
+| `--dry-run` | Validate inputs without deploying |
+| `--verbose` | Log each deployment step |
 
-  ```shell
-  web-ext-deploy --env --publish-only=chrome firefox
-  ```
+**Chrome overrides:**
 
-  It will only deploy to Chrome Web Store and Firefox Add-ons Store
+| Flag | Description |
+|------|-------------|
+| `--chrome-skip-review` | Publish without waiting for a review |
+| `--chrome-deploy-percentage <number>` | Staged rollout percentage (1-100) |
 
-- `--zip` string?  
-  If specified, it will be used for every `.env` that the `ZIP` is not specified
+**Firefox overrides:**
 
-- `--firefox-changelog` string?  
-  If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox users  
-  New lines (`\n`) are supported
+| Flag | Description                                                                            |
+|------|----------------------------------------------------------------------------------------|
+| `--firefox-changelog <text>` | Changelog for Firefox users. Supports `\n` for new lines                               |
+| `--firefox-changelog-lang <code>` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: manifest's `default_locale` or `en-US`) |
+| `--firefox-dev-changelog <text>` | Changelog for Firefox Add-ons reviewers only. Supports `\n` for new lines              |
 
-- `--firefox-changelog-lang` string?  
-  If specified and `firefox.env` exists, it will be used to dictate the language of the release notes.  
-  Fallbacks to the Manifest's `default_locale` field, if applicable, or `en-US`
+**Edge overrides:**
 
-- `--firefox-dev-changelog` string?  
-  If specified and `firefox.env` exists, it will be used to provide changelog for the Firefox Add-ons reviewers  
-  New lines (`\n`) are supported
+| Flag | Description |
+|------|-------------|
+| `--edge-dev-changelog <text>` | Changelog for Edge Add-ons reviewers only. Supports `\n` for new lines |
 
-- `--edge-dev-changelog` string?  
-  If specified and `edge.env` exists, it will be used to provide changelog for the Edge Add-ons reviewers  
-  New lines (`\n`) are supported
+**Opera overrides:**
 
-- `--opera-changelog` string?  
-  If specified and `opera.env` exists, it will be used to provide changelog for the Opera users  
-  New lines (`\n`) are supported
+| Flag | Description |
+|------|-------------|
+| `--opera-changelog <text>` | Changelog for Opera users. Supports `\n` for new lines |
 
 ### Notes:
 
 - Chrome Web Store:
 
-  - `REFRESH_TOKEN`, `CLIENT_ID`, `CLIENT_SECRET` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)
-  - `EXT_ID` - Get it from `https://chrome.google.com/webstore/detail/EXT_ID`, e.g. `https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone`
+  - `REFRESH_TOKEN` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)
+  - `PUBLISHER_ID` - Get it from the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/) > Account
+  - `EXT_ID` - Get it from `https://chromewebstore.google.com/detail/EXT_ID`
 
 - Firefox Add-ons store:
 
@@ -162,11 +152,10 @@ web-ext-deploy --env
 #### `chrome.env`
 
 ```dotenv
-REFRESH_TOKEN="RefreshToken"
-CLIENT_ID="ClientID"
-CLIENT_SECRET="ClientSecret"
-ZIP="dist/some-zip-v{version}.zip"
 EXT_ID="ExtensionID"
+PUBLISHER_ID="PublisherID"
+REFRESH_TOKEN="RefreshToken"
+ZIP="dist/some-zip-v{version}.zip"
 ```
 
 #### `firefox.env`
@@ -177,6 +166,7 @@ JWT_SECRET="JwtSecret"
 ZIP="dist/some-zip-v{version}.zip"
 ZIP_SOURCE="dist/some-zip-source-v{version}.zip"
 EXT_ID="ExtensionID"
+CHANGELOG_LANG="en-US"
 ```
 
 #### `edge.env`
@@ -202,7 +192,7 @@ PACKAGE_ID=123456
 Use it only if your extension's code will not be publicly available
 
 ```shell
-web-ext-deploy --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="ExtensionID" --firefox-zip="some-zip-v{version}.zip" --firefox-ext-id="ExtensionID"
+web-ext-deploy cli --chrome-zip="some-zip-v{version}.zip" --chrome-ext-id="ExtensionID" --firefox-zip="some-zip-v{version}.zip" --firefox-ext-id="ExtensionID"
 ```
 
 ### CLI API
@@ -216,108 +206,62 @@ Stores:
 
 Options:
 
-- `--verbose` boolean?
-  If specified, the steps of every store will be logged to the console
-
-- `--auto-fetch-cookies` boolean?
-  If specified, cookies will be automatically refreshed when they expire mid-deployment (Opera only)
-  Playwright will be auto-installed if needed
-
-- `--zip` string?  
-  If specified, it will be used for every store that the `zip` is not specified  
-  For example, in
-
-  ```shell
-  web-ext-deploy --zip="zip-v{version}.zip" --chrome-refresh-token="refreshToken" --chrome-client-id="clientId" --chrome-client-secret="clientSecret" --firefox-jwt-issuer="jwtIssuer" --firefox-jwt-secret="jwtSecret" --edge-client-id="clientId" --edge-api-key="apiKey" --edge-zip="some-zip-v{version}.zip"
-  ```
-  the `zip-v{version}.zip` will be used for the Chrome Web Store _and_ the Firefox Add-ons
+| Flag | Description |
+|------|-------------|
+| `--auto-fetch-cookies` | Automatically refresh expired cookies mid-deployment (Opera). Playwright will be auto-installed if needed |
+| `--dry-run` | Validate inputs without deploying |
+| `--verbose` | Log each deployment step |
 
 #### Chrome Web Store CLI
 
-```yaml
-# Get it from https://chrome.google.com/webstore/detail/EXT_ID, e.g. https://chrome.google.com/webstore/detail/fcphghnknhkimeagdglkljinmpbagone
---chrome-ext-id: string
+| Flag | Description |
+|------|-------------|
+| `--chrome-ext-id <id>` | Extension ID from `https://chromewebstore.google.com/detail/EXT_ID` |
+| `--chrome-publisher-id <id>` | Publisher ID from the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/) > Account |
+| `--chrome-refresh-token <token>` | OAuth refresh token ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)) |
+| `--chrome-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
+| `[--chrome-skip-review]` | Publish without waiting for a review |
+| `[--chrome-deploy-percentage <n>]` | Staged rollout percentage (1-100) |
 
-# Get them by following https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md
---chrome-refresh-token: string
---chrome-client-id: string
---chrome-client-secret: string
-
-# The relative path from the root to the ZIP
-# You can use {version}, which will be replaced by the `version` entry in your `package.json`
---chrome-zip: string
-```
-
-Get your `--chrome-refresh-token`, `--chrome-client-id` and `--chrome-client-secret` by following [this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)  
 Example:
 
 ```shell
-web-ext-deploy --chrome-ext-id="ExtensionID" --chrome-refresh-token="RefreshToken" --chrome-client-id="ClientID" --chrome-client-secret="ClientSecret" --chrome-zip="some-zip-v{version}.zip"
+web-ext-deploy cli --chrome-ext-id="ExtensionID" --chrome-publisher-id="PublisherID" --chrome-refresh-token="RefreshToken" --chrome-zip="some-zip-v{version}.zip"
 ```
 
 #### Firefox Add-ons CLI
 
-```yaml
-# The extension ID from the store URL, e.g. https://addons.mozilla.org/addon/EXT_ID
---firefox-ext-id: string
-  
-# Get them from https://addons.mozilla.org/developers/addon/api/key
---firefox-jwt-issuer: string
---firefox-jwt-secret: string
-  
-# The relative path from the root to the ZIP
-# You can use {version}, which will be replaced by the `version` entry from your `package.json`
---firefox-zip: string
-  
-# If applicable, the relative path from the root to the ZIP source
-# You can use {version}, which will be replaced by the `version` entry from your `package.json`
---firefox-zip-source?: string
-  
-# A description of the changes in this version, compared to the previous one
-# It's recommended to use instead --firefox-changelog , so it stays up to date
---firefox-changelog?: string
-
-# The language of the changelog
-# Fallbacks to the Manifest's `default_locale` field, if applicable, or `en-US`
---firefox-changelog-lang?: string
-  
-# A description of the technical changes made in this version, compared to the previous one
-# This will only be seen by the Firefox Addons reviewers
-# It's recommended to use instead --firefox-dev-changelog , so it stays up to date
---firefox-dev-changelog?: string
-```
+| Flag | Description |
+|------|-------------|
+| `--firefox-ext-id <id>` | Extension ID from `https://addons.mozilla.org/addon/EXT_ID` |
+| `--firefox-jwt-issuer <issuer>` | JWT issuer from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/) |
+| `--firefox-jwt-secret <secret>` | JWT secret from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/) |
+| `--firefox-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
+| `[--firefox-zip-source <path>]` | Path to the source code ZIP. Supports `{version}` placeholder |
+| `[--firefox-changelog <text>]` | Changelog for Firefox users. Supports `\n` for new lines |
+| `[--firefox-changelog-lang <code>]` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: manifest's `default_locale` or `en-US`) |
+| `[--firefox-dev-changelog <text>]` | Changelog for reviewers only. Supports `\n` for new lines |
 
 Example:
 
 ```shell
-web-ext-deploy --firefox-ext-id="ExtensionID" --firefox-jwt-issuer="JwtIssuer" --firefox-jwt-secret="JwtSecret" --firefox-zip="dist/some-zip-v{version}.zip" --firefox-changelog="Changelog\nWith line breaks" --firefox-dev-changelog="Changelog for reviewers\nWith line breaks"
+web-ext-deploy cli --firefox-ext-id="ExtensionID" --firefox-jwt-issuer="JwtIssuer" --firefox-jwt-secret="JwtSecret" --firefox-zip="dist/some-zip-v{version}.zip"
 ```
 
 #### Edge Add-ons CLI
 
-```yaml
-# The product ID from the Edge Add-ons Dashboard, e.g.
-# https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID
---edge-product-id: string
-
-# Get them by following https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md
---edge-client-id: string
---edge-api-key: string
-
-# The relative path from the root to the ZIP
-# You can use {version}, which will be replaced by the `version` entry in `package.json`
---edge-zip: string
-
-# A description of the technical changes made in this version, compared to the previous one
-# This will only be seen by the Edge Add-ons reviewers
-# You can use \n for new lines
---edge-dev-changelog?: string
-```
+| Flag | Description |
+|------|-------------|
+| `--edge-product-id <id>` | Product ID from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID` |
+| `--edge-client-id <id>` | Client ID ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)) |
+| `--edge-api-key <key>` | API key ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)) |
+| `--edge-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
+| `[--edge-dev-changelog <text>]` | Changelog for reviewers only. Supports `\n` for new lines |
 
 Example:
 
 ```shell
-web-ext-deploy --edge-product-id="ProductID" --edge-client-id="clientId" --edge-api-key="apiKey" --edge-zip="dist/some-zip-v{version}.zip" --edge-dev-changelog="Changelog for reviewers\nWith line breaks"
+web-ext-deploy cli --edge-product-id="ProductID" --edge-client-id="clientId" --edge-api-key="apiKey" --edge-zip="dist/some-zip-v{version}.zip"
 ```
 
 **Note:**  
@@ -326,28 +270,18 @@ Therefore, if you publish after you had just published/canceled, expect to wait 
 
 #### Opera Add-ons CLI
 
-```yaml
-# The extension ID from the Opera Add-ons Dashboard, e.g.
-# https://addons.opera.com/developer/package/PACKAGE_ID
---opera-package-id: number
-
-# If you have a hard time obtaining them, run: web-ext-deploy --get-cookies=opera
---opera-sessionid: string
---opera-csrftoken: string
-
-# The relative path from the root to the ZIP
-# You can use {version}, which will be replaced by the `version` entry from your `package.json`
---opera-zip: string
-  
-# A description of the changes in this version, compared to the previous one
-# You can use \n for new lines
---opera-changelog?: string
-```
+| Flag | Description |
+|------|-------------|
+| `--opera-package-id <id>` | Package ID from `https://addons.opera.com/developer/package/PACKAGE_ID` |
+| `--opera-sessionid <value>` | Session cookie. Use `--auto-fetch-cookies` to obtain automatically |
+| `--opera-csrftoken <value>` | CSRF cookie. Use `--auto-fetch-cookies` to obtain automatically |
+| `--opera-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
+| `[--opera-changelog <text>]` | Changelog for Opera users. Supports `\n` for new lines |
 
 Example:
 
 ```shell
-web-ext-deploy --opera-package-id=123456 --opera-sessionid="sessionid_value" --opera-csrftoken="csrftoken_value" --opera-zip="dist/some-zip-v{version}.zip" --opera-changelog="Changelog\nWith line breaks"
+web-ext-deploy cli --opera-package-id=123456 --opera-sessionid="sessionid_value" --opera-csrftoken="csrftoken_value" --opera-zip="dist/some-zip-v{version}.zip"
 ```
 
 **Notes:**
