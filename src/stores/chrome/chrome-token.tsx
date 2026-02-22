@@ -1,10 +1,10 @@
 import { config } from "../../utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
-import { render, Box, Text, Newline, useApp } from "ink";
+import { Box, Newline, render, Text, useApp } from "ink";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createServer, type Server } from "node:http";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { z } from "zod";
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#creatingclient
@@ -167,7 +167,7 @@ function App({
         setStep("success");
       } else {
         res.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
-        const message = "No refresh token in response \u2014 try revoking access at https://myaccount.google.com/permissions and retry";
+        const message = `No refresh token in response - try revoking access at https://myaccount.google.com/permissions and retry`;
         onError(new Error(message));
         setErrorMessage(message);
         setStep("error");
