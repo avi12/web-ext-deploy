@@ -228,8 +228,12 @@ function App({
   );
 }
 
-export async function runChromeToken(clientId: string, clientSecret: string) {
+export async function runChromeToken(clientId: string, clientSecret: string, printOnly?: boolean) {
   const refreshToken = await getChromeRefreshToken(clientId, clientSecret);
+  if (printOnly) {
+    console.log(`\n${refreshToken}`);
+    return;
+  }
   const { parsed: envCurrent = {} } = config({ path: "chrome.env" });
   fs.writeFileSync("chrome.env", headersToEnv({ ...envCurrent, REFRESH_TOKEN: refreshToken }));
   createGitIgnoreIfNeeded(["chrome"]);

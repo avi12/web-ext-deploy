@@ -1,4 +1,4 @@
-import { type Argv, createCookieRefreshCallback, getJsonStoresFromCli } from "./cli.js";
+import { createCookieRefreshCallback, getJsonStoresFromCli } from "./cli.js";
 import { deployStore } from "./deploy-store.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus } from "./types.js";
@@ -6,6 +6,7 @@ import { createInkLogger } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 import { toError } from "./utils/retry.js";
 import { z } from "zod";
+import type { Arguments } from "yargs";
 
 async function runStoreDeploy(
   store: string,
@@ -32,7 +33,7 @@ async function runStoreDeploy(
   });
 }
 
-export async function runDeploy(argv: Argv) {
+export async function runDeploy(argv: Arguments) {
   const preDeployLogs: string[] = [];
   const storeJsons = await getJsonStoresFromCli(argv, msg => preDeployLogs.push(msg));
 

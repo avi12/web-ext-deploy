@@ -7,7 +7,7 @@ import { capitalCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
 import { getZodBaseType, unwrapZod } from "./utils/zod.js";
-import yargs, { type Options } from "yargs";
+import yargs, { type Arguments, type Options } from "yargs";
 import { z } from "zod";
 
 const BaseOptionsSchema = z.object({
@@ -126,11 +126,12 @@ export const parser = yargs(process.argv.slice(2))
     "Get a Chrome Web Store refresh token",
     builder => builder.version(false).options({
       "client-id": { type: "string", description: "OAuth client ID", demandOption: true },
-      "client-secret": { type: "string", description: "OAuth client secret", demandOption: true }
+      "client-secret": { type: "string", description: "OAuth client secret", demandOption: true },
+      "print-only": { type: "boolean", description: "Print token to terminal instead of saving to chrome.env" }
     }),
     async argv => {
       const { runChromeToken } = await import("./stores/chrome/chrome-token.js");
-      await runChromeToken(argv.clientId, argv.clientSecret);
+      await runChromeToken(argv.clientId, argv.clientSecret, argv.printOnly);
     }
   )
   .demandCommand(1, "You need at least one command before moving on")
@@ -147,9 +148,7 @@ export const parser = yargs(process.argv.slice(2))
   })
   .help();
 
-export type Argv = { [key: string]: unknown; _: (string | number)[]; $0: string };
-
-async function handleDeploy(argv: Argv) {
+async function handleDeploy(argv: Arguments) {
   const { runDeploy } = await import("./run-deploy.js");
   await runDeploy(argv);
 }
@@ -157,7 +156,7 @@ async function handleDeploy(argv: Argv) {
 type StoreConfig = Record<string, unknown>;
 type StoreConfigMap = Partial<Record<string, StoreConfig>>;
 
-function getJsons(command: string, argv: Argv) {
+function getJsons(command: string, argv: Arguments) {
   if (command === "env") {
     const publishOnly = z.array(z.string()).safeParse(argv.publishOnly).data;
     const stores = (publishOnly && publishOnly.length > 0 ? publishOnly : storeNames).filter(isSupportedStore);
@@ -194,7 +193,7 @@ function getJsons(command: string, argv: Argv) {
 
 export { mapStoreArgs };
 
-function getJsonsFromArgs(store: string, argv: Argv) {
+function getJsonsFromArgs(store: string, argv: Arguments) {
   return mapStoreArgs(Object.fromEntries(Object.entries(argv)), store);
 }
 
@@ -287,7 +286,7 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
   return missingArgs;
 }
 
-function collectMissingGlobalArgs(argv: Argv) {
+function collectMissingGlobalArgs(argv: Arguments) {
   const globalSchema = BaseOptionsSchema.shape;
   const missingGlobal: string[] = [];
 
@@ -300,7 +299,7 @@ function collectMissingGlobalArgs(argv: Argv) {
   return missingGlobal;
 }
 
-export async function getJsonStoresFromCli(argv: Argv, log?: (message: string) => void) {
+export async function getJsonStoresFromCli(argv: Arguments, log?: (message: string) => void) {
   const command = z.string().safeParse(argv._[0]).data ?? "";
   const jsonStoresRaw = getJsons(command, argv);
 
