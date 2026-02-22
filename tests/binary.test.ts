@@ -1,11 +1,13 @@
 import { spawnSync, execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { describe, it, expect, beforeAll } from "vitest";
 
 const ROOT = path.resolve(__dirname, "..");
 const BINARY = path.join(ROOT, "dist-esm/cli.js");
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
+const EMPTY_DIR = mkdtempSync(path.join(os.tmpdir(), "web-ext-deploy-test-"));
 
 beforeAll(() => {
   if (!existsSync(BINARY)) {
@@ -13,9 +15,9 @@ beforeAll(() => {
   }
 }, 60000);
 
-function runCli(args: string[]) {
+function runCli(args: string[], cwd = ROOT) {
   return spawnSync(process.execPath, [BINARY, ...args], {
-    cwd: ROOT,
+    cwd,
     encoding: "utf8",
     timeout: 15000
   });
@@ -41,7 +43,7 @@ describe("binary", () => {
   });
 
   it("env with no .env files exits non-zero", () => {
-    const { status, stdout } = runCli(["env"]);
+    const { status, stdout } = runCli(["env"], EMPTY_DIR);
     expect(status).not.toBe(0);
     expect(stdout).toContain("No .env files found");
   });

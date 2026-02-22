@@ -11,8 +11,8 @@ export const OperaOptionsSchema = z
     packageId: z.coerce.number().describe("Get it from https://addons.opera.com/developer/package/PACKAGE_ID"),
     sessionid: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
     csrftoken: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
-    zip: z.string().nonempty().describe("Path to the ZIP file"),
-    changelog: z.string().optional().describe("Changelog for this version")
+    zip: z.string().nonempty().describe(`Path to the ZIP file. Supports "{version}" which is retrieved from package.json `),
+    changelog: z.string().optional().describe("Changelog for this version. Supports \\n")
   })
   .check(ctx => {
     if (!getIsFileExists(ctx.value.zip)) {

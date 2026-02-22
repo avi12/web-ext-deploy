@@ -12,9 +12,9 @@ export const FirefoxOptionsSubmissionApiSchema = z
     extId: z.string().nonempty().describe("Get it from https://addons.mozilla.org/addon/EXT_ID"),
     jwtIssuer: z.string().nonempty().describe("Get it from https://addons.mozilla.org/developers/addon/api/key/"),
     jwtSecret: z.string().nonempty().describe("Get it from https://addons.mozilla.org/developers/addon/api/key/"),
-    zip: z.string().nonempty().describe("Path to the ZIP file"),
-    zipSource: z.string().optional().describe("Path to the source code ZIP"),
-    changelog: z.string().optional().describe("Changelog for this version"),
+    zip: z.string().nonempty().describe(`Path to the ZIP file. Supports "{version}" which is retrieved from package.json`),
+    zipSource: z.string().optional().describe(`Path to the source code ZIP. Supports "{version}" which is retrieved from package.json`),
+    changelog: z.string().optional().describe("Changelog for this version. Supports \\n"),
     changelogLang: z.string().default("en-US").describe(`Changelog language code (default: manifest.json's "default_locale" or "en-US"). Full list: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3`),
     devChangelog: z.string().optional().describe("Changelog for reviewers only")
   })

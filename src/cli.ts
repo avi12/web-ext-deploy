@@ -3,7 +3,7 @@ import { getSignInCookie } from "./stores/get-sign-in-cookie.js";
 import { getStore, isSupportedStore, storeNames, storeRegistry } from "./stores/registry.js";
 import { renderFatalError, renderGlobalArgsHelp, renderStoreHelp } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
-import { capitalCase, kebabCase } from "./utils/case-conversion.js";
+import { camelCase, capitalCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
 import { getZodBaseType, unwrapZod } from "./utils/zod.js";
@@ -162,10 +162,13 @@ function getJsons(command: string, argv: Arguments) {
     const stores = (publishOnly && publishOnly.length > 0 ? publishOnly : storeNames).filter(isSupportedStore);
     const result: StoreConfigMap = {};
     for (const store of stores) {
-      const { parsed = {} } = config({ path: `${store}.env` });
-      if (isObjectEmpty(parsed)) {
+      const { parsed: rawParsed = {} } = config({ path: `${store}.env` });
+      if (isObjectEmpty(rawParsed)) {
         continue;
       }
+      const parsed = Object.fromEntries(
+        Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
+      );
       const storeConfig = getStore(store);
       const dynamicFields = storeConfig?.dynamicFields ?? [];
       const cliOverridableFields = new Set([...dynamicFields, ...(storeConfig?.cliOverridableFields ?? [])]);
@@ -351,7 +354,10 @@ export function getCookies(siteNames: Array<string>) {
 }
 
 export function readCookiesFromEnv(storeName: string, cookieFields: string[]) {
-  const { parsed = {} } = config({ path: `${storeName}.env` });
+  const { parsed: rawParsed = {} } = config({ path: `${storeName}.env` });
+  const parsed = Object.fromEntries(
+    Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
+  );
   const result: Record<string, string> = {};
   for (const field of cookieFields) {
     if (parsed[field]) {
