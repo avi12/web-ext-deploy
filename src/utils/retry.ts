@@ -38,7 +38,7 @@ export async function requestWithRetry<T>({
   logger?: StoreLogger;
   onRateLimit?: (response: HttpLikeResponse) => Promise<void>;
 }): Promise<T> {
-  async function attempt(count: number): Promise<T> {
+  async function attempt(count: number) {
     const response = await sendRequest().catch((error: unknown): undefined => {
       if (error instanceof CookieAuthError) {
         throw error;
