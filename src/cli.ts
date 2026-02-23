@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { getSignInCookie } from "./stores/get-sign-in-cookie.js";
 import { getStore, isSupportedStore, storeNames, storeRegistry } from "./stores/registry.js";
+import { getStoreDisplayName } from "./stores/registry.js";
 import { renderFatalError, renderGlobalArgsHelp, renderStoreHelp } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
-import { getStoreDisplayName } from "./stores/registry.js";
 import { camelCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
