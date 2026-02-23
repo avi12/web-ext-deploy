@@ -348,8 +348,6 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   return jsonStoresRaw;
 }
 
-export type { StoreConfigMap };
-
 export function getCookies(siteNames: Array<string>) {
   return getSignInCookie(siteNames);
 }

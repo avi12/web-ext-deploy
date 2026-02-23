@@ -15,7 +15,7 @@ export type StoreLogger = {
   error: (message: string) => void;
 };
 
-export type CookieRefreshCallback = () => Promise<Record<string, string>>;
+type CookieRefreshCallback = () => Promise<Record<string, string>>;
 
 export type DeployContext = {
   logger?: StoreLogger;
