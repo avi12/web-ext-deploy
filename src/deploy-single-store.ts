@@ -3,10 +3,22 @@ import { StoreStatus, type DeployContext } from "./types.js";
 import { renderStoreHelp } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 
+export class StoreValidationError extends Error {
+  help: string;
+  constructor(message: string, help: string, cause?: unknown) {
+    super(message);
+    this.name = "StoreValidationError";
+    this.help = help;
+    if (cause) {
+      this.cause = cause;
+    }
+  }
+}
+
 export function deployStore(
   options: unknown,
   storeName: string,
-  context?: DeployContext & { isDryRun?: boolean }
+  context?: DeployContext & { isDryRun?: boolean; mode?: "cli" | "env" }
 ) {
   const store = storeRegistry.find(store => store.name === storeName);
   if (!store) {
@@ -15,8 +27,8 @@ export function deployStore(
   const parseResult = store.schema.safeParse(options);
   if (!parseResult.success) {
     const messages = parseResult.error.issues.map(issue => issue.message);
-    const help = renderStoreHelp(store.name, store.schema);
-    throw new Error(messages.join("\n") + help, { cause: parseResult.error });
+    const help = renderStoreHelp(store.name, store.schema, context?.mode);
+    throw new StoreValidationError(messages.join("\n"), help, parseResult.error);
   }
 
   const prepared = store.prepare(parseResult.data);

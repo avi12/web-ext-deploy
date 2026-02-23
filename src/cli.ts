@@ -3,7 +3,8 @@ import { getSignInCookie } from "./stores/get-sign-in-cookie.js";
 import { getStore, isSupportedStore, storeNames, storeRegistry } from "./stores/registry.js";
 import { renderFatalError, renderGlobalArgsHelp, renderStoreHelp } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
-import { camelCase, capitalCase, kebabCase } from "./utils/case-conversion.js";
+import { getStoreDisplayName } from "./stores/registry.js";
+import { camelCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
 import { getZodBaseType, unwrapZod } from "./utils/zod.js";
@@ -74,7 +75,7 @@ const envStoreHelp = storeRegistry.map(store => renderStoreHelp(store.name, stor
 
 function applyStoreGroups(builder: ReturnType<typeof yargs>) {
   for (const [store, keys] of Object.entries(storeOptionGroups)) {
-    builder = builder.group(keys, `${capitalCase(store)} Store:`);
+    builder = builder.group(keys, `${getStoreDisplayName(store)}:`);
   }
   return builder;
 }
@@ -224,7 +225,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
       continue;
     }
 
-    log?.(`${capitalCase(store.name)}: Fetching cookies...`);
+    log?.(`${getStoreDisplayName(store.name)}: Fetching cookies...`);
     try {
       await getCookies([store.name]);
     } catch (error) {

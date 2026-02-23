@@ -1,5 +1,6 @@
+import { getStoreDisplayName } from "../stores/registry.js";
 import { StoreStatus, type StoreLogger } from "../types.js";
-import { capitalCase, kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
+import { kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
 import { getZodBaseType, getZodDefaultValue, unwrapZod } from "../utils/zod.js";
 import { Colors } from "./logging.js";
 import { z } from "zod";
@@ -24,7 +25,7 @@ function createDeploymentUI(storeStatuses: Record<string, StoreStatus>, logEntri
   for (const [store, status] of Object.entries(storeStatuses)) {
     const symbol = statusSymbols[status];
     const statusText = statusTexts[status];
-    lines.push(`${symbol} ${store}: ${statusText}`);
+    lines.push(`${symbol} ${getStoreDisplayName(store)}: ${statusText}`);
   }
 
   lines.push("");
@@ -38,7 +39,7 @@ function createDeploymentUI(storeStatuses: Record<string, StoreStatus>, logEntri
 
     for (const entry of logEntries.slice(-5)) {
       const color = logLevelColors[entry.level];
-      lines.push(`${color}[${entry.timestamp.toLocaleTimeString()}] ${entry.store}: ${entry.message}${Colors.Reset}`);
+      lines.push(`${color}[${entry.timestamp.toLocaleTimeString()}] ${getStoreDisplayName(entry.store)}: ${entry.message}${Colors.Reset}`);
     }
   }
 
@@ -80,6 +81,7 @@ export function createInkLogger(storeNames: string[]) {
 
   const logEntries: LogEntry[] = [];
   let isMounted = true;
+  let lastLineCount = 0;
 
   function renderUI() {
     if (!isMounted) {
@@ -87,8 +89,12 @@ export function createInkLogger(storeNames: string[]) {
     }
 
     const output = createDeploymentUI(storeStatuses, logEntries);
-    // Clear screen and move cursor to top, then render
-    process.stdout.write("\x1b[2J\x1b[H" + output);
+    if (lastLineCount > 0) {
+      // Move cursor up to start of previous render, then clear to end of screen
+      process.stdout.write(`\x1b[${lastLineCount}A\x1b[J`);
+    }
+    process.stdout.write(output + "\n");
+    lastLineCount = output.split("\n").length;
   }
 
   const logger = {
@@ -147,9 +153,9 @@ export function createInkLogger(storeNames: string[]) {
     logger,
     monitor,
     forStore: (store: string) => ({
-      info: msg => logger.info(capitalCase(store), msg),
-      warning: msg => logger.warning(capitalCase(store), msg),
-      error: msg => logger.error(capitalCase(store), msg)
+      info: msg => logger.info(store, msg),
+      warning: msg => logger.warning(store, msg),
+      error: msg => logger.error(store, msg)
     } satisfies StoreLogger),
     unmount() {
       isMounted = false;
@@ -228,7 +234,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
   const reqWidth = 10;
   const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
 
-  const title = mode === "env" ? `${storeName}.env` : `${capitalCase(storeName)} Store`;
+  const title = mode === "env" ? `${storeName}.env` : getStoreDisplayName(storeName);
   const header = missingFields
     ? `${Colors.Yellow}${title}${Colors.Reset}:\n`
     : `${Colors.Yellow}${title}${Colors.Reset} - Arguments:\n`;

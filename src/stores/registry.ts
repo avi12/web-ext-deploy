@@ -10,6 +10,17 @@ export const storeRegistry: StoreDefinition[] = [chrome, firefox, edge, opera];
 
 export const storeNames = storeRegistry.map(store => store.name);
 
+const storeDisplayNames: Record<string, string> = {
+  chrome: "Chrome Web Store",
+  firefox: "Firefox Add-ons Store",
+  edge: "Microsoft Partner Center",
+  opera: "Opera Add-ons Store"
+};
+
+export function getStoreDisplayName(name: string) {
+  return storeDisplayNames[name] ?? name;
+}
+
 export function getStore(name: string) {
   return storeRegistry.find(store => store.name === name);
 }

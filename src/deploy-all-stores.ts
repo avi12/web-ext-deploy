@@ -1,5 +1,5 @@
 import { createCookieRefreshCallback, getJsonStoresFromCli } from "./cli.js";
-import { deployStore } from "./deploy-single-store.js";
+import { deployStore, StoreValidationError } from "./deploy-single-store.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus } from "./types.js";
 import { createInkLogger } from "./ui/ink-logger.js";
@@ -14,7 +14,8 @@ async function runStoreDeploy(
   inkLogger: ReturnType<typeof createInkLogger>,
   isDryRun?: boolean,
   isVerbose?: boolean,
-  isAutoFetchCookies?: boolean
+  isAutoFetchCookies?: boolean,
+  mode?: "cli" | "env"
 ) {
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
@@ -28,6 +29,7 @@ async function runStoreDeploy(
     onCookieExpired,
     isDryRun,
     isVerbose,
+    mode,
     setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
     setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath)
   });
@@ -52,23 +54,30 @@ export async function runDeploy(argv: Arguments) {
   for (const msg of preDeployLogs) {
     inkLogger.logger.info("System", msg);
   }
+  const command = z.string().safeParse(argv._[0]).data;
+  const mode = command === "cli" || command === "env" ? command : undefined;
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
   const isVerbose = z.boolean().safeParse(argv.verbose).data;
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
 
   const results = await Promise.allSettled(
-    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCookies))
+    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCookies, mode))
   );
 
   const failures: string[] = [];
+  const helpTexts: string[] = [];
   for (const [idx, result] of results.entries()) {
     const [store] = storeEntries[idx];
     if (result.status === "fulfilled") {
       inkLogger.logger.info(store, "Published!");
       inkLogger.monitor.updateStore(store, StoreStatus.Success);
     } else {
-      inkLogger.logger.error(store, toError(result.reason).message);
+      const error = toError(result.reason);
+      inkLogger.logger.error(store, error.message);
       inkLogger.monitor.updateStore(store, StoreStatus.Error);
+      if (error instanceof StoreValidationError) {
+        helpTexts.push(error.help);
+      }
       failures.push(store);
     }
   }
@@ -76,6 +85,10 @@ export async function runDeploy(argv: Arguments) {
   const successes = results.length - failures.length;
   inkLogger.logger.info("System", `Deployments complete! ${successes} succeeded, ${failures.length} failed`);
   inkLogger.unmount();
+
+  for (const help of helpTexts) {
+    console.error(help);
+  }
 
   if (failures.length > 0) {
     throw new Error(red(`${failures.length} deployment(s) failed`));
