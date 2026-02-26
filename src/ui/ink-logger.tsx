@@ -55,13 +55,6 @@ function stripAnsi(str: string) {
   return str.replace(/\u001b\[[0-9;]*m/g, "");
 }
 
-function renderProgressBar(current: number, total: number) {
-  const percentage = Math.round((current / total) * 100);
-  const barWidth = 30;
-  const filled = Math.round((current / total) * barWidth);
-  return `[${"█".repeat(filled)}${"░".repeat(barWidth - filled)}] ${percentage}%`;
-}
-
 export function createInkLogger(storeNames: string[], isDryRun?: boolean) {
   const sharedStatuses: Record<string, StoreStatus> = Object.fromEntries(
     storeNames.map(store => [store, StoreStatus.Pending])
@@ -96,10 +89,32 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean) {
       return () => clearInterval(interval);
     }, []);
 
-    const completedCount = Object.values(sharedStatuses).filter(
-      status => status === StoreStatus.Success || status === StoreStatus.Error
-    ).length;
+    const successCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Success).length;
+    const errorCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Error).length;
+    const runningCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Running).length;
+    const pendingCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Pending).length;
+    const completedCount = successCount + errorCount;
     const totalCount = storeNames.length;
+
+    const label = `${completedCount}/${totalCount}`;
+    const barWidth = Math.max(10, (process.stdout.columns ?? 80) - label.length - 3);
+    const successFilled = Math.round((successCount / totalCount) * barWidth);
+    const errorFilled = Math.round((errorCount / totalCount) * barWidth);
+
+    type SummaryPart = { text: string; color: string };
+    const summaryParts: SummaryPart[] = [];
+    if (successCount > 0) {
+      summaryParts.push({ text: `✔ ${successCount} succeeded`, color: "green" });
+    }
+    if (errorCount > 0) {
+      summaryParts.push({ text: `✖ ${errorCount} failed`, color: "red" });
+    }
+    if (runningCount > 0) {
+      summaryParts.push({ text: `${SPINNER_FRAMES[spinnerFrame]} ${runningCount} ${isDryRun ? "validating" : "deploying"}`, color: "cyan" });
+    }
+    if (pendingCount > 0) {
+      summaryParts.push({ text: `○ ${pendingCount} waiting`, color: "blue" });
+    }
 
     return (
       <Box flexDirection="column">
@@ -118,7 +133,21 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean) {
           );
         })}
         <Newline />
-        <Text>{renderProgressBar(completedCount, totalCount)}</Text>
+        <Box>
+          <Text>[</Text>
+          <Text color="green">{"█".repeat(successFilled)}</Text>
+          <Text color="red">{"█".repeat(errorFilled)}</Text>
+          <Text color="gray">{"░".repeat(Math.max(0, barWidth - successFilled - errorFilled))}</Text>
+          <Text>] {label}</Text>
+        </Box>
+        <Box>
+          {summaryParts.map((part, i) => (
+            <React.Fragment key={part.color}>
+              {i > 0 && <Text>{"  "}</Text>}
+              <Text color={part.color}>{part.text}</Text>
+            </React.Fragment>
+          ))}
+        </Box>
         {sharedEntries.length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             <Text bold color="gray">Recent Activity:</Text>
