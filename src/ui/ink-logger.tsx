@@ -3,7 +3,12 @@ import { StoreStatus, type StoreLogger } from "../types.js";
 import { kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
 import { getZodBaseType, getZodDefaultValue, unwrapZod } from "../utils/zod.js";
 import { Colors } from "./logging.js";
+import { Box, Newline, render, Text } from "ink";
+import React, { useEffect, useState } from "react";
 import { z } from "zod";
+
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const RENDER_INTERVAL_MS = 80;
 
 interface LogEntry {
   store: string;
@@ -12,144 +17,189 @@ interface LogEntry {
   timestamp: Date;
 }
 
-function createDeploymentUI(storeStatuses: Record<string, StoreStatus>, logEntries: LogEntry[]) {
-  const statuses = Object.values(storeStatuses);
-  const completedCount = statuses.filter(
-    status => status === StoreStatus.Success || status === StoreStatus.Error
-  ).length;
-  const totalCount = statuses.length;
-
-  const lines = [`${Colors.Cyan}${Colors.Bold}Web Extension Deployment${Colors.Reset}\n`];
-
-  // Store Status Section
-  for (const [store, status] of Object.entries(storeStatuses)) {
-    const symbol = statusSymbols[status];
-    const statusText = statusTexts[status];
-    lines.push(`${symbol} ${getStoreDisplayName(store)}: ${statusText}`);
-  }
-
-  lines.push("");
-
-  // Progress Bar
-  lines.push(renderProgressBar(completedCount, totalCount), "");
-
-  // Recent Logs Section
-  if (logEntries.length > 0) {
-    lines.push(`${Colors.Gray}${Colors.Bold}Recent Activity:${Colors.Reset}`);
-
-    for (const entry of logEntries.slice(-5)) {
-      const color = logLevelColors[entry.level];
-      lines.push(`${color}[${entry.timestamp.toLocaleTimeString()}] ${getStoreDisplayName(entry.store)}: ${entry.message}${Colors.Reset}`);
-    }
-  }
-
-  return lines.join("\n");
-}
-
-const statusSymbols: Record<StoreStatus, string> = {
-  [StoreStatus.Pending]: `${Colors.Blue}○${Colors.Reset}`,
-  [StoreStatus.Running]: `${Colors.Cyan}●${Colors.Reset}`,
-  [StoreStatus.Success]: `${Colors.Green}✔${Colors.Reset}`,
-  [StoreStatus.Error]: `${Colors.Red}✖${Colors.Reset}`
+const statusIcons: Partial<Record<StoreStatus, string>> = {
+  [StoreStatus.Pending]: "○",
+  [StoreStatus.Success]: "✔",
+  [StoreStatus.Error]: "✖"
 };
 
-const statusTexts: Record<StoreStatus, string> = {
+const statusColors: Record<StoreStatus, string> = {
+  [StoreStatus.Pending]: "blue",
+  [StoreStatus.Running]: "cyan",
+  [StoreStatus.Success]: "green",
+  [StoreStatus.Error]: "red"
+};
+
+const deployStatusTexts: Record<StoreStatus, string> = {
   [StoreStatus.Pending]: "Waiting...",
   [StoreStatus.Running]: "Deploying...",
   [StoreStatus.Success]: "Published!",
   [StoreStatus.Error]: "Failed"
 };
 
-const logLevelColors: Record<LogEntry["level"], string> = {
-  info: Colors.White,
-  warning: Colors.Yellow,
-  error: Colors.Red
+const dryRunStatusTexts: Record<StoreStatus, string> = {
+  [StoreStatus.Pending]: "Waiting...",
+  [StoreStatus.Running]: "Validating...",
+  [StoreStatus.Success]: "Valid",
+  [StoreStatus.Error]: "Invalid"
 };
+
+const logLevelColors: Record<LogEntry["level"], string> = {
+  info: "white",
+  warning: "yellow",
+  error: "red"
+};
+
+function stripAnsi(str: string) {
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/\u001b\[[0-9;]*m/g, "");
+}
 
 function renderProgressBar(current: number, total: number) {
   const percentage = Math.round((current / total) * 100);
   const barWidth = 30;
   const filled = Math.round((current / total) * barWidth);
-
   return `[${"█".repeat(filled)}${"░".repeat(barWidth - filled)}] ${percentage}%`;
 }
 
-export function createInkLogger(storeNames: string[]) {
-  const storeStatuses: Record<string, StoreStatus> = Object.fromEntries(
+export function createInkLogger(storeNames: string[], isDryRun?: boolean) {
+  const sharedStatuses: Record<string, StoreStatus> = Object.fromEntries(
     storeNames.map(store => [store, StoreStatus.Pending])
   );
+  const sharedEntries: LogEntry[] = [];
+  let triggerRender: (() => void) | null = null;
+  let resolveReady!: () => void;
+  let notifyAfterRender: (() => void) | null = null;
+  const ready = new Promise<void>(resolve => {
+    resolveReady = resolve;
+  });
 
-  const logEntries: LogEntry[] = [];
-  let isMounted = true;
-  let lastLineCount = 0;
+  function DeployUI() {
+    const [, setTick] = useState(0);
+    const [spinnerFrame, setSpinnerFrame] = useState(0);
 
-  function renderUI() {
-    if (!isMounted) {
-      return;
+    triggerRender = () => setTick(tick => tick + 1);
+
+    useEffect(() => {
+      resolveReady();
+    }, []);
+
+    useEffect(() => {
+      notifyAfterRender?.();
+      notifyAfterRender = null;
+    });
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setSpinnerFrame(frame => (frame + 1) % SPINNER_FRAMES.length);
+      }, RENDER_INTERVAL_MS);
+      return () => clearInterval(interval);
+    }, []);
+
+    const completedCount = Object.values(sharedStatuses).filter(
+      status => status === StoreStatus.Success || status === StoreStatus.Error
+    ).length;
+    const totalCount = storeNames.length;
+
+    return (
+      <Box flexDirection="column">
+        <Text bold color="cyan">Web Extension Deployment</Text>
+        <Newline />
+        {Object.entries(sharedStatuses).map(([store, status]) => {
+          const icon = status === StoreStatus.Running
+            ? SPINNER_FRAMES[spinnerFrame]
+            : (statusIcons[status] ?? "?");
+          const statusText = isDryRun ? dryRunStatusTexts[status] : deployStatusTexts[status];
+          return (
+            <Text key={store}>
+              <Text color={statusColors[status]}>{icon}</Text>
+              {" "}{getStoreDisplayName(store)}: {statusText}
+            </Text>
+          );
+        })}
+        <Newline />
+        <Text>{renderProgressBar(completedCount, totalCount)}</Text>
+        {sharedEntries.length > 0 && (
+          <Box flexDirection="column" marginTop={1}>
+            <Text bold color="gray">Recent Activity:</Text>
+            {sharedEntries.slice(-(storeNames.length * 2 + 2)).map((entry, i) => (
+              <Text key={i} color={logLevelColors[entry.level]}>
+                [{entry.timestamp.toLocaleTimeString()}] {getStoreDisplayName(entry.store)}: {stripAnsi(entry.message)}
+              </Text>
+            ))}
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
+  const inkInstance = render(<DeployUI />);
+
+  function addLogEntry(entry: LogEntry) {
+    sharedEntries.push(entry);
+    if (sharedStatuses[entry.store] === StoreStatus.Pending) {
+      sharedStatuses[entry.store] = StoreStatus.Running;
     }
-
-    const output = createDeploymentUI(storeStatuses, logEntries);
-    if (lastLineCount > 0) {
-      // Move cursor up to start of previous render, then clear to end of screen
-      process.stdout.write(`\x1b[${lastLineCount}A\x1b[J`);
-    }
-    process.stdout.write(output + "\n");
-    lastLineCount = output.split("\n").length;
+    triggerRender?.();
   }
 
   const logger = {
     info(store: string, message: string) {
-      logEntries.push({
-        store, level: "info", message, timestamp: new Date()
+      addLogEntry({
+        store,
+        level: "info",
+        message,
+        timestamp: new Date()
       });
-      if (storeStatuses[store] === StoreStatus.Pending) {
-        storeStatuses[store] = StoreStatus.Running;
-      }
-      renderUI();
     },
     warning(store: string, message: string) {
-      logEntries.push({
-        store, level: "warning", message: `Warning: ${message}`, timestamp: new Date()
+      addLogEntry({
+        store,
+        level: "warning",
+        message: `Warning: ${message}`,
+        timestamp: new Date()
       });
-      if (storeStatuses[store] === StoreStatus.Pending) {
-        storeStatuses[store] = StoreStatus.Running;
-      }
-      renderUI();
     },
     error(store: string, message: string) {
-      logEntries.push({
-        store, level: "error", message, timestamp: new Date()
+      sharedEntries.push({
+        store,
+        level: "error",
+        message,
+        timestamp: new Date()
       });
-      storeStatuses[store] = StoreStatus.Error;
-      renderUI();
+      sharedStatuses[store] = StoreStatus.Error;
+      triggerRender?.();
     }
   };
 
   const monitor = {
     updateStore(store: string, status: StoreStatus, message?: string) {
-      if (storeStatuses[store] === status) {
+      if (sharedStatuses[store] === status) {
         return;
       }
-      storeStatuses[store] = status;
+      sharedStatuses[store] = status;
       if (message) {
-        logEntries.push({
-          store, level: status === StoreStatus.Error ? "error" : "info", message, timestamp: new Date()
+        sharedEntries.push({
+          store,
+          level: status === StoreStatus.Error ? "error" : "info",
+          message,
+          timestamp: new Date()
         });
       }
-      renderUI();
+      triggerRender?.();
     },
     setZipPath(store: string, zipPath: string) {
-      logEntries.push({
-        store, level: "info", message: `ZIP: ${zipPath}`, timestamp: new Date()
+      addLogEntry({
+        store,
+        level: "info",
+        message: `ZIP: ${zipPath}`,
+        timestamp: new Date()
       });
-      if (storeStatuses[store] === StoreStatus.Pending) {
-        storeStatuses[store] = StoreStatus.Running;
-      }
-      renderUI();
     }
   };
 
   return {
+    ready,
     logger,
     monitor,
     forStore: (store: string) => ({
@@ -157,8 +207,14 @@ export function createInkLogger(storeNames: string[]) {
       warning: msg => logger.warning(store, msg),
       error: msg => logger.error(store, msg)
     } satisfies StoreLogger),
+    waitForRender(): Promise<void> {
+      return new Promise<void>(resolve => {
+        notifyAfterRender = resolve;
+        triggerRender?.();
+      });
+    },
     unmount() {
-      isMounted = false;
+      inkInstance.unmount();
     }
   };
 }

@@ -50,13 +50,14 @@ export async function runDeploy(argv: Arguments) {
     throw new Error(red("No stores to deploy to"));
   }
 
-  const inkLogger = createInkLogger(storeEntries.map(([store]) => store));
-  for (const msg of preDeployLogs) {
-    inkLogger.logger.info("System", msg);
-  }
   const command = z.string().safeParse(argv._[0]).data;
   const mode = command === "cli" || command === "env" ? command : undefined;
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
+  const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun);
+  await inkLogger.ready;
+  for (const msg of preDeployLogs) {
+    inkLogger.logger.info("System", msg);
+  }
   const isVerbose = z.boolean().safeParse(argv.verbose).data;
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
 
@@ -69,11 +70,13 @@ export async function runDeploy(argv: Arguments) {
   for (const [idx, result] of results.entries()) {
     const [store] = storeEntries[idx];
     if (result.status === "fulfilled") {
-      inkLogger.logger.info(store, "Published!");
+      inkLogger.logger.info(store, isDryRun ? "Validation passed" : "Published!");
       inkLogger.monitor.updateStore(store, StoreStatus.Success);
     } else {
       const error = toError(result.reason);
-      inkLogger.logger.error(store, error.message);
+      for (const line of error.message.split("\n").filter(line => line.trim())) {
+        inkLogger.logger.error(store, line);
+      }
       inkLogger.monitor.updateStore(store, StoreStatus.Error);
       if (error instanceof StoreValidationError) {
         helpTexts.push(error.help);
@@ -84,6 +87,7 @@ export async function runDeploy(argv: Arguments) {
 
   const successes = results.length - failures.length;
   inkLogger.logger.info("System", `Deployments complete! ${successes} succeeded, ${failures.length} failed`);
+  await inkLogger.waitForRender();
   inkLogger.unmount();
 
   for (const help of helpTexts) {
@@ -91,6 +95,7 @@ export async function runDeploy(argv: Arguments) {
   }
 
   if (failures.length > 0) {
-    throw new Error(red(`${failures.length} deployment(s) failed`));
+    const isPlural = failures.length > 1;
+    throw new Error(red(`${failures.length} deployment${isPlural ? "s" : ""} failed`));
   }
 }

@@ -27,7 +27,12 @@ export function deployStore(
   const parseResult = store.schema.safeParse(options);
   if (!parseResult.success) {
     const messages = parseResult.error.issues.map(issue => issue.message);
-    const help = renderStoreHelp(store.name, store.schema, context?.mode);
+    const failedFields = [...new Set(
+      parseResult.error.issues
+        .map(issue => issue.path[0])
+        .filter((path): path is string => typeof path === "string")
+    )];
+    const help = renderStoreHelp(store.name, store.schema, context?.mode, failedFields.length > 0 ? failedFields : undefined, store.dynamicFields, store.cliOverridableFields);
     throw new StoreValidationError(messages.join("\n"), help, parseResult.error);
   }
 
