@@ -1,7 +1,7 @@
 import { createHttpClient } from "../../http/client.js";
 import { StoreStatus, type DeployContext } from "../../types.js";
 import { isObjectEmpty } from "../../utils/helpers.js";
-import { requestWithRetry } from "../../utils/retry.js";
+import { createRateLimitHandler, requestWithRetry, type RateLimitHandler } from "../../utils/retry.js";
 import { ChromeOptions, storeError } from "./chrome-input.js";
 import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
 import fs from "node:fs";
@@ -17,11 +17,13 @@ const PENDING_REVIEW_STATES: readonly string[] = [ItemState.PENDING_REVIEW, Item
 function fetchStatus({
   extId,
   publisherId,
-  logger
+  logger,
+  onRateLimit
 }: {
   extId: string;
   publisherId: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
     sendRequest: () => httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`),
@@ -34,7 +36,8 @@ function fetchStatus({
     },
     formatError: storeError,
     errorContext: "Fetch status failed",
-    logger
+    logger,
+    onRateLimit
   });
 }
 
@@ -42,14 +45,18 @@ async function cancelSubmissionIfPending({
   extId,
   publisherId,
   logger,
-  isVerbose
+  isVerbose,
+  onRateLimit
 }: {
   extId: string;
   publisherId: string;
   logger?: DeployContext["logger"];
   isVerbose?: boolean;
+  onRateLimit?: RateLimitHandler;
 }) {
-  const status = await fetchStatus({ extId, publisherId, logger });
+  const status = await fetchStatus({
+    extId, publisherId, logger, onRateLimit
+  });
   const submittedState = status.submittedItemRevisionStatus?.state;
   if (!submittedState || !PENDING_REVIEW_STATES.includes(submittedState)) {
     return;
@@ -64,7 +71,8 @@ async function cancelSubmissionIfPending({
     parseResponse: (): undefined => undefined,
     formatError: storeError,
     errorContext: "Cancel submission failed",
-    logger
+    logger,
+    onRateLimit
   });
   await setTimeout(60_000);
 }
@@ -72,11 +80,13 @@ async function cancelSubmissionIfPending({
 async function waitForUpload({
   extId,
   publisherId,
-  logger
+  logger,
+  onRateLimit
 }: {
   extId: string;
   publisherId: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const pollIntervalMs = 5_000;
 
@@ -92,7 +102,8 @@ async function waitForUpload({
       },
       formatError: storeError,
       errorContext: "Upload status check failed",
-      logger
+      logger,
+      onRateLimit
     });
 
     const { lastAsyncUploadState } = data;
@@ -110,12 +121,14 @@ async function uploadZip({
   zip,
   extId,
   publisherId,
-  logger
+  logger,
+  onRateLimit
 }: {
   zip: string;
   extId: string;
   publisherId: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const data = await requestWithRetry({
     sendRequest: () => uploadHttpClient.post(
@@ -132,14 +145,17 @@ async function uploadZip({
     },
     formatError: storeError,
     errorContext: "Upload failed",
-    logger
+    logger,
+    onRateLimit
   });
 
   if (data.uploadState === UploadState.SUCCEEDED) {
     return;
   }
   if (data.uploadState === UploadState.IN_PROGRESS) {
-    return waitForUpload({ extId, publisherId, logger });
+    return waitForUpload({
+      extId, publisherId, logger, onRateLimit
+    });
   }
   throw new Error(storeError(`Upload failed with state: ${data.uploadState}`));
 }
@@ -151,13 +167,15 @@ async function publishExtension({
   publisherId,
   skipReview,
   deployPercentage,
-  logger
+  logger,
+  onRateLimit
 }: {
   extId: string;
   publisherId: string;
   skipReview?: boolean;
   deployPercentage?: number;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const body = {
     ...skipReview && { skipReview: true },
@@ -180,7 +198,8 @@ async function publishExtension({
     },
     formatError: storeError,
     errorContext: "Publish failed",
-    logger
+    logger,
+    onRateLimit
   });
 
   const { state } = data;
@@ -192,13 +211,17 @@ async function publishExtension({
 async function verifySubmission({
   extId,
   publisherId,
-  logger
+  logger,
+  onRateLimit
 }: {
   extId: string;
   publisherId: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
-  const status = await fetchStatus({ extId, publisherId, logger });
+  const status = await fetchStatus({
+    extId, publisherId, logger, onRateLimit
+  });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const publishedState = status.publishedItemRevisionStatus?.state;
 
@@ -226,8 +249,14 @@ export async function deployToChrome(
   httpClient = createHttpClient(BASE_URL, authHeaders);
   uploadHttpClient = createHttpClient(BASE_URL, authHeaders);
 
+  const onRateLimit = createRateLimitHandler({
+    manualDeployUrl: `https://chrome.google.com/webstore/devconsole/${publisherId}/${extId}/edit/package`,
+    formatError: storeError,
+    logger
+  });
+
   await cancelSubmissionIfPending({
-    extId, publisherId, logger, isVerbose
+    extId, publisherId, logger, isVerbose, onRateLimit
   });
 
   if (isVerbose) {
@@ -238,7 +267,8 @@ export async function deployToChrome(
     zip,
     extId,
     publisherId,
-    logger
+    logger,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -246,14 +276,16 @@ export async function deployToChrome(
   }
 
   await publishExtension({
-    extId, publisherId, skipReview, deployPercentage, logger
+    extId, publisherId, skipReview, deployPercentage, logger, onRateLimit
   });
 
   if (isVerbose) {
     logger?.info("Verifying submission");
   }
 
-  await verifySubmission({ extId, publisherId, logger });
+  await verifySubmission({
+    extId, publisherId, logger, onRateLimit
+  });
 
   logger?.info("Successfully published to Chrome Web Store!");
   setStatus?.(StoreStatus.Success);

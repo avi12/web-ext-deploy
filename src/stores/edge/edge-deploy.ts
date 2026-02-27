@@ -1,6 +1,6 @@
 import { createHttpClient } from "../../http/client.js";
 import { StoreStatus, type DeployContext } from "../../types.js";
-import { requestWithRetry, type HttpLikeResponse } from "../../utils/retry.js";
+import { createRateLimitHandler, requestWithRetry, type HttpLikeResponse, type RateLimitHandler } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { EdgeOptionsPublishApi, storeError } from "./edge-input.js";
 import { PublishOperationStatusSchema, StatusPackageUploadSchema } from "./edge-types.js";
@@ -10,28 +10,16 @@ import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
-function handleEdgeRateLimit(productId: string, logger?: DeployContext["logger"]) {
-  return async (response: HttpLikeResponse) => {
-    const message = z.object({ message: z.string() }).safeParse(response.data).data?.message ?? "";
-    const secondsToWait = Number(message.match(/\d+/)?.[0] || "60");
-    if (secondsToWait >= 60) {
-      const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
-      logger?.warning(
-        `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard`
-      );
-    }
-    await setTimeout(60_000);
-  };
-}
-
 async function checkStatusOfPackageUpload({
   productId,
   operationId,
-  logger
+  logger,
+  onRateLimit
 }: {
   productId: string;
   operationId: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const pollIntervalMs = 5_000;
 
@@ -47,7 +35,8 @@ async function checkStatusOfPackageUpload({
       },
       formatError: storeError,
       errorContext: "Upload verification failed",
-      logger
+      logger,
+      onRateLimit
     });
 
     if (data.status === "Failed") {
@@ -72,11 +61,13 @@ function parseLocation(response: HttpLikeResponse) {
 function uploadZip({
   zip,
   productId,
-  logger
+  logger,
+  onRateLimit
 }: {
   zip: string;
   productId: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
     sendRequest: () => httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), { headers: { "Content-Type": "application/zip" } }),
@@ -84,18 +75,20 @@ function uploadZip({
     formatError: storeError,
     errorContext: "Upload failed",
     logger,
-    onRateLimit: handleEdgeRateLimit(productId, logger)
+    onRateLimit
   });
 }
 
 function publishSubmission({
   productId,
   devChangelog,
-  logger
+  logger,
+  onRateLimit
 }: {
   productId: string;
   devChangelog: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
     sendRequest: () => httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), { headers: { "Content-Type": "application/json" } }),
@@ -103,18 +96,20 @@ function publishSubmission({
     formatError: storeError,
     errorContext: "Publish failed",
     logger,
-    onRateLimit: handleEdgeRateLimit(productId, logger)
+    onRateLimit
   });
 }
 
 async function checkPublishStatus({
   productId,
   operationId,
-  logger
+  logger,
+  onRateLimit
 }: {
   productId: string;
   operationId: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const data = await requestWithRetry({
     sendRequest: () => httpClient.get(`products/${productId}/submissions/operations/${operationId}`),
@@ -128,7 +123,7 @@ async function checkPublishStatus({
     formatError: storeError,
     errorContext: "Submission status check failed",
     logger,
-    onRateLimit: handleEdgeRateLimit(productId, logger)
+    onRateLimit
   });
 
   if (!data.status) {
@@ -157,6 +152,16 @@ export async function deployToEdgePublishApi(
     "X-ClientID": clientId
   });
 
+  const onRateLimit = createRateLimitHandler({
+    manualDeployUrl: `https://partner.microsoft.com/en-us/dashboard/microsoftedge/${productId}/packages/dashboard`,
+    formatError: storeError,
+    getWaitSeconds(response) {
+      const message = z.object({ message: z.string() }).safeParse(response.data).data?.message ?? "";
+      return Number(message.match(/\d+/)?.[0] || "60");
+    },
+    logger
+  });
+
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
 
@@ -167,7 +172,8 @@ export async function deployToEdgePublishApi(
   const uploadOperationId = await uploadZip({
     zip,
     productId,
-    logger
+    logger,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -177,7 +183,8 @@ export async function deployToEdgePublishApi(
   await checkStatusOfPackageUpload({
     productId,
     operationId: uploadOperationId,
-    logger
+    logger,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -187,7 +194,8 @@ export async function deployToEdgePublishApi(
   const publishOperationId = await publishSubmission({
     productId,
     devChangelog,
-    logger
+    logger,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -197,7 +205,8 @@ export async function deployToEdgePublishApi(
   await checkPublishStatus({
     productId,
     operationId: publishOperationId,
-    logger
+    logger,
+    onRateLimit
   });
 
   logger?.info("Successfully published to Edge Add-ons!");

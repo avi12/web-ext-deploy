@@ -23,6 +23,32 @@ export type HttpLikeResponse = {
   headers?: Record<string, string>;
 };
 
+export type RateLimitHandler = (response: HttpLikeResponse) => Promise<void>;
+
+export function createRateLimitHandler({
+  manualDeployUrl,
+  formatError,
+  logger,
+  maxWaitSeconds = 60,
+  getWaitSeconds = () => 60
+}: {
+  manualDeployUrl: string;
+  formatError: (message: string) => string;
+  logger?: StoreLogger;
+  maxWaitSeconds?: number;
+  getWaitSeconds?: (response: HttpLikeResponse) => number;
+}): RateLimitHandler {
+  return async response => {
+    const secondsToWait = getWaitSeconds(response);
+    if (secondsToWait > maxWaitSeconds) {
+      throw new Error(formatError(`Too many API requests. Deploy manually at ${manualDeployUrl}`));
+    }
+    const retryAt = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
+    logger?.warning(`Too many requests. A retry will automatically be at ${retryAt}\nOr, you can deploy manually: ${manualDeployUrl}`);
+    await setTimeout(secondsToWait * 1000);
+  };
+}
+
 export async function requestWithRetry<T>({
   sendRequest,
   parseResponse,

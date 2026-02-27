@@ -1,5 +1,5 @@
 import { StoreStatus, type DeployContext } from "../../types.js";
-import { CookieAuthError, requestWithRetry, type HttpLikeResponse } from "../../utils/retry.js";
+import { CookieAuthError, createRateLimitHandler, requestWithRetry, type HttpLikeResponse, type RateLimitHandler } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { OperaOptions, storeError } from "./opera-input.js";
 import { ListVersionsSchema,
@@ -71,12 +71,14 @@ async function verifySourceCodeExistence({
   zip,
   packageId,
   logger,
-  onCookieExpired
+  onCookieExpired,
+  onRateLimit
 }: {
   zip: string;
   packageId: number;
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
   const { version, default_locale = "en" } = extJson;
@@ -99,7 +101,8 @@ async function verifySourceCodeExistence({
     },
     formatError: storeError,
     errorContext: "Source code verification failed",
-    logger
+    logger,
+    onRateLimit
   });
 
   if (!data.source_url && !data.source_for_moderators_url) {
@@ -111,12 +114,14 @@ async function cancelLatestVersionIfNotSubmitted({
   packageId,
   versionsListed,
   logger,
-  onCookieExpired
+  onCookieExpired,
+  onRateLimit
 }: {
   packageId: number;
   versionsListed: ListVersions["versions"];
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
+  onRateLimit?: RateLimitHandler;
 }) {
   if (versionsListed.length === 0 || versionsListed[0].submitted_for_moderation) {
     return;
@@ -140,7 +145,8 @@ async function cancelLatestVersionIfNotSubmitted({
     },
     formatError: storeError,
     errorContext: "Cancel changes failed",
-    logger
+    logger,
+    onRateLimit
   });
 }
 
@@ -148,12 +154,14 @@ async function submitChanges({
   zip,
   packageId,
   logger,
-  onCookieExpired
+  onCookieExpired,
+  onRateLimit
 }: {
   zip: string;
   packageId: number;
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
   const { version } = extJson;
@@ -174,7 +182,8 @@ async function submitChanges({
     },
     formatError: storeError,
     errorContext: "Submit changes failed",
-    logger
+    logger,
+    onRateLimit
   });
 }
 
@@ -193,11 +202,13 @@ function getFileMetadata(zipPath: string) {
 async function uploadZip({
   zip,
   logger,
-  onCookieExpired
+  onCookieExpired,
+  onRateLimit
 }: {
   zip: string;
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const { zipName, fileId } = getFileMetadata(zip);
 
@@ -240,7 +251,8 @@ async function uploadZip({
     },
     formatError: storeError,
     errorContext: "Upload failed",
-    logger
+    logger,
+    onRateLimit
   });
 }
 
@@ -249,13 +261,15 @@ async function verifyUploadSuccessful({
   packageId,
   lastVersion,
   logger,
-  onCookieExpired
+  onCookieExpired,
+  onRateLimit
 }: {
   zipPath: string;
   packageId: number;
   lastVersion: string;
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
+  onRateLimit?: RateLimitHandler;
 }): Promise<UploadResult> {
   const { zipName, fileId } = getFileMetadata(zipPath);
 
@@ -283,7 +297,8 @@ async function verifyUploadSuccessful({
     },
     formatError: storeError,
     errorContext: "Upload verification failed",
-    logger
+    logger,
+    onRateLimit
   });
 
   if ("package_file" in data) {
@@ -297,13 +312,15 @@ async function updateChangelog({
   packageId,
   changelog,
   logger,
-  onCookieExpired
+  onCookieExpired,
+  onRateLimit
 }: {
   zip: string;
   packageId: number;
   changelog: string;
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const { version, default_locale = "en" } = await getExtJson(zip);
 
@@ -327,7 +344,8 @@ async function updateChangelog({
     },
     formatError: storeError,
     errorContext: "Changelog update failed",
-    logger
+    logger,
+    onRateLimit
   });
 }
 
@@ -346,11 +364,13 @@ function verifyVersionNotSubmittedForModeration({ versionsListed, version }: {
 function getVersions({
   packageId,
   logger,
-  onCookieExpired
+  onCookieExpired,
+  onRateLimit
 }: {
   packageId: number;
   logger?: DeployContext["logger"];
   onCookieExpired?: DeployContext["onCookieExpired"];
+  onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
     sendRequest: () => fetchWithAuth(
@@ -368,7 +388,8 @@ function getVersions({
     },
     formatError: storeError,
     errorContext: "Get package versions failed",
-    logger
+    logger,
+    onRateLimit
   });
 }
 
@@ -387,6 +408,12 @@ export async function deployToOpera(
     Referer: "https://addons.opera.com"
   };
 
+  const onRateLimit = createRateLimitHandler({
+    manualDeployUrl: `https://addons.opera.com/developer/package/${packageId}/`,
+    formatError: storeError,
+    logger
+  });
+
   setZipPath?.(zip);
   const { name, version } = await getExtJson(zip);
 
@@ -397,7 +424,8 @@ export async function deployToOpera(
   const versionsData = await getVersions({
     packageId,
     logger,
-    onCookieExpired
+    onCookieExpired,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -413,7 +441,8 @@ export async function deployToOpera(
     packageId,
     versionsListed: versionsData.versions,
     logger,
-    onCookieExpired
+    onCookieExpired,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -423,7 +452,8 @@ export async function deployToOpera(
   await uploadZip({
     zip,
     logger,
-    onCookieExpired
+    onCookieExpired,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -436,7 +466,8 @@ export async function deployToOpera(
     packageId,
     lastVersion,
     logger,
-    onCookieExpired
+    onCookieExpired,
+    onRateLimit
   });
 
   if (isVerbose) {
@@ -447,7 +478,8 @@ export async function deployToOpera(
     zip,
     packageId,
     logger,
-    onCookieExpired
+    onCookieExpired,
+    onRateLimit
   });
 
   if (changelog) {
@@ -459,7 +491,8 @@ export async function deployToOpera(
       packageId,
       changelog,
       logger,
-      onCookieExpired
+      onCookieExpired,
+      onRateLimit
     });
   }
 
@@ -471,7 +504,8 @@ export async function deployToOpera(
     zip,
     packageId,
     logger,
-    onCookieExpired
+    onCookieExpired,
+    onRateLimit
   });
 
   logger?.info("Successfully published to Opera Add-ons!");

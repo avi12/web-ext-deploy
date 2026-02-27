@@ -2,7 +2,7 @@ import { createHttpClient } from "../../http/client.js";
 import { buildFormData } from "../../http/form-data.js";
 import { generateJwt } from "../../http/jwt.js";
 import { StoreStatus, type DeployContext } from "../../types.js";
-import { requestWithRetry, type HttpLikeResponse } from "../../utils/retry.js";
+import { createRateLimitHandler, requestWithRetry, type RateLimitHandler } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { FirefoxOptionsSubmissionApi, storeError } from "./firefox-input.js";
 import { FirefoxUploadDetailSchema, FirefoxCreateNewVersionSchema, FirefoxUploadSourceSchema } from "./firefox-types.js";
@@ -10,41 +10,20 @@ import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
 
-const SECONDS_TO_TOKEN_EXPIRY = 60 * 3;
-
 let httpClient: ReturnType<typeof createHttpClient>;
-
-function handleFirefoxRateLimit(extId: string, errorContext: string, logger?: DeployContext["logger"]) {
-  return async (response: HttpLikeResponse) => {
-    const detail = z.object({ detail: z.string() }).safeParse(response.data).data?.detail ?? "";
-    const secondsToWait = Number(detail.match(/\d+/)?.[0] || "60");
-    if (secondsToWait > 60) {
-      throw new Error(
-        storeError(`${errorContext}: Too many API requests. Deploy manually at https://addons.mozilla.org/developers/addons/${extId}/versions/submit/`)
-      );
-    }
-    if (secondsToWait < SECONDS_TO_TOKEN_EXPIRY) {
-      const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
-      logger?.warning(
-        `Too many requests. A retry will automatically be at ${newTime}\nOr, you can deploy manually: https://addons.mozilla.org/developers/addon/${extId}/versions/submit/`
-      );
-    }
-    await setTimeout(secondsToWait * 1000);
-  };
-}
 
 function uploadZip({
   zip,
-  extId,
   jwtIssuer,
   jwtSecret,
-  logger
+  logger,
+  onRateLimit
 }: {
   zip: string;
-  extId: string;
   jwtIssuer: string;
   jwtSecret: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const formData = buildFormData([
     { name: "upload", value: fs.createReadStream(zip) },
@@ -63,7 +42,7 @@ function uploadZip({
     formatError: storeError,
     errorContext: "Upload failed",
     logger,
-    onRateLimit: handleFirefoxRateLimit(extId, "Upload failed", logger)
+    onRateLimit
   });
 }
 
@@ -74,7 +53,8 @@ async function createNewVersion({
   changelogLang,
   devChangelog,
   zip,
-  logger
+  logger,
+  onRateLimit
 }: {
   slug: string;
   uuid: string;
@@ -83,6 +63,7 @@ async function createNewVersion({
   devChangelog: string;
   zip: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const { default_locale } = await getExtJson(zip);
   const locale = default_locale ?? changelogLang;
@@ -115,13 +96,14 @@ async function createNewVersion({
     formatError: storeError,
     errorContext: "Version creation failed",
     logger,
-    onRateLimit: handleFirefoxRateLimit(slug, "Version creation failed", logger)
+    onRateLimit
   });
 }
 
-async function validateUpload({ uuid, logger }: {
+async function validateUpload({ uuid, logger, onRateLimit }: {
   uuid: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const pollIntervalMs = 5_000;
 
@@ -137,7 +119,8 @@ async function validateUpload({ uuid, logger }: {
       },
       formatError: storeError,
       errorContext: "Upload verification failed",
-      logger
+      logger,
+      onRateLimit
     });
 
     if (data.processed) {
@@ -158,12 +141,14 @@ function uploadSourceCodeIfNeeded({
   slug,
   zipSource,
   version,
-  logger
+  logger,
+  onRateLimit
 }: {
   slug: string;
   zipSource: string;
   version: string;
   logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
 }) {
   const formData = buildFormData([
     { name: "source", value: fs.createReadStream(zipSource) }
@@ -181,7 +166,7 @@ function uploadSourceCodeIfNeeded({
     formatError: storeError,
     errorContext: "Source upload failed",
     logger,
-    onRateLimit: handleFirefoxRateLimit(slug, "Source upload failed", logger)
+    onRateLimit
   });
 }
 
@@ -202,6 +187,16 @@ export async function deployToFirefox(
 ) {
   httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/", { Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` });
 
+  const onRateLimit = createRateLimitHandler({
+    manualDeployUrl: `https://addons.mozilla.org/developers/addon/${extId}/versions/submit/`,
+    formatError: storeError,
+    getWaitSeconds(response) {
+      const detail = z.object({ detail: z.string() }).safeParse(response.data).data?.detail ?? "";
+      return Number(detail.match(/\d+/)?.[0] || "60");
+    },
+    logger
+  });
+
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
 
@@ -211,10 +206,10 @@ export async function deployToFirefox(
 
   const uploadData = await uploadZip({
     zip,
-    extId,
     jwtIssuer,
     jwtSecret,
-    logger
+    logger,
+    onRateLimit
   });
   const { uuid, version } = uploadData;
 
@@ -222,7 +217,7 @@ export async function deployToFirefox(
     logger?.info("Verifying upload");
   }
 
-  await validateUpload({ uuid, logger });
+  await validateUpload({ uuid, logger, onRateLimit });
 
   if (isVerbose) {
     logger?.info(`Creating a new version: ${version}`);
@@ -235,7 +230,8 @@ export async function deployToFirefox(
     changelogLang,
     devChangelog,
     zip,
-    logger
+    logger,
+    onRateLimit
   });
 
   if (zipSource) {
@@ -246,7 +242,8 @@ export async function deployToFirefox(
       slug: extId,
       zipSource,
       version,
-      logger
+      logger,
+      onRateLimit
     });
   }
 
