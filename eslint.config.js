@@ -1,4 +1,5 @@
 import eslint from "@eslint/js";
+import importNewlines from "eslint-plugin-import-newlines";
 import stylistic from "@stylistic/eslint-plugin";
 import perfectionist from "eslint-plugin-perfectionist";
 import globals from "globals";
@@ -15,6 +16,7 @@ export default [
     },
     plugins: {
       "@stylistic": stylistic,
+      "import-newlines": importNewlines,
       perfectionist
     }
   },
@@ -84,10 +86,10 @@ export default [
       "@stylistic/padded-blocks": ["error", "never"],
       "@stylistic/rest-spread-spacing": ["error", "never"],
       "@stylistic/spaced-comment": ["error", "always"],
+      "import-newlines/enforce": ["error", { items: 4, "max-len": 120 }],
       "@stylistic/object-curly-newline": ["error", {
         ObjectExpression: { multiline: true, minProperties: 4 },
         ObjectPattern: { multiline: true, minProperties: 4 },
-        ImportDeclaration: { multiline: true, minProperties: 4 },
         ExportDeclaration: "never"
       }],
       "@stylistic/object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
@@ -125,7 +127,6 @@ export default [
       "@stylistic/object-curly-newline": ["error", {
         ObjectExpression: { multiline: true, consistent: true },
         ObjectPattern: { multiline: true, consistent: true },
-        ImportDeclaration: { multiline: true, minProperties: 4 },
         ExportDeclaration: "never"
       }]
     }

@@ -5,7 +5,11 @@ import { StoreStatus, type DeployContext } from "../../types.js";
 import { createRateLimitHandler, requestWithRetry, type RateLimitHandler } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { FirefoxOptionsSubmissionApi, storeError } from "./firefox-input.js";
-import { FirefoxUploadDetailSchema, FirefoxCreateNewVersionSchema, FirefoxUploadSourceSchema } from "./firefox-types.js";
+import {
+  FirefoxUploadDetailSchema,
+  FirefoxCreateNewVersionSchema,
+  FirefoxUploadSourceSchema
+} from "./firefox-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";

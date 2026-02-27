@@ -1,7 +1,11 @@
 import { config } from "../../utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
 import {
-  Box, Newline, render, Text, useApp
+  Box,
+  Newline,
+  render,
+  Text,
+  useApp
 } from "ink";
 import { exec } from "node:child_process";
 import fs from "node:fs";
