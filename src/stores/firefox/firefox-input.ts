@@ -20,7 +20,7 @@ export const FirefoxOptionsSubmissionApiSchema = z.object({
     .transform(val => val ? getCorrectZip(val) : undefined)
     .check(ctx => {
       if (ctx.value && !getIsFileExists(ctx.value)) {
-        ctx.issues.push({ code: "custom", input: ctx.value, message: storeError(`Zip source doesn't exist: ${getFullPath(ctx.value)}`) });
+        ctx.issues.push({ code: "custom", input: ctx.value, message: storeError(`Source zip doesn't exist: ${getFullPath(ctx.value)}`) });
       }
     }),
   changelog: z.string().optional().describe("Changelog for this version. Supports \\n")
