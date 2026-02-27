@@ -1,13 +1,7 @@
 import { getStoreDisplayName } from "../stores/registry.js";
-import { StoreStatus, type StoreLogger } from "../types.js";
+import { type StoreLogger, StoreStatus } from "../types.js";
 import { kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
-import {
-  getZodBaseType,
-  getZodDefaultValue,
-  getZodDescription,
-  isZodOptional,
-  unwrapZod
-} from "../utils/zod.js";
+import { getZodBaseType, getZodDefaultValue, getZodDescription, isZodOptional, unwrapZod } from "../utils/zod.js";
 import { green, red, yellow } from "./logging.js";
 import { Box, Newline, render, Text } from "ink";
 import React, { useEffect, useState } from "react";
@@ -102,6 +96,8 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     const completedCount = successCount + errorCount;
     const totalCount = storeNames.length;
 
+    const activityEntries = isVerbose ? sharedEntries : sharedEntries.filter(entry => entry.level === "error");
+
     const label = `${completedCount}/${totalCount}`;
     const barWidth = Math.max(10, (process.stdout.columns ?? 80) - label.length - 3);
     const successFilled = Math.round((successCount / totalCount) * barWidth);
@@ -154,10 +150,10 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
             </React.Fragment>
           ))}
         </Box>
-        {isVerbose && sharedEntries.length > 0 && (
+        {activityEntries.length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             <Text bold color="gray">Recent Activity:</Text>
-            {sharedEntries.slice(-(storeNames.length * 2 + 2)).map((entry, i) => (
+            {activityEntries.slice(-(storeNames.length * 2 + 2)).map((entry, i) => (
               <Text key={i} color={logLevelColors[entry.level]}>
                 [{entry.timestamp.toLocaleTimeString()}] {getStoreDisplayName(entry.store)}: {stripAnsi(entry.message)}
               </Text>
@@ -170,9 +166,11 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
 
   const inkInstance = render(<DeployUI />);
 
-  function addLogEntry(entry: LogEntry) {
+  function addLogEntry(entry: LogEntry, overrideStatus?: StoreStatus) {
     sharedEntries.push(entry);
-    if (sharedStatuses[entry.store] === StoreStatus.Pending) {
+    if (overrideStatus !== undefined) {
+      sharedStatuses[entry.store] = overrideStatus;
+    } else if (sharedStatuses[entry.store] === StoreStatus.Pending) {
       sharedStatuses[entry.store] = StoreStatus.Running;
     }
     triggerRender?.();
@@ -196,14 +194,12 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
       });
     },
     error(store: string, message: string) {
-      sharedEntries.push({
+      addLogEntry({
         store,
         level: "error",
         message,
         timestamp: new Date()
-      });
-      sharedStatuses[store] = StoreStatus.Error;
-      triggerRender?.();
+      }, StoreStatus.Error);
     }
   };
 
@@ -238,9 +234,9 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     logger,
     monitor,
     forStore: (store: string) => ({
-      info: msg => logger.info(store, msg),
-      warning: msg => logger.warning(store, msg),
-      error: msg => logger.error(store, msg)
+      info: message => logger.info(store, message),
+      warning: message => logger.warning(store, message),
+      error: message => logger.error(store, message)
     } satisfies StoreLogger),
     waitForRender(): Promise<void> {
       return new Promise<void>(resolve => {
@@ -273,12 +269,39 @@ function unwrapZodType(zodValue: z.ZodTypeAny) {
   return { type, defaultValue, description };
 }
 
+type TableField = { name: string; type: string; isMissing?: boolean; defaultValue: string; description: string };
+
+function buildTable(fields: TableField[], header: string) {
+  const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
+  const typeWidth = 10;
+  const requiredWidth = 10;
+  const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
+
+  const nameColumn = "Argument".padEnd(nameWidth);
+  const typeColumn = "Type".padEnd(typeWidth);
+  const requiredColumn = "Required".padEnd(requiredWidth);
+  const defaultColumn = "Default".padEnd(defaultWidth);
+  const columnHeader = `  ${nameColumn}${typeColumn}${requiredColumn}${defaultColumn}Description\n`;
+  const separator = `  ${"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + 20)}\n`;
+
+  const rows = fields.map(field => {
+    const requiredMark = field.isMissing ? green("✔") : "";
+    const requiredPad = " ".repeat(field.isMissing ? requiredWidth - 1 : requiredWidth);
+    const nameText = field.isMissing ? red(field.name) : field.name;
+    const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
+    const typeText = field.type.padEnd(typeWidth);
+    const defaultText = field.defaultValue.padEnd(defaultWidth);
+    return `  ${nameText}${namePad}${typeText}${requiredMark}${requiredPad}${defaultText}${field.description}`;
+  }).join("\n");
+
+  return `\n${header}${columnHeader}${separator}${rows}\n`;
+}
+
 export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
   if (!(schema instanceof z.ZodObject)) {
     return "";
   }
 
-  const shape = schema.shape;
   function formatFieldName(key: string) {
     const isDynamic = dynamicFields?.includes(key);
     const isOverridable = cliOverridableFields?.includes(key);
@@ -295,10 +318,9 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     return key;
   }
 
-  type FieldInfo = { name: string; type: string; isMissing: boolean; defaultValue: string; description: string };
-  const fields: FieldInfo[] = [];
+  const fields: TableField[] = [];
 
-  for (const key in shape) {
+  for (const key in schema.shape) {
     // verbose is a global flag, not per-store
     if (key === "verbose" && mode) {
       continue;
@@ -306,7 +328,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     if (missingFields && !missingFields.includes(key)) {
       continue;
     }
-    const zodValue = shape[key];
+    const zodValue = schema.shape[key];
     const isOptional = isZodOptional(zodValue);
     const { type, defaultValue, description } = unwrapZodType(zodValue);
 
@@ -319,28 +341,12 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
     });
   }
 
-  const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
-  const typeWidth = 10;
-  const reqWidth = 10;
-  const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
-
   const title = mode === "env" ? `${storeName}.env` : getStoreDisplayName(storeName);
   const header = missingFields
     ? `${yellow(title)}:\n`
     : `${yellow(title)} - Arguments:\n`;
-  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
-  const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
-  const rows = fields.map(field => {
-    const reqMark = field.isMissing ? green("✔") : "";
-    const reqPad = " ".repeat(field.isMissing ? reqWidth - 1 : reqWidth);
-    const nameStr = field.isMissing ? red(field.name) : field.name;
-    const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
-    const defaultStr = field.defaultValue.padEnd(defaultWidth);
-    return `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark}${reqPad}${defaultStr}${field.description}`;
-  }).join("\n");
-
-  return `\n${header}${colHeader}${separator}${rows}\n`;
+  return buildTable(fields, header);
 }
 
 export function renderFatalError(message: string) {
@@ -362,20 +368,17 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
     return key;
   }
 
-  const shape = schema.shape;
-  type FieldInfo = { name: string; key: string; type: string; defaultValue: string; description: string };
-  const fields: FieldInfo[] = [];
+  const fields: TableField[] = [];
 
-  for (const key in shape) {
+  for (const key in schema.shape) {
     if (!missingArgs.includes(key)) {
       continue;
     }
-    const zodValue = shape[key];
+    const zodValue = (schema.shape)[key];
     const { type, defaultValue, description } = unwrapZodType(zodValue);
 
     fields.push({
       name: formatFieldName(key),
-      key,
       type,
       defaultValue,
       description
@@ -386,19 +389,6 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
     return "";
   }
 
-  const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
-  const typeWidth = 10;
-  const reqWidth = 10;
-  const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
-
   const header = `${yellow("Global Arguments")}:\n`;
-  const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
-  const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
-
-  const rows = fields.map(field => {
-    const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
-    return `  ${field.name}${namePad}${field.type.padEnd(typeWidth)}${"".padEnd(reqWidth)}${field.defaultValue.padEnd(defaultWidth)}${field.description}`;
-  }).join("\n");
-
-  return `\n${header}${colHeader}${separator}${rows}\n`;
+  return buildTable(fields, header);
 }

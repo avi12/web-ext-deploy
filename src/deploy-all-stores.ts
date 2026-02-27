@@ -3,7 +3,6 @@ import { deployStore, StoreValidationError } from "./deploy-single-store.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus } from "./types.js";
 import { createInkLogger } from "./ui/ink-logger.js";
-import { red } from "./ui/logging.js";
 import { toError } from "./utils/retry.js";
 import type { Arguments } from "yargs";
 import { z } from "zod";
@@ -37,7 +36,7 @@ async function runStoreDeploy(
 
 export async function runDeploy(argv: Arguments) {
   const preDeployLogs: string[] = [];
-  const storeJsons = await getJsonStoresFromCli(argv, msg => preDeployLogs.push(msg));
+  const storeJsons = await getJsonStoresFromCli(argv, message => preDeployLogs.push(message));
 
   const storeEntries: [string, Record<string, unknown>][] = [];
   for (const [store, json] of Object.entries(storeJsons)) {
@@ -47,7 +46,7 @@ export async function runDeploy(argv: Arguments) {
   }
 
   if (storeEntries.length === 0) {
-    throw new Error(red("No stores to deploy to"));
+    throw new Error("No stores to deploy to");
   }
 
   const command = z.string().safeParse(argv._[0]).data;
@@ -56,8 +55,8 @@ export async function runDeploy(argv: Arguments) {
   const isVerbose = z.boolean().safeParse(argv.verbose).data;
   const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun, isVerbose);
   await inkLogger.ready;
-  for (const msg of preDeployLogs) {
-    inkLogger.logger.info("System", msg);
+  for (const message of preDeployLogs) {
+    inkLogger.logger.info("System", message);
   }
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
 
@@ -67,8 +66,8 @@ export async function runDeploy(argv: Arguments) {
 
   const failures: string[] = [];
   const helpTexts: string[] = [];
-  for (const [idx, result] of results.entries()) {
-    const [store] = storeEntries[idx];
+  for (const [index, result] of results.entries()) {
+    const [store] = storeEntries[index];
     if (result.status === "fulfilled") {
       inkLogger.logger.info(store, isDryRun ? "Validation passed" : "Published!");
       inkLogger.monitor.updateStore(store, StoreStatus.Success);
@@ -96,6 +95,6 @@ export async function runDeploy(argv: Arguments) {
 
   if (failures.length > 0) {
     const isPlural = failures.length > 1;
-    throw new Error(red(`${failures.length} deployment${isPlural ? "s" : ""} failed`));
+    throw new Error(`${failures.length} deployment${isPlural ? "s" : ""} failed`);
   }
 }

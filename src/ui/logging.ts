@@ -14,18 +14,18 @@ export function storeError(message: string) {
   return red(message);
 }
 
-export function red(str: string) {
-  return `${Colors.Red}${str}${Colors.Reset}`;
+export function red(text: string) {
+  return `${Colors.Red}${text}${Colors.Reset}`;
 }
 
-export function green(str: string) {
-  return `${Colors.Green}${str}${Colors.Reset}`;
+export function green(text: string) {
+  return `${Colors.Green}${text}${Colors.Reset}`;
 }
 
-export function blue(str: string) {
-  return `${Colors.Blue}${str}${Colors.Reset}`;
+export function blue(text: string) {
+  return `${Colors.Blue}${text}${Colors.Reset}`;
 }
 
-export function yellow(str: string) {
-  return `${Colors.Yellow}${str}${Colors.Reset}`;
+export function yellow(text: string) {
+  return `${Colors.Yellow}${text}${Colors.Reset}`;
 }

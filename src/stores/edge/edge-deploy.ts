@@ -136,7 +136,7 @@ async function checkPublishStatus({
     throw new Error(storeError(data.message));
   }
   if (data.status === "Failed") {
-    const errors = (data.errors || []).map(err => err.message);
+    const errors = (data.errors || []).map(error => error.message);
     if (errors.length === 0) {
       errors.push(data.message);
     }

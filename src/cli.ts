@@ -52,9 +52,9 @@ for (const store of storeRegistry) {
   Object.assign(allStoreOptions, options);
   // In env mode, all store options are optional overrides (credentials come from .env files)
   const optionalOptions = Object.fromEntries(
-    Object.entries(options).map(([key, opt]) => [
+    Object.entries(options).map(([key, option]) => [
       key,
-      { ...opt, description: (opt.description ?? "").replace(" [required]", "") }
+      { ...option, description: (option.description ?? "").replace(" [required]", "") }
     ])
   );
   Object.assign(envOverrideStoreOptions, optionalOptions);

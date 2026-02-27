@@ -142,14 +142,14 @@ function App({
   const authUrl = buildAuthUrl(clientId);
 
   useEffect(() => {
-    const server: Server = createServer(async (req, res) => {
-      const url = new URL(req.url ?? "/", REDIRECT_URI);
+    const server: Server = createServer(async (request, response) => {
+      const url = new URL(request.url ?? "/", REDIRECT_URI);
       const code = url.searchParams.get("code");
       const authError = url.searchParams.get("error");
 
       if (authError) {
-        res.writeHead(HTTP_OK, { "Content-Type": "text/html" });
-        res.end("<h1>Authorization failed</h1><p>Check the terminal for details</p>");
+        response.writeHead(HTTP_OK, { "Content-Type": "text/html" });
+        response.end("<h1>Authorization failed</h1><p>Check the terminal for details</p>");
         const message = `Authorization failed: ${authError}`;
         onError(new Error(message));
         setErrorMessage(message);
@@ -159,27 +159,27 @@ function App({
       }
 
       if (!code) {
-        res.writeHead(HTTP_BAD_REQUEST);
-        res.end();
+        response.writeHead(HTTP_BAD_REQUEST);
+        response.end();
         return;
       }
 
       setStep(Step.Exchanging);
       const data = await exchangeCodeForToken(code, clientId, clientSecret);
-      res.writeHead(HTTP_OK, { "Content-Type": "text/html" });
+      response.writeHead(HTTP_OK, { "Content-Type": "text/html" });
 
       if ("error" in data) {
-        res.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
+        response.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
         const message = `Token exchange failed: ${JSON.stringify(data.error, null, 2)}`;
         onError(new Error(message));
         setErrorMessage(message);
         setStep(Step.Error);
       } else if (data.refresh_token) {
-        res.end("<h1>Success!</h1><p>You can close this tab</p>");
+        response.end("<h1>Success!</h1><p>You can close this tab</p>");
         onSuccess(data.refresh_token);
         setStep(Step.Success);
       } else {
-        res.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
+        response.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
         const message = `No refresh token in response - try revoking access at https://myaccount.google.com/permissions and retry`;
         onError(new Error(message));
         setErrorMessage(message);
@@ -257,8 +257,8 @@ async function getChromeRefreshToken(clientId: string, clientSecret: string): Pr
       onSuccess={token => {
         tokenResult = token;
       }}
-      onError={err => {
-        errorResult = err;
+      onError={error => {
+        errorResult = error;
       }}
     />
   );

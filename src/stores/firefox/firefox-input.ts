@@ -17,7 +17,7 @@ export const FirefoxOptionsSubmissionApiSchema = z.object({
     }),
   zipSource: z.string().optional()
     .describe(`Path to the source code ZIP. Supports "{version}" which is retrieved from package.json`)
-    .transform(val => val ? getCorrectZip(val) : undefined)
+    .transform(value => value ? getCorrectZip(value) : undefined)
     .check(ctx => {
       if (ctx.value && !getIsFileExists(ctx.value)) {
         ctx.issues.push({ code: "custom", input: ctx.value, message: storeError(`Source zip doesn't exist: ${getFullPath(ctx.value)}`) });
