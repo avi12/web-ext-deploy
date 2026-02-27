@@ -253,7 +253,7 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
     const requiredFields: string[] = [];
     const optionalFields: string[] = [];
     for (const [key, value] of Object.entries(store.schema.shape)) {
-      if (value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault) {
+      if (isZodOptional(value)) {
         optionalFields.push(key);
       } else {
         requiredFields.push(key);
