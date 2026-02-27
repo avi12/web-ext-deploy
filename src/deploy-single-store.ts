@@ -41,7 +41,7 @@ export function deployStore(
         const help = renderStoreHelp(store.name, store.schema, context?.mode, failedFields.length > 0 ? failedFields : undefined, store.dynamicFields, store.cliOverridableFields);
         throw new StoreValidationError(messages.join("\n"), help, error);
       }
-      throw new Error(messages.join("\n"));
+      throw new Error(messages.join("\n"), { cause: error });
     }
     throw error;
   }
