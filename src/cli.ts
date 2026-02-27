@@ -7,7 +7,7 @@ import { red } from "./ui/logging.js";
 import { camelCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
-import { getZodBaseType, unwrapZod } from "./utils/zod.js";
+import { getZodBaseType, getZodDescription, isZodOptional, unwrapZod } from "./utils/zod.js";
 import yargs, { type Arguments, type Options } from "yargs";
 import { z } from "zod";
 
@@ -35,12 +35,9 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
       continue;
     }
     const optionName = store === "base" ? kebabCase(key) : `${store}-${kebabCase(key)}`;
-    const isOptional =
-      value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
-
+    const isOptional = isZodOptional(value);
     const type = getZodBaseType(unwrapZod(value));
-
-    const description = value.description || "";
+    const description = getZodDescription(value);
     options[optionName] = { type, description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description };
   }
 

@@ -38,7 +38,7 @@ export type StoreDefinition = {
 export function defineStore<T, Name extends string>(config: {
   name: Name;
   schema: z.ZodType<T>;
-  prepare: (options: T) => T;
+  prepare: (options: unknown) => T;
   deploy: (options: T, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
@@ -48,11 +48,7 @@ export function defineStore<T, Name extends string>(config: {
     name: config.name,
     schema: config.schema,
     prepare(options: unknown) {
-      const result = config.schema.safeParse(options);
-      if (!result.success) {
-        throw result.error;
-      }
-      return config.prepare(result.data);
+      return config.prepare(options);
     },
     deploy(options: unknown, context?: DeployContext) {
       const result = config.schema.safeParse(options);

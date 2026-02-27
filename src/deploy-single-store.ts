@@ -2,6 +2,7 @@ import { storeRegistry } from "./stores/registry.js";
 import { StoreStatus, type DeployContext } from "./types.js";
 import { renderStoreHelp } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
+import { ZodError } from "zod";
 
 export class StoreValidationError extends Error {
   help: string;
@@ -24,19 +25,26 @@ export function deployStore(
   if (!store) {
     throw new Error(red(`Unknown store: ${storeName}`));
   }
-  const parseResult = store.schema.safeParse(options);
-  if (!parseResult.success) {
-    const messages = parseResult.error.issues.map(issue => issue.message);
-    const failedFields = [...new Set(
-      parseResult.error.issues
-        .map(issue => issue.path[0])
-        .filter((path): path is string => typeof path === "string")
-    )];
-    const help = renderStoreHelp(store.name, store.schema, context?.mode, failedFields.length > 0 ? failedFields : undefined, store.dynamicFields, store.cliOverridableFields);
-    throw new StoreValidationError(messages.join("\n"), help, parseResult.error);
+  let prepared: unknown;
+  try {
+    prepared = store.prepare(options);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const messages = error.issues.map(issue => issue.message);
+      const structuralIssues = error.issues.filter(issue => issue.code !== "custom");
+      if (structuralIssues.length > 0) {
+        const failedFields = [...new Set(
+          structuralIssues
+            .map(issue => issue.path[0])
+            .filter((path): path is string => typeof path === "string")
+        )];
+        const help = renderStoreHelp(store.name, store.schema, context?.mode, failedFields.length > 0 ? failedFields : undefined, store.dynamicFields, store.cliOverridableFields);
+        throw new StoreValidationError(messages.join("\n"), help, error);
+      }
+      throw new Error(messages.join("\n"));
+    }
+    throw error;
   }
-
-  const prepared = store.prepare(parseResult.data);
   if (context?.isDryRun) {
     context.logger?.info("Dry run: validation passed");
     context.setStatus?.(StoreStatus.Success);

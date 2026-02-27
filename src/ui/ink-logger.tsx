@@ -1,7 +1,7 @@
 import { getStoreDisplayName } from "../stores/registry.js";
 import { StoreStatus, type StoreLogger } from "../types.js";
 import { kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
-import { getZodBaseType, getZodDefaultValue, unwrapZod } from "../utils/zod.js";
+import { getZodBaseType, getZodDefaultValue, getZodDescription, isZodOptional, unwrapZod } from "../utils/zod.js";
 import { Colors } from "./logging.js";
 import { Box, Newline, render, Text } from "ink";
 import React, { useEffect, useState } from "react";
@@ -249,7 +249,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean) {
 }
 
 function unwrapZodType(zodValue: z.ZodTypeAny) {
-  const rawDescription = zodValue.description || "";
+  const rawDescription = getZodDescription(zodValue);
   const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
 
   const type = getZodBaseType(unwrapZod(zodValue));
@@ -301,8 +301,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
       continue;
     }
     const zodValue = shape[key];
-    const isOptional =
-      zodValue instanceof z.ZodOptional || zodValue instanceof z.ZodNullable || zodValue instanceof z.ZodDefault;
+    const isOptional = isZodOptional(zodValue);
     const { type, defaultValue, description } = unwrapZodType(zodValue);
 
     fields.push({
