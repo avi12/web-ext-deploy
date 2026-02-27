@@ -8,7 +8,7 @@ import {
   isZodOptional,
   unwrapZod
 } from "../utils/zod.js";
-import { Colors } from "./logging.js";
+import { green, red, yellow } from "./logging.js";
 import { Box, Newline, render, Text } from "ink";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
@@ -326,15 +326,15 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
 
   const title = mode === "env" ? `${storeName}.env` : getStoreDisplayName(storeName);
   const header = missingFields
-    ? `${Colors.Yellow}${title}${Colors.Reset}:\n`
-    : `${Colors.Yellow}${title}${Colors.Reset} - Arguments:\n`;
+    ? `${yellow(title)}:\n`
+    : `${yellow(title)} - Arguments:\n`;
   const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
   const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
   const rows = fields.map(field => {
-    const reqMark = field.isMissing ? `${Colors.Green}✔${Colors.Reset}` : "";
+    const reqMark = field.isMissing ? green("✔") : "";
     const reqPad = " ".repeat(field.isMissing ? reqWidth - 1 : reqWidth);
-    const nameStr = field.isMissing ? `${Colors.Red}${field.name}${Colors.Reset}` : field.name;
+    const nameStr = field.isMissing ? red(field.name) : field.name;
     const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
     const defaultStr = field.defaultValue.padEnd(defaultWidth);
     return `  ${nameStr}${namePad}${field.type.padEnd(typeWidth)}${reqMark}${reqPad}${defaultStr}${field.description}`;
@@ -344,7 +344,7 @@ export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cl
 }
 
 export function renderFatalError(message: string) {
-  process.stdout.write(`${Colors.Red}✖${Colors.Reset} ${message}\n`);
+  process.stdout.write(`${red("✖")} ${message}\n`);
 }
 
 export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
@@ -391,7 +391,7 @@ export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], m
   const reqWidth = 10;
   const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
 
-  const header = `${Colors.Yellow}Global Arguments${Colors.Reset}:\n`;
+  const header = `${yellow("Global Arguments")}:\n`;
   const colHeader = `  ${"Argument".padEnd(nameWidth)}${"Type".padEnd(typeWidth)}${"Required".padEnd(reqWidth)}${"Default".padEnd(defaultWidth)}Description\n`;
   const separator = `  ${"-".repeat(nameWidth + typeWidth + reqWidth + defaultWidth + 20)}\n`;
 
