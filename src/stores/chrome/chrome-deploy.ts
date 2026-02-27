@@ -10,7 +10,6 @@ import { setTimeout } from "node:timers/promises";
 const BASE_URL = "https://chromewebstore.googleapis.com";
 
 let httpClient: ReturnType<typeof createHttpClient>;
-let uploadHttpClient: ReturnType<typeof createHttpClient>;
 
 const PENDING_REVIEW_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED];
 
@@ -131,7 +130,7 @@ async function uploadZip({
   onRateLimit?: RateLimitHandler;
 }) {
   const data = await requestWithRetry({
-    sendRequest: () => uploadHttpClient.post(
+    sendRequest: () => httpClient.post(
       `upload/v2/publishers/${publisherId}/items/${extId}:upload`,
       fs.createReadStream(zip),
       { headers: { "Content-Type": "application/zip" } }
@@ -247,7 +246,6 @@ export async function deployToChrome(
   setZipPath?.(zip);
   const authHeaders = { Authorization: `Bearer ${refreshToken}` };
   httpClient = createHttpClient(BASE_URL, authHeaders);
-  uploadHttpClient = createHttpClient(BASE_URL, authHeaders);
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://chrome.google.com/webstore/devconsole/${publisherId}/${extId}/edit/package`,
