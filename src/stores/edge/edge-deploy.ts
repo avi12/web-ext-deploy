@@ -46,7 +46,7 @@ async function checkStatusOfPackageUpload({
     });
 
     if (data.status === "Failed") {
-      const errors = (data.errors || []).map(({ message }) => message).join("\n");
+      const errors = (data.errors || []).join("\n");
       throw new Error(storeError(errors));
     }
     if (data.status !== "InProgress") {
@@ -132,7 +132,7 @@ async function checkPublishStatus({
     onRateLimit
   });
 
-  if (!data.status) {
+  if (!("status" in data)) {
     throw new Error(storeError(data.message));
   }
   if (data.status === "Failed") {
