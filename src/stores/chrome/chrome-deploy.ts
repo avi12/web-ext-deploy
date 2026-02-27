@@ -3,11 +3,13 @@ import { type DeployContext, StoreStatus } from "../../types.js";
 import { isObjectEmpty } from "../../utils/helpers.js";
 import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "../../utils/retry.js";
 import { ChromeOptions, storeError } from "./chrome-input.js";
-import { FetchStatusSchema,
+import {
+  FetchStatusSchema,
   ItemState,
   PublishResponseSchema,
   UploadResponseSchema,
-  UploadState } from "./chrome-types.js";
+  UploadState
+} from "./chrome-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 

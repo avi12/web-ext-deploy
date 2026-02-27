@@ -87,7 +87,7 @@ export default [
       "@stylistic/object-curly-newline": ["error", {
         ObjectExpression: { multiline: true, minProperties: 4 },
         ObjectPattern: { multiline: true, minProperties: 4 },
-        ImportDeclaration: "never",
+        ImportDeclaration: { multiline: true, minProperties: 4 },
         ExportDeclaration: "never"
       }],
       "@stylistic/object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
@@ -125,7 +125,7 @@ export default [
       "@stylistic/object-curly-newline": ["error", {
         ObjectExpression: { multiline: true, consistent: true },
         ObjectPattern: { multiline: true, consistent: true },
-        ImportDeclaration: "never",
+        ImportDeclaration: { multiline: true, minProperties: 4 },
         ExportDeclaration: "never"
       }]
     }

@@ -1,9 +1,13 @@
 import { getStoreDisplayName } from "../stores/registry.js";
 import { StoreStatus, type StoreLogger } from "../types.js";
 import { kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
-import { getZodBaseType, getZodDefaultValue, getZodDescription, isZodOptional, unwrapZod } from "../utils/zod.js";
+import {
+  getZodBaseType, getZodDefaultValue, getZodDescription, isZodOptional, unwrapZod
+} from "../utils/zod.js";
 import { Colors } from "./logging.js";
-import { Box, Newline, render, Text } from "ink";
+import {
+  Box, Newline, render, Text
+} from "ink";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
 
