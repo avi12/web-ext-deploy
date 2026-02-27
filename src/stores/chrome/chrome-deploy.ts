@@ -248,8 +248,9 @@ export async function deployToChrome(
   }: DeployContext = {}
 ) {
   setZipPath?.(zip);
-  const authHeaders = { Authorization: `Bearer ${refreshToken}` };
-  httpClient = createHttpClient("https://chromewebstore.googleapis.com", authHeaders);
+  httpClient = createHttpClient("https://chromewebstore.googleapis.com", {
+    Authorization: `Bearer ${refreshToken}`
+  });
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://chrome.google.com/webstore/devconsole/${publisherId}/${extId}/edit/package`,
