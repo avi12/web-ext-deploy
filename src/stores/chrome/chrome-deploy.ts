@@ -1,13 +1,17 @@
 import { createHttpClient } from "../../http/client.js";
-import { StoreStatus, type DeployContext } from "../../types.js";
+import { type DeployContext, StoreStatus } from "../../types.js";
 import { isObjectEmpty } from "../../utils/helpers.js";
-import { createRateLimitHandler, requestWithRetry, type RateLimitHandler } from "../../utils/retry.js";
+import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "../../utils/retry.js";
 import { ChromeOptions, storeError } from "./chrome-input.js";
-import { FetchStatusSchema, ItemState, PublishResponseSchema, UploadResponseSchema, UploadState } from "./chrome-types.js";
+import {
+  FetchStatusSchema,
+  ItemState,
+  PublishResponseSchema,
+  UploadResponseSchema,
+  UploadState
+} from "./chrome-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
-
-const BASE_URL = "https://chromewebstore.googleapis.com";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
@@ -245,7 +249,7 @@ export async function deployToChrome(
 ) {
   setZipPath?.(zip);
   const authHeaders = { Authorization: `Bearer ${refreshToken}` };
-  httpClient = createHttpClient(BASE_URL, authHeaders);
+  httpClient = createHttpClient("https://chromewebstore.googleapis.com", authHeaders);
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://chrome.google.com/webstore/devconsole/${publisherId}/${extId}/edit/package`,
