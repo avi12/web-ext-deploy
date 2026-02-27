@@ -53,12 +53,12 @@ export async function runDeploy(argv: Arguments) {
   const command = z.string().safeParse(argv._[0]).data;
   const mode = command === "cli" || command === "env" ? command : undefined;
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
-  const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun);
+  const isVerbose = z.boolean().safeParse(argv.verbose).data;
+  const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun, isVerbose);
   await inkLogger.ready;
   for (const msg of preDeployLogs) {
     inkLogger.logger.info("System", msg);
   }
-  const isVerbose = z.boolean().safeParse(argv.verbose).data;
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
 
   const results = await Promise.allSettled(

@@ -61,7 +61,7 @@ function stripAnsi(str: string) {
   return str.replace(/\u001b\[[0-9;]*m/g, "");
 }
 
-export function createInkLogger(storeNames: string[], isDryRun?: boolean) {
+export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerbose?: boolean) {
   const sharedStatuses: Record<string, StoreStatus> = Object.fromEntries(
     storeNames.map(store => [store, StoreStatus.Pending])
   );
@@ -154,7 +154,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean) {
             </React.Fragment>
           ))}
         </Box>
-        {sharedEntries.length > 0 && (
+        {isVerbose && sharedEntries.length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             <Text bold color="gray">Recent Activity:</Text>
             {sharedEntries.slice(-(storeNames.length * 2 + 2)).map((entry, i) => (
