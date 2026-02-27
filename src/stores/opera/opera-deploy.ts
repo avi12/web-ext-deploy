@@ -1,83 +1,91 @@
-import { StoreStatus, type DeployContext } from "../../types.js";
-import { CookieAuthError, createRateLimitHandler, requestWithRetry, type HttpLikeResponse, type RateLimitHandler } from "../../utils/retry.js";
+import { createHttpClient } from "../../http/client.js";
+import { type DeployContext, StoreStatus } from "../../types.js";
+import { CookieAuthError,
+  createRateLimitHandler,
+  type HttpLikeResponse,
+  type RateLimitHandler,
+  requestWithRetry } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { OperaOptions, storeError } from "./opera-input.js";
-import { ListVersionsSchema,
-  ListingDetailSchema,
-  SubmitChangesSchema,
-  CancelChangesSchema,
-  UploadResultSchema,
+import { CancelChangesSchema,
   FileUploadResponseSchema,
+  ListingDetailSchema,
   type ListVersions,
-  type UploadResult } from "./opera-types.js";
+  ListVersionsSchema,
+  SubmitChangesSchema,
+  type UploadResult,
+  UploadResultSchema } from "./opera-types.js";
 import fs from "node:fs";
 import { z } from "zod";
 
-const BASE_URL = "https://addons.opera.com/api/";
+let httpClient: ReturnType<typeof createOperaHttpClient>;
 
-let defaultHeaders: Record<string, string> = {};
-
-function updateCookieHeaders(freshCookies: Record<string, string>) {
-  const csrftoken = freshCookies["csrftoken"] || "";
-  const sessionid = freshCookies["sessionid"] || "";
-  defaultHeaders = {
-    ...defaultHeaders,
-    Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}`,
-    "X-Csrftoken": csrftoken
-  };
-}
-
-async function fetchWithAuth(
-  url: string,
-  options: RequestInit,
+function createOperaHttpClient(
+  cookies: { sessionid: string; csrftoken: string },
   logger?: DeployContext["logger"],
   onCookieExpired?: DeployContext["onCookieExpired"]
-): Promise<HttpLikeResponse> {
-  let response = await fetch(url, {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers
-    }
+) {
+  const client = createHttpClient("https://addons.opera.com/api/", {
+    Accept: "application/json; version=1.0",
+    Referer: "https://addons.opera.com"
   });
 
-  const isAuthFailure = response.status === 401 || response.status === 403;
-  if (isAuthFailure && onCookieExpired) {
+  let { csrftoken, sessionid } = cookies;
+
+  function cookieHeaders() {
+    return {
+      Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}`,
+      "X-Csrftoken": csrftoken
+    };
+  }
+
+  async function withCookieRefresh(sendRequest: () => Promise<HttpLikeResponse>): Promise<HttpLikeResponse> {
+    const response = await sendRequest();
+    const isAuthFailure = response.status === 401 || response.status === 403;
+    if (!isAuthFailure) {
+      return response;
+    }
+
+    if (!onCookieExpired) {
+      throw new CookieAuthError("Opera");
+    }
+
     logger?.warning("Cookies expired, refreshing...");
     const freshCookies = await onCookieExpired();
-    updateCookieHeaders(freshCookies);
+    csrftoken = freshCookies.csrftoken || "";
+    sessionid = freshCookies.sessionid || "";
 
-    response = await fetch(url, {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers
-      }
-    });
+    const retryResponse = await sendRequest();
+    if (retryResponse.status === 401 || retryResponse.status === 403) {
+      throw new CookieAuthError("Opera");
+    }
+    return retryResponse;
   }
 
-  if (response.status === 401 || response.status === 403) {
-    throw new CookieAuthError("Opera");
+  function get(endpoint: string) {
+    return withCookieRefresh(() => client.get(endpoint, { headers: cookieHeaders() }));
   }
 
-  return {
-    data: await response.json(),
-    status: response.status,
-    statusText: response.statusText
-  };
+  function post(endpoint: string, body?: BodyInit, options?: { headers?: Record<string, string>; params?: Record<string, string | number> }) {
+    return withCookieRefresh(() => client.post(endpoint, body, { ...options, headers: { ...cookieHeaders(), ...options?.headers } }));
+  }
+
+  function patch(endpoint: string, body?: BodyInit, options?: { headers?: Record<string, string> }) {
+    return withCookieRefresh(() => client.patch(endpoint, body, { ...options, headers: { ...cookieHeaders(), ...options?.headers } }));
+  }
+
+  return { get, post, patch };
 }
 
 async function verifySourceCodeExistence({
   zip,
   packageId,
   logger,
-  onCookieExpired,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
   logger?: DeployContext["logger"];
-  onCookieExpired?: DeployContext["onCookieExpired"];
   onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
@@ -86,12 +94,7 @@ async function verifySourceCodeExistence({
   const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${params}`;
 
   const data = await requestWithRetry({
-    sendRequest: () => fetchWithAuth(
-      `${BASE_URL}developer/package-versions/${packageId}-${version}/`,
-      { method: "GET" },
-      logger,
-      onCookieExpired
-    ),
+    sendRequest: () => httpClient.get(`developer/package-versions/${packageId}-${version}/`),
     parseResponse(response) {
       const result = ListingDetailSchema.safeParse(response.data);
       if (!result.success) {
@@ -114,13 +117,11 @@ async function cancelLatestVersionIfNotSubmitted({
   packageId,
   versionsListed,
   logger,
-  onCookieExpired,
   onRateLimit
 }: {
   packageId: number;
   versionsListed: ListVersions["versions"];
   logger?: DeployContext["logger"];
-  onCookieExpired?: DeployContext["onCookieExpired"];
   onRateLimit?: RateLimitHandler;
 }) {
   if (versionsListed.length === 0 || versionsListed[0].submitted_for_moderation) {
@@ -130,12 +131,7 @@ async function cancelLatestVersionIfNotSubmitted({
   logger?.info(`Canceling unsubmitted version ${version}`);
 
   await requestWithRetry({
-    sendRequest: () => fetchWithAuth(
-      `${BASE_URL}developer/package-versions/${packageId}-${version}/cancel_changes/`,
-      { method: "POST" },
-      logger,
-      onCookieExpired
-    ),
+    sendRequest: () => httpClient.post(`developer/package-versions/${packageId}-${version}/cancel_changes/`),
     parseResponse(response) {
       const result = CancelChangesSchema.safeParse(response.data);
       if (!result.success) {
@@ -154,25 +150,18 @@ async function submitChanges({
   zip,
   packageId,
   logger,
-  onCookieExpired,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
   logger?: DeployContext["logger"];
-  onCookieExpired?: DeployContext["onCookieExpired"];
   onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
   const { version } = extJson;
 
   return requestWithRetry({
-    sendRequest: () => fetchWithAuth(
-      `${BASE_URL}developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
-      { method: "POST" },
-      logger,
-      onCookieExpired
-    ),
+    sendRequest: () => httpClient.post(`developer/package-versions/${packageId}-${version}/submit_for_moderation/`),
     parseResponse(response) {
       const result = SubmitChangesSchema.safeParse(response.data);
       if (!result.success) {
@@ -202,12 +191,10 @@ function getFileMetadata(zipPath: string) {
 async function uploadZip({
   zip,
   logger,
-  onCookieExpired,
   onRateLimit
 }: {
   zip: string;
   logger?: DeployContext["logger"];
-  onCookieExpired?: DeployContext["onCookieExpired"];
   onRateLimit?: RateLimitHandler;
 }) {
   const { zipName, fileId } = getFileMetadata(zip);
@@ -232,16 +219,7 @@ async function uploadZip({
   const body = Buffer.concat([filePart, fileBuffer, identifierPart, fileBuffer, closingPart]);
 
   return requestWithRetry({
-    sendRequest: () => fetchWithAuth(
-      `${BASE_URL}file-upload/`,
-      {
-        method: "POST",
-        headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
-        body
-      },
-      logger,
-      onCookieExpired
-    ),
+    sendRequest: () => httpClient.post("file-upload/", body, { headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` } }),
     parseResponse(response) {
       const result = FileUploadResponseSchema.safeParse(response.data);
       if (!result.success) {
@@ -261,32 +239,28 @@ async function verifyUploadSuccessful({
   packageId,
   lastVersion,
   logger,
-  onCookieExpired,
   onRateLimit
 }: {
   zipPath: string;
   packageId: number;
   lastVersion: string;
   logger?: DeployContext["logger"];
-  onCookieExpired?: DeployContext["onCookieExpired"];
   onRateLimit?: RateLimitHandler;
 }): Promise<UploadResult> {
   const { zipName, fileId } = getFileMetadata(zipPath);
 
   const data = await requestWithRetry({
-    sendRequest: () => fetchWithAuth(
-      `${BASE_URL}developer/package-versions/?package_id=${packageId}`,
+    sendRequest: () => httpClient.post(
+      "developer/package-versions/",
+      JSON.stringify({
+        file_id: fileId,
+        file_name: zipName,
+        metadata_from: lastVersion
+      }),
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_id: fileId,
-          file_name: zipName,
-          metadata_from: lastVersion
-        })
-      },
-      logger,
-      onCookieExpired
+        params: { package_id: packageId },
+        headers: { "Content-Type": "application/json" }
+      }
     ),
     parseResponse(response) {
       const result = UploadResultSchema.safeParse(response.data);
@@ -312,28 +286,21 @@ async function updateChangelog({
   packageId,
   changelog,
   logger,
-  onCookieExpired,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
   changelog: string;
   logger?: DeployContext["logger"];
-  onCookieExpired?: DeployContext["onCookieExpired"];
   onRateLimit?: RateLimitHandler;
 }) {
   const { version, default_locale = "en" } = await getExtJson(zip);
 
   return requestWithRetry({
-    sendRequest: () => fetchWithAuth(
-      `${BASE_URL}developer/package-versions/${packageId}-${version}/`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ translations: { [default_locale]: { changelog } } })
-      },
-      logger,
-      onCookieExpired
+    sendRequest: () => httpClient.patch(
+      `developer/package-versions/${packageId}-${version}/`,
+      JSON.stringify({ translations: { [default_locale]: { changelog } } }),
+      { headers: { "Content-Type": "application/json" } }
     ),
     parseResponse(response) {
       const result = ListingDetailSchema.safeParse(response.data);
@@ -364,21 +331,14 @@ function verifyVersionNotSubmittedForModeration({ versionsListed, version }: {
 function getVersions({
   packageId,
   logger,
-  onCookieExpired,
   onRateLimit
 }: {
   packageId: number;
   logger?: DeployContext["logger"];
-  onCookieExpired?: DeployContext["onCookieExpired"];
   onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
-    sendRequest: () => fetchWithAuth(
-      `${BASE_URL}developer/packages/${packageId}/`,
-      { method: "GET" },
-      logger,
-      onCookieExpired
-    ),
+    sendRequest: () => httpClient.get(`developer/packages/${packageId}/`),
     parseResponse(response) {
       const result = ListVersionsSchema.safeParse(response.data);
       if (!result.success) {
@@ -401,12 +361,7 @@ export async function deployToOpera(
     logger, onCookieExpired, isVerbose, setStatus, setZipPath
   }: DeployContext = {}
 ) {
-  defaultHeaders = {
-    Accept: "application/json; version=1.0",
-    Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}`,
-    "X-Csrftoken": csrftoken,
-    Referer: "https://addons.opera.com"
-  };
+  httpClient = createOperaHttpClient({ sessionid, csrftoken }, logger, onCookieExpired);
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://addons.opera.com/developer/package/${packageId}/`,
@@ -424,7 +379,6 @@ export async function deployToOpera(
   const versionsData = await getVersions({
     packageId,
     logger,
-    onCookieExpired,
     onRateLimit
   });
 
@@ -441,7 +395,6 @@ export async function deployToOpera(
     packageId,
     versionsListed: versionsData.versions,
     logger,
-    onCookieExpired,
     onRateLimit
   });
 
@@ -452,7 +405,6 @@ export async function deployToOpera(
   await uploadZip({
     zip,
     logger,
-    onCookieExpired,
     onRateLimit
   });
 
@@ -466,7 +418,6 @@ export async function deployToOpera(
     packageId,
     lastVersion,
     logger,
-    onCookieExpired,
     onRateLimit
   });
 
@@ -478,7 +429,6 @@ export async function deployToOpera(
     zip,
     packageId,
     logger,
-    onCookieExpired,
     onRateLimit
   });
 
@@ -491,7 +441,6 @@ export async function deployToOpera(
       packageId,
       changelog,
       logger,
-      onCookieExpired,
       onRateLimit
     });
   }
@@ -504,7 +453,6 @@ export async function deployToOpera(
     zip,
     packageId,
     logger,
-    onCookieExpired,
     onRateLimit
   });
 
