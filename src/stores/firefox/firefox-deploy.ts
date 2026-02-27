@@ -185,7 +185,9 @@ export async function deployToFirefox(
     logger, isVerbose, setStatus, setZipPath
   }: DeployContext = {}
 ) {
-  httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/", { Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` });
+  httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/", {
+    Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}`
+  });
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://addons.mozilla.org/developers/addon/${extId}/versions/submit/`,
