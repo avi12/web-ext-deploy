@@ -1,5 +1,6 @@
 import { createHttpClient } from "../../http/client.js";
 import { type DeployContext, StoreStatus } from "../../types.js";
+import { storeError } from "../../ui/logging.js";
 import {
   CookieAuthError,
   createRateLimitHandler,
@@ -8,7 +9,7 @@ import {
   requestWithRetry
 } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
-import { OperaOptions, storeError } from "./opera-input.js";
+import { OperaOptions } from "./opera-input.js";
 import {
   CancelChangesSchema,
   FileUploadResponseSchema,

@@ -1,8 +1,9 @@
 import { createHttpClient } from "../../http/client.js";
 import { type DeployContext, StoreStatus } from "../../types.js";
+import { storeError } from "../../ui/logging.js";
 import { isObjectEmpty } from "../../utils/helpers.js";
 import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "../../utils/retry.js";
-import { ChromeOptions, storeError } from "./chrome-input.js";
+import { ChromeOptions } from "./chrome-input.js";
 import {
   FetchStatusSchema,
   ItemState,

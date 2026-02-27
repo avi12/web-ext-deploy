@@ -10,6 +10,10 @@ export const Colors = {
   Reset: "\x1b[0m"
 };
 
+export function storeError(message: string) {
+  return red(message);
+}
+
 export function red(str: string) {
   return `${Colors.Red}${str}${Colors.Reset}`;
 }

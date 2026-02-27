@@ -1,10 +1,6 @@
-import { red } from "../../ui/logging.js";
+import { storeError } from "../../ui/logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils/zip.js";
 import { z } from "zod";
-
-export function storeError(message: string) {
-  return red(message);
-}
 
 // https://mozilla.github.io/addons-server/topics/api/addons.html
 export const FirefoxOptionsSubmissionApiSchema = z.object({

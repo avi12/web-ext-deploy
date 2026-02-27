@@ -1,10 +1,6 @@
-import { red } from "../../ui/logging.js";
+import { storeError } from "../../ui/logging.js";
 import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils/zip.js";
 import { z } from "zod";
-
-export function storeError(message: string) {
-  return red(message);
-}
 
 export const OperaOptionsSchema = z.object({
   packageId: z.coerce.number().describe("Get it from https://addons.opera.com/developer/package/PACKAGE_ID"),
