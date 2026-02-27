@@ -20,6 +20,7 @@ export const EdgeOptionsPublishApiSchema = z.object({
       }
     }),
   devChangelog: z.string().optional().describe("Changelog for reviewers only")
+    .transform(changelog => changelog?.trim().replaceAll("\\n", "\n"))
 });
 
 export type EdgeOptionsPublishApi = z.infer<typeof EdgeOptionsPublishApiSchema>;
@@ -29,8 +30,5 @@ export function prepareEdgeOptions(options: unknown): EdgeOptionsPublishApi {
   if (!parseResult.success) {
     throw parseResult.error;
   }
-  return {
-    ...parseResult.data,
-    devChangelog: parseResult.data.devChangelog?.replaceAll("\\n", "\n")
-  };
+  return parseResult.data;
 }

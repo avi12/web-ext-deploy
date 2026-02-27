@@ -19,6 +19,7 @@ export const OperaOptionsSchema = z.object({
       }
     }),
   changelog: z.string().optional().describe("Changelog for this version. Supports \\n")
+    .transform(changelog => changelog?.trim().replaceAll("\\n", "\n"))
 });
 
 export type OperaOptions = z.infer<typeof OperaOptionsSchema>;
@@ -28,8 +29,5 @@ export function prepareOperaOptions(options: unknown): OperaOptions {
   if (!parseResult.success) {
     throw parseResult.error;
   }
-  return {
-    ...parseResult.data,
-    changelog: parseResult.data.changelog?.replaceAll("\\\\n", "\n")
-  };
+  return parseResult.data;
 }
