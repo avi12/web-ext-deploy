@@ -1,6 +1,6 @@
 import eslint from "@eslint/js";
-import importNewlines from "eslint-plugin-import-newlines";
 import stylistic from "@stylistic/eslint-plugin";
+import importNewlines from "eslint-plugin-import-newlines";
 import perfectionist from "eslint-plugin-perfectionist";
 import globals from "globals";
 import tsEslint from "typescript-eslint";
