@@ -16,9 +16,15 @@ import { z } from "zod";
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const RENDER_INTERVAL_MS = 80;
 
+enum LogLevel {
+  Info = "info",
+  Warning = "warning",
+  Error = "error"
+}
+
 interface LogEntry {
   store: string;
-  level: "info" | "warning" | "error";
+  level: LogLevel;
   message: string;
   timestamp: Date;
 }
@@ -50,10 +56,10 @@ const dryRunStatusTexts: Record<StoreStatus, string> = {
   [StoreStatus.Error]: "Invalid"
 };
 
-const logLevelColors: Record<LogEntry["level"], string> = {
-  info: "white",
-  warning: "yellow",
-  error: "red"
+const logLevelColors: Record<LogLevel, string> = {
+  [LogLevel.Info]: "white",
+  [LogLevel.Warning]: "yellow",
+  [LogLevel.Error]: "red"
 };
 
 function stripAnsi(str: string) {
@@ -102,7 +108,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     const completedCount = successCount + errorCount;
     const totalCount = storeNames.length;
 
-    const activityEntries = isVerbose ? sharedEntries : sharedEntries.filter(entry => entry.level === "error");
+    const activityEntries = isVerbose ? sharedEntries : sharedEntries.filter(entry => entry.level === LogLevel.Error);
 
     const label = `${completedCount}/${totalCount}`;
     const barWidth = Math.max(10, (process.stdout.columns ?? 80) - label.length - 3);
@@ -186,7 +192,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     info(store: string, message: string) {
       addLogEntry({
         store,
-        level: "info",
+        level: LogLevel.Info,
         message,
         timestamp: new Date()
       });
@@ -194,7 +200,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     warning(store: string, message: string) {
       addLogEntry({
         store,
-        level: "warning",
+        level: LogLevel.Warning,
         message: `Warning: ${message}`,
         timestamp: new Date()
       });
@@ -202,7 +208,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     error(store: string, message: string) {
       addLogEntry({
         store,
-        level: "error",
+        level: LogLevel.Error,
         message,
         timestamp: new Date()
       }, StoreStatus.Error);
@@ -218,7 +224,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
       if (message) {
         sharedEntries.push({
           store,
-          level: status === StoreStatus.Error ? "error" : "info",
+          level: status === StoreStatus.Error ? LogLevel.Error : LogLevel.Info,
           message,
           timestamp: new Date()
         });
@@ -228,7 +234,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     setZipPath(store: string, zipPath: string) {
       addLogEntry({
         store,
-        level: "info",
+        level: LogLevel.Info,
         message: `ZIP: ${zipPath}`,
         timestamp: new Date()
       });
