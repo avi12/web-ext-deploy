@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-const UploadStateSchema = z.enum(["UPLOAD_STATE_UNSPECIFIED", "SUCCEEDED", "IN_PROGRESS", "FAILED", "NOT_FOUND"]);
+const UploadStateSchema = z.enum([
+  "UPLOAD_STATE_UNSPECIFIED",
+  "SUCCEEDED",
+  "IN_PROGRESS",
+  "FAILED",
+  "NOT_FOUND"
+]);
 export const UploadState = UploadStateSchema.enum;
 
 // https://developer.chrome.com/docs/webstore/api/reference/rest/v2/media/upload
