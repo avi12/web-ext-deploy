@@ -2,11 +2,18 @@
 import { getSignInCookie } from "./stores/get-sign-in-cookie.js";
 import { getStore, isSupportedStore, storeNames, storeRegistry } from "./stores/registry.js";
 import { getStoreDisplayName } from "./stores/registry.js";
-import { renderFatalError, renderGlobalArgsHelp, renderStoreHelp } from "./ui/ink-logger.js";
-import { red } from "./ui/logging.js";
+import {
+  buildGlobalHelpTableData,
+  buildHelpTableData,
+  MissingArgsError,
+  NoStoresError,
+  renderApplicationError,
+  renderHelpTables
+} from "./ui/ink-logger.js";
 import { camelCase, kebabCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
+import { toError } from "./utils/retry.js";
 import { getZodBaseType, getZodDescription, isZodOptional, unwrapZod } from "./utils/zod.js";
 import yargs, { type Arguments, type Options } from "yargs";
 import { z } from "zod";
@@ -50,28 +57,34 @@ const storeOptionGroups: Record<string, string[]> = {};
 for (const store of storeRegistry) {
   const options = schemaToOptions(store.name, store.schema);
   Object.assign(allStoreOptions, options);
-  // In env mode, all store options are optional overrides (credentials come from .env files)
-  const optionalOptions = Object.fromEntries(
-    Object.entries(options).map(([key, option]) => [
-      key,
-      { ...option, description: (option.description ?? "").replace(" [required]", "") }
-    ])
-  );
-  Object.assign(envOverrideStoreOptions, optionalOptions);
   storeOptionGroups[store.name] = Object.keys(options);
+  // In env mode, dynamic fields and cliOverridableFields are registered so yargs can parse
+  // them, but all are hidden from the option list — the epilogue tables show everything.
+  const envCliOptionNames = new Set([
+    ...(store.dynamicFields ?? []).map(key => `${store.name}-${kebabCase(key)}`),
+    ...(store.cliOverridableFields ?? []).map(key => `${store.name}-${kebabCase(key)}`)
+  ]);
+  const envOptions = Object.fromEntries(
+    Object.entries(options)
+      .filter(([key]) => envCliOptionNames.has(key))
+      .map(([key, option]) => [key, { ...option, description: (option.description ?? "").replace(" [required]", "") }])
+  );
+  Object.assign(envOverrideStoreOptions, envOptions);
 }
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
 
-const EPILOGUE =
+const CLI_EPILOGUE =
   "Choose which stores to deploy to by supplying their options\n" +
   "Only stores with at least one argument will be included\n" +
   "For each included store, all [required] options must be provided";
 
-const envStoreHelp = storeRegistry.map(store => renderStoreHelp(store.name, store.schema, "env")).join("");
+const ENV_EPILOGUE =
+  "Create a .env file for each store you want to deploy to (e.g. chrome.env, firefox.env)\n" +
+  "Required fields go in the .env file; dynamic fields are passed as CLI arguments";
 
-function applyStoreGroups(builder: ReturnType<typeof yargs>) {
-  for (const [store, keys] of Object.entries(storeOptionGroups)) {
+function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Record<string, string[]> = storeOptionGroups) {
+  for (const [store, keys] of Object.entries(groups)) {
     builder = builder.group(keys, `${getStoreDisplayName(store)}:`);
   }
   return builder;
@@ -104,8 +117,10 @@ export const parser = yargs(process.argv.slice(2))
         },
         ...envOverrideStoreOptions
       });
-      builder = applyStoreGroups(builder);
-      return builder.version(false).epilogue(EPILOGUE + envStoreHelp);
+      for (const name in envOverrideStoreOptions) {
+        builder = builder.hide(name);
+      }
+      return builder.version(false).epilogue(ENV_EPILOGUE);
     },
     handleDeploy
   )
@@ -115,7 +130,7 @@ export const parser = yargs(process.argv.slice(2))
     builder => {
       builder = builder.options({ ...baseOptions, ...allStoreOptions });
       builder = applyStoreGroups(builder);
-      return builder.version(false).epilogue(EPILOGUE);
+      return builder.version(false).epilogue(CLI_EPILOGUE);
     },
     handleDeploy
   )
@@ -135,20 +150,24 @@ export const parser = yargs(process.argv.slice(2))
   .demandCommand(1, "You need at least one command before moving on")
   .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options`)
   .strict()
-  .fail((message, error, instance) => {
+  .fail((message, _error, instance) => {
     if (message) {
       instance.showHelp();
       console.error(`\n${stripCamelCaseArgs(message)}`);
-    } else if (error) {
-      renderFatalError(error.message);
+      process.exit(1);
     }
-    process.exit(1);
   })
+  .exitProcess(false)
   .help();
 
 async function handleDeploy(argv: Arguments) {
   const { runDeploy } = await import("./deploy-all-stores.js");
-  await runDeploy(argv);
+  try {
+    await runDeploy(argv);
+  } catch (error) {
+    await renderApplicationError(toError(error));
+    process.exit(1);
+  }
 }
 
 type StoreConfig = Record<string, unknown>;
@@ -226,7 +245,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
     try {
       await getCookies([store.name]);
     } catch (error) {
-      throw new Error(red(`Failed to fetch cookies: ${error}`), { cause: error });
+      throw new Error(`Failed to fetch cookies: ${error}`, { cause: error });
     }
 
     const freshCookies = readCookiesFromEnv(store.name, fields);
@@ -306,13 +325,17 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
 
   if (isObjectEmpty(jsonStoresRaw)) {
     if (command === "env") {
-      const storeHelp = storeRegistry.map(store => renderStoreHelp(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields)).join("");
       const hasCookieStores = storeRegistry.some(store => store.cookieFields && store.cookieFields.length > 0);
       const allGlobalKeys = ["publishOnly", ...(hasCookieStores ? ["autoFetchCookies"] : []), "dryRun", "verbose"];
-      const globalHelp = renderGlobalArgsHelp(EnvOptionsSchema, allGlobalKeys, "cli");
-      throw new Error(red("No .env files found. In env mode, store credentials are read from .env files.\n") + storeHelp + globalHelp);
+      const tables = [
+        ...storeRegistry
+          .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
+          .filter((data): data is NonNullable<typeof data> => data !== null),
+        buildGlobalHelpTableData(EnvOptionsSchema, allGlobalKeys, "cli")
+      ].filter((data): data is NonNullable<typeof data> => data !== null);
+      throw new NoStoresError("No .env files found. In env mode, store credentials are read from .env files", tables);
     }
-    throw new Error(red("Supply arguments for at least one store"));
+    throw new NoStoresError("Supply arguments for at least one store", []);
   }
 
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
@@ -323,12 +346,16 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCookies);
   if (!isObjectEmpty(missingArgs)) {
     const isCliMode = command === "cli";
-    const storeHelpParts: string[] = [];
+    const tables = [];
     for (const storeName in missingArgs) {
       const store = getStore(storeName);
       if (store) {
         const { required, optional = [] } = missingArgs[storeName];
-        storeHelpParts.push(renderStoreHelp(storeName, store.schema, isCliMode ? "cli" : "env", [...required, ...optional], store.dynamicFields, store.cliOverridableFields));
+        const allMissingFields = [...required, ...optional];
+        const tableData = buildHelpTableData(storeName, store.schema, isCliMode ? "cli" : "env", allMissingFields, store.dynamicFields, store.cliOverridableFields);
+        if (tableData) {
+          tables.push(tableData);
+        }
       }
     }
     const hasCookieStores = Object.keys(missingArgs).some(storeName => {
@@ -336,10 +363,13 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
       return store?.cookieFields && store.cookieFields.length > 0;
     });
     const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
-    const globalHelp = missingGlobalArgs.length > 0
-      ? renderGlobalArgsHelp(isCliMode ? BaseOptionsSchema : EnvOptionsSchema, missingGlobalArgs, "cli")
-      : "";
-    throw new Error(red("Missing required arguments:\n") + storeHelpParts.join("") + globalHelp);
+    const globalTableData = missingGlobalArgs.length > 0
+      ? buildGlobalHelpTableData(isCliMode ? BaseOptionsSchema : EnvOptionsSchema, missingGlobalArgs, "cli")
+      : null;
+    if (globalTableData) {
+      tables.push(globalTableData);
+    }
+    throw new MissingArgsError(tables);
   }
 
   return jsonStoresRaw;
@@ -370,4 +400,14 @@ export function createCookieRefreshCallback(store: string, cookieFields: string[
   };
 }
 
-parser.parseAsync();
+const argv = await parser.parseAsync();
+if (argv.help) {
+  const command = z.string().safeParse(argv._[0]).data;
+  if (command === "env") {
+    const tables = storeRegistry
+      .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
+      .filter((table): table is NonNullable<typeof table> => table !== null);
+    await renderHelpTables(tables);
+  }
+  process.exit(0);
+}

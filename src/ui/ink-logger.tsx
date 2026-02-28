@@ -8,7 +8,6 @@ import {
   isZodOptional,
   unwrapZod
 } from "../utils/zod.js";
-import { green, red, yellow } from "./logging.js";
 import { Box, Newline, render, Text } from "ink";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
@@ -67,11 +66,282 @@ function stripAnsi(str: string) {
   return str.replace(/\u001b\[[0-9;]*m/g, "");
 }
 
+export type HelpField = { name: string; type: string; isMissing?: boolean; defaultValue: string; description: string };
+export type HelpTableData = { title: string; fields: HelpField[] };
+
+export class MissingArgsError extends Error {
+  constructor(public readonly tables: HelpTableData[]) {
+    super("Missing required arguments");
+  }
+}
+
+export class NoStoresError extends Error {
+  constructor(message: string, public readonly tables: HelpTableData[]) {
+    super(message);
+  }
+}
+
+function HelpTable({ data }: { data: HelpTableData }) {
+  const { title, fields } = data;
+  if (fields.length === 0) {
+    return null;
+  }
+
+  const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
+  const typeWidth = 10;
+  const requiredWidth = 10;
+  const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
+
+  return (
+    <Box flexDirection="column">
+      <Newline />
+      <Text color="yellow">{title}:</Text>
+      <Text>{"  "}{"Argument".padEnd(nameWidth)}{"Type".padEnd(typeWidth)}{"Required".padEnd(requiredWidth)}{"Default".padEnd(defaultWidth)}Description</Text>
+      <Text>{"  "}{"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + 20)}</Text>
+      {fields.map(field => {
+        const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
+        const requiredPad = " ".repeat(field.isMissing ? requiredWidth - 1 : requiredWidth);
+        return (
+          <Text key={field.name}>
+            {"  "}
+            <Text color={field.isMissing ? "red" : undefined}>{field.name}</Text>
+            {`${namePad}${field.type.padEnd(typeWidth)}`}
+            {field.isMissing ? <Text color="green">{"✔"}</Text> : null}
+            {`${requiredPad}${field.defaultValue.padEnd(defaultWidth)}${field.description}`}
+          </Text>
+        );
+      })}
+    </Box>
+  );
+}
+
+function unwrapZodType(zodValue: z.ZodTypeAny) {
+  const rawDescription = getZodDescription(zodValue);
+  const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
+
+  const type = getZodBaseType(unwrapZod(zodValue));
+  const schemaDefault = getZodDefaultValue(zodValue);
+
+  let defaultValue = "";
+  if (defaultMatch) {
+    defaultValue = defaultMatch[1];
+  } else if (schemaDefault !== undefined) {
+    defaultValue = String(schemaDefault);
+  }
+
+  const description = defaultMatch ? rawDescription.slice(0, defaultMatch.index) : rawDescription;
+
+  return { type, defaultValue, description };
+}
+
+export function buildHelpTableData(
+  storeName: string,
+  schema: z.ZodType,
+  mode?: "cli" | "env",
+  missingFields?: string[],
+  dynamicFields?: string[],
+  cliOverridableFields?: string[]
+): HelpTableData | null {
+  if (!(schema instanceof z.ZodObject)) {
+    return null;
+  }
+
+  function formatFieldName(key: string) {
+    const isDynamic = dynamicFields?.includes(key);
+    const isOverridable = cliOverridableFields?.includes(key);
+    if (mode === "cli" || (mode === "env" && isDynamic)) {
+      return `--${kebabCase(storeName)}-${kebabCase(key)}`;
+    }
+    if (mode === "env") {
+      const envName = screamingSnakeCase(key);
+      if (isOverridable) {
+        return `${envName} / --${kebabCase(storeName)}-${kebabCase(key)}`;
+      }
+      return envName;
+    }
+    return key;
+  }
+
+  const fields: HelpField[] = [];
+
+  for (const key in schema.shape) {
+    // verbose is a global flag, not per-store
+    if (key === "verbose" && mode) {
+      continue;
+    }
+    if (missingFields && !missingFields.includes(key)) {
+      continue;
+    }
+    const zodValue = schema.shape[key];
+    const isOptional = isZodOptional(zodValue);
+    const { type, defaultValue, description } = unwrapZodType(zodValue);
+
+    fields.push({
+      name: formatFieldName(key),
+      type,
+      isMissing: !isOptional,
+      defaultValue,
+      description
+    });
+  }
+
+  const title = mode === "env" ? `${storeName}.env` : getStoreDisplayName(storeName);
+  return { title, fields };
+}
+
+export function buildGlobalHelpTableData(
+  schema: z.ZodType,
+  missingArgs: string[],
+  mode?: "cli" | "env"
+): HelpTableData | null {
+  if (missingArgs.length === 0 || !(schema instanceof z.ZodObject)) {
+    return null;
+  }
+
+  function formatFieldName(key: string) {
+    if (mode === "cli") {
+      return `--${kebabCase(key)}`;
+    }
+    if (mode === "env") {
+      return screamingSnakeCase(key);
+    }
+    return key;
+  }
+
+  const fields: HelpField[] = [];
+
+  for (const key in schema.shape) {
+    if (!missingArgs.includes(key)) {
+      continue;
+    }
+    const zodValue = (schema.shape)[key];
+    const { type, defaultValue, description } = unwrapZodType(zodValue);
+
+    fields.push({
+      name: formatFieldName(key),
+      type,
+      defaultValue,
+      description
+    });
+  }
+
+  if (fields.length === 0) {
+    return null;
+  }
+
+  return { title: "Global Arguments", fields };
+}
+
+export function createPreDeployUI() {
+  const messages: string[] = [];
+  let triggerRender: (() => void) | null = null;
+
+  function PreDeployUI() {
+    const [, setTick] = useState(0);
+    const [spinnerFrame, setSpinnerFrame] = useState(0);
+
+    triggerRender = () => setTick(tick => tick + 1);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setSpinnerFrame(frame => (frame + 1) % SPINNER_FRAMES.length);
+      }, RENDER_INTERVAL_MS);
+      return () => clearInterval(interval);
+    }, []);
+
+    if (messages.length === 0) {
+      return null;
+    }
+
+    return (
+      <Box flexDirection="column">
+        {messages.map((message, i) => (
+          <Text key={i}>{SPINNER_FRAMES[spinnerFrame]} {message}</Text>
+        ))}
+      </Box>
+    );
+  }
+
+  const inkInstance = render(<PreDeployUI />);
+
+  return {
+    log(message: string) {
+      messages.push(message);
+      triggerRender?.();
+    },
+    unmount() {
+      inkInstance.unmount();
+    }
+  };
+}
+
+export async function renderHelpTables(tables: HelpTableData[]): Promise<void> {
+  if (tables.length === 0) {
+    return;
+  }
+  let notifyRendered: (() => void) | null = null;
+
+  function HelpTablesUI() {
+    useEffect(() => {
+      notifyRendered?.();
+      notifyRendered = null;
+    });
+    return (
+      <Box flexDirection="column">
+        {tables.map((table, i) => (
+          <HelpTable key={i} data={table} />
+        ))}
+      </Box>
+    );
+  }
+
+  const inkInstance = render(<HelpTablesUI />);
+  await new Promise<void>(resolve => {
+    notifyRendered = resolve;
+  });
+  inkInstance.unmount();
+}
+
+export async function renderApplicationError(error: Error): Promise<void> {
+  let notifyRendered: (() => void) | null = null;
+
+  function ErrorUI() {
+    useEffect(() => {
+      notifyRendered?.();
+      notifyRendered = null;
+    });
+
+    if (error instanceof MissingArgsError || error instanceof NoStoresError) {
+      return (
+        <Box flexDirection="column">
+          <Text><Text color="red">✖</Text>{" "}{error.message}</Text>
+          {error.tables.map((table, i) => (
+            <HelpTable key={i} data={table} />
+          ))}
+        </Box>
+      );
+    }
+
+    return (
+      <Box>
+        <Text><Text color="red">✖</Text>{" "}{error.message}</Text>
+      </Box>
+    );
+  }
+
+  const inkInstance = render(<ErrorUI />);
+  await new Promise<void>(resolve => {
+    notifyRendered = resolve;
+  });
+  inkInstance.unmount();
+}
+
 export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerbose?: boolean) {
   const sharedStatuses: Record<string, StoreStatus> = Object.fromEntries(
     storeNames.map(store => [store, StoreStatus.Pending])
   );
   const sharedEntries: LogEntry[] = [];
+  let sharedHelpTables: HelpTableData[] = [];
   let triggerRender: (() => void) | null = null;
   let resolveReady!: () => void;
   let notifyAfterRender: (() => void) | null = null;
@@ -130,6 +400,8 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
       summaryParts.push({ text: `○ ${pendingCount} waiting`, color: "blue" });
     }
 
+    const allComplete = completedCount === totalCount;
+
     return (
       <Box flexDirection="column">
         <Text bold color="cyan">Web Extension Deployment</Text>
@@ -169,6 +441,13 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
               <Text key={i} color={logLevelColors[entry.level]}>
                 [{entry.timestamp.toLocaleTimeString()}] {getStoreDisplayName(entry.store)}: {stripAnsi(entry.message)}
               </Text>
+            ))}
+          </Box>
+        )}
+        {allComplete && sharedHelpTables.length > 0 && (
+          <Box flexDirection="column" marginTop={1}>
+            {sharedHelpTables.map((tableData, i) => (
+              <HelpTable key={i} data={tableData} />
             ))}
           </Box>
         )}
@@ -238,6 +517,10 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
         message: `ZIP: ${zipPath}`,
         timestamp: new Date()
       });
+    },
+    setHelpTables(tables: HelpTableData[]) {
+      sharedHelpTables = tables;
+      triggerRender?.();
     }
   };
 
@@ -260,147 +543,4 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
       inkInstance.unmount();
     }
   };
-}
-
-function unwrapZodType(zodValue: z.ZodTypeAny) {
-  const rawDescription = getZodDescription(zodValue);
-  const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
-
-  const type = getZodBaseType(unwrapZod(zodValue));
-  const schemaDefault = getZodDefaultValue(zodValue);
-
-  let defaultValue = "";
-  if (defaultMatch) {
-    defaultValue = defaultMatch[1];
-  } else if (schemaDefault !== undefined) {
-    defaultValue = String(schemaDefault);
-  }
-
-  const description = defaultMatch ? rawDescription.slice(0, defaultMatch.index) : rawDescription;
-
-  return { type, defaultValue, description };
-}
-
-type TableField = { name: string; type: string; isMissing?: boolean; defaultValue: string; description: string };
-
-function buildTable(fields: TableField[], header: string) {
-  const nameWidth = Math.max(10, ...fields.map(field => field.name.length)) + 2;
-  const typeWidth = 10;
-  const requiredWidth = 10;
-  const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
-
-  const nameColumn = "Argument".padEnd(nameWidth);
-  const typeColumn = "Type".padEnd(typeWidth);
-  const requiredColumn = "Required".padEnd(requiredWidth);
-  const defaultColumn = "Default".padEnd(defaultWidth);
-  const columnHeader = `  ${nameColumn}${typeColumn}${requiredColumn}${defaultColumn}Description\n`;
-  const separator = `  ${"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + 20)}\n`;
-
-  const rows = fields.map(field => {
-    const requiredMark = field.isMissing ? green("✔") : "";
-    const requiredPad = " ".repeat(field.isMissing ? requiredWidth - 1 : requiredWidth);
-    const nameText = field.isMissing ? red(field.name) : field.name;
-    const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
-    const typeText = field.type.padEnd(typeWidth);
-    const defaultText = field.defaultValue.padEnd(defaultWidth);
-    return `  ${nameText}${namePad}${typeText}${requiredMark}${requiredPad}${defaultText}${field.description}`;
-  }).join("\n");
-
-  return `\n${header}${columnHeader}${separator}${rows}\n`;
-}
-
-export function renderStoreHelp(storeName: string, schema: z.ZodType, mode?: "cli" | "env", missingFields?: string[], dynamicFields?: string[], cliOverridableFields?: string[]) {
-  if (!(schema instanceof z.ZodObject)) {
-    return "";
-  }
-
-  function formatFieldName(key: string) {
-    const isDynamic = dynamicFields?.includes(key);
-    const isOverridable = cliOverridableFields?.includes(key);
-    if (mode === "cli" || (mode === "env" && isDynamic)) {
-      return `--${kebabCase(storeName)}-${kebabCase(key)}`;
-    }
-    if (mode === "env") {
-      const envName = screamingSnakeCase(key);
-      if (isOverridable) {
-        return `${envName} / --${kebabCase(storeName)}-${kebabCase(key)}`;
-      }
-      return envName;
-    }
-    return key;
-  }
-
-  const fields: TableField[] = [];
-
-  for (const key in schema.shape) {
-    // verbose is a global flag, not per-store
-    if (key === "verbose" && mode) {
-      continue;
-    }
-    if (missingFields && !missingFields.includes(key)) {
-      continue;
-    }
-    const zodValue = schema.shape[key];
-    const isOptional = isZodOptional(zodValue);
-    const { type, defaultValue, description } = unwrapZodType(zodValue);
-
-    fields.push({
-      name: formatFieldName(key),
-      type,
-      isMissing: !isOptional,
-      defaultValue,
-      description
-    });
-  }
-
-  const title = mode === "env" ? `${storeName}.env` : getStoreDisplayName(storeName);
-  const header = missingFields
-    ? `${yellow(title)}:\n`
-    : `${yellow(title)} - Arguments:\n`;
-
-  return buildTable(fields, header);
-}
-
-export function renderFatalError(message: string) {
-  process.stdout.write(`${red("✖")} ${message}\n`);
-}
-
-export function renderGlobalArgsHelp(schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
-  if (missingArgs.length === 0 || !(schema instanceof z.ZodObject)) {
-    return "";
-  }
-
-  function formatFieldName(key: string) {
-    if (mode === "cli") {
-      return `--${kebabCase(key)}`;
-    }
-    if (mode === "env") {
-      return screamingSnakeCase(key);
-    }
-    return key;
-  }
-
-  const fields: TableField[] = [];
-
-  for (const key in schema.shape) {
-    if (!missingArgs.includes(key)) {
-      continue;
-    }
-    const zodValue = (schema.shape)[key];
-    const { type, defaultValue, description } = unwrapZodType(zodValue);
-
-    fields.push({
-      name: formatFieldName(key),
-      type,
-      defaultValue,
-      description
-    });
-  }
-
-  if (fields.length === 0) {
-    return "";
-  }
-
-  const header = `${yellow("Global Arguments")}:\n`;
-  return buildTable(fields, header);
 }

@@ -1,15 +1,15 @@
 import { storeRegistry } from "./stores/registry.js";
 import { StoreStatus, type DeployContext } from "./types.js";
-import { renderStoreHelp } from "./ui/ink-logger.js";
+import { buildHelpTableData, type HelpTableData } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 import { ZodError } from "zod";
 
 export class StoreValidationError extends Error {
-  help: string;
-  constructor(message: string, help: string, cause?: unknown) {
+  helpTables: HelpTableData[];
+  constructor(message: string, helpTables: HelpTableData[], cause?: unknown) {
     super(message);
     this.name = "StoreValidationError";
-    this.help = help;
+    this.helpTables = helpTables;
     if (cause) {
       this.cause = cause;
     }
@@ -38,8 +38,9 @@ export function deployStore(
             .map(issue => issue.path[0])
             .filter((path): path is string => typeof path === "string")
         )];
-        const help = renderStoreHelp(store.name, store.schema, context?.mode, failedFields.length > 0 ? failedFields : undefined, store.dynamicFields, store.cliOverridableFields);
-        throw new StoreValidationError(messages.join("\n"), help, error);
+        const missingFields = failedFields.length > 0 ? failedFields : undefined;
+        const helpTableData = buildHelpTableData(store.name, store.schema, context?.mode, missingFields, store.dynamicFields, store.cliOverridableFields);
+        throw new StoreValidationError(messages.join("\n"), helpTableData ? [helpTableData] : [], error);
       }
       throw new Error(messages.join("\n"), { cause: error });
     }

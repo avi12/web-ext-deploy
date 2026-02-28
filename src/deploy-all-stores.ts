@@ -2,7 +2,7 @@ import { createCookieRefreshCallback, getJsonStoresFromCli } from "./cli.js";
 import { deployStore, StoreValidationError } from "./deploy-single-store.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus } from "./types.js";
-import { createInkLogger } from "./ui/ink-logger.js";
+import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
 import { toError } from "./utils/retry.js";
 import type { Arguments } from "yargs";
 import { z } from "zod";
@@ -36,7 +36,18 @@ async function runStoreDeploy(
 
 export async function runDeploy(argv: Arguments) {
   const preDeployLogs: string[] = [];
-  const storeJsons = await getJsonStoresFromCli(argv, message => preDeployLogs.push(message));
+  const preDeployUI = createPreDeployUI();
+  let storeJsons;
+  try {
+    storeJsons = await getJsonStoresFromCli(argv, message => {
+      preDeployUI.log(message);
+      preDeployLogs.push(message);
+    });
+  } catch (error) {
+    preDeployUI.unmount();
+    throw error;
+  }
+  preDeployUI.unmount();
 
   const storeEntries: [string, Record<string, unknown>][] = [];
   for (const [store, json] of Object.entries(storeJsons)) {
@@ -65,7 +76,7 @@ export async function runDeploy(argv: Arguments) {
   );
 
   const failures: string[] = [];
-  const helpTexts: string[] = [];
+  const helpTables: HelpTableData[] = [];
   for (const [index, result] of results.entries()) {
     const [store] = storeEntries[index];
     if (result.status === "fulfilled") {
@@ -78,7 +89,7 @@ export async function runDeploy(argv: Arguments) {
       }
       inkLogger.monitor.updateStore(store, StoreStatus.Error);
       if (error instanceof StoreValidationError) {
-        helpTexts.push(error.help);
+        helpTables.push(...error.helpTables);
       }
       failures.push(store);
     }
@@ -86,12 +97,9 @@ export async function runDeploy(argv: Arguments) {
 
   const successes = results.length - failures.length;
   inkLogger.logger.info("System", `Deployments complete! ${successes} succeeded, ${failures.length} failed`);
+  inkLogger.monitor.setHelpTables(helpTables);
   await inkLogger.waitForRender();
   inkLogger.unmount();
-
-  for (const help of helpTexts) {
-    console.error(help);
-  }
 
   if (failures.length > 0) {
     const isPlural = failures.length > 1;
