@@ -279,13 +279,16 @@ export async function renderHelpTables(tables: HelpTableData[]): Promise<void> {
   if (tables.length === 0) {
     return;
   }
-  let notifyRendered: (() => void) | null = null;
+
+  let resolveRendered!: () => void;
+  const rendered = new Promise<void>(resolve => {
+    resolveRendered = resolve;
+  });
 
   function HelpTablesUI() {
     useEffect(() => {
-      notifyRendered?.();
-      notifyRendered = null;
-    });
+      resolveRendered();
+    }, []);
     return (
       <Box flexDirection="column">
         {tables.map((table, i) => (
@@ -296,20 +299,20 @@ export async function renderHelpTables(tables: HelpTableData[]): Promise<void> {
   }
 
   const inkInstance = render(<HelpTablesUI />);
-  await new Promise<void>(resolve => {
-    notifyRendered = resolve;
-  });
+  await rendered;
   inkInstance.unmount();
 }
 
 export async function renderApplicationError(error: Error): Promise<void> {
-  let notifyRendered: (() => void) | null = null;
+  let resolveRendered!: () => void;
+  const rendered = new Promise<void>(resolve => {
+    resolveRendered = resolve;
+  });
 
   function ErrorUI() {
     useEffect(() => {
-      notifyRendered?.();
-      notifyRendered = null;
-    });
+      resolveRendered();
+    }, []);
 
     if (error instanceof MissingArgsError || error instanceof NoStoresError) {
       return (
@@ -330,9 +333,7 @@ export async function renderApplicationError(error: Error): Promise<void> {
   }
 
   const inkInstance = render(<ErrorUI />);
-  await new Promise<void>(resolve => {
-    notifyRendered = resolve;
-  });
+  await rendered;
   inkInstance.unmount();
 }
 

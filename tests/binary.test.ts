@@ -48,6 +48,15 @@ describe("binary", () => {
     expect(stdout).toContain("No .env files found");
   });
 
+  it("env --help exits 0 and shows store tables", () => {
+    const { status, stdout } = runCli(["env", "--help"]);
+    expect(status).toBe(0);
+    expect(stdout).toContain("chrome.env");
+    expect(stdout).toContain("firefox.env");
+    expect(stdout).toContain("edge.env");
+    expect(stdout).toContain("opera.env");
+  });
+
   it("cli --dry-run with valid chrome args exits 0", () => {
     const { status } = runCli([
       "cli",

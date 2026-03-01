@@ -49,7 +49,7 @@ describe("FirefoxOptionsSubmissionApiSchema", () => {
 
   it("rejects non-existent zipSource", () => {
     expect(() =>
-      FirefoxOptionsSubmissionApiSchema.parse({ ...validInput,   zipSource: "nonexistent-source.zip" })
-    ).toThrow("Zip source doesn't exist");
+      FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, zipSource: "nonexistent-source.zip" })
+    ).toThrow("Source zip doesn't exist");
   });
 });

@@ -1,5 +1,5 @@
-import { createCookieRefreshCallback, getJsonStoresFromCli } from "./cli.js";
 import { deployStore, StoreValidationError } from "./deploy-single-store.js";
+import { createCookieRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus } from "./types.js";
 import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
