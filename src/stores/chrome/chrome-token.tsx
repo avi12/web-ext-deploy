@@ -234,8 +234,9 @@ export async function runChromeToken(clientId: string, clientSecret: string, pri
     console.log(`\n${refreshToken}`);
     return;
   }
-  const { parsed: envCurrent = {} } = config({ path: "chrome.env" });
-  fs.writeFileSync("chrome.env", headersToEnv({ ...envCurrent, REFRESH_TOKEN: refreshToken }));
+  const envFile = "chrome.env";
+  const { parsed: envCurrent = {} } = config({ path: envFile });
+  fs.writeFileSync(envFile, headersToEnv({ ...envCurrent, REFRESH_TOKEN: refreshToken }));
   createGitIgnoreIfNeeded(["chrome"]);
   console.log("\nSaved refresh token to chrome.env");
 }
