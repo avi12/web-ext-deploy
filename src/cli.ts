@@ -19,12 +19,20 @@ type StoreCliOptionKeys<Store extends typeof storeRegistry[number]> =
     : never;
 
 type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
+type PerStoreCliOptions = Partial<
+  Record<StoreName, Partial<Record<AllCliOptionKeys, Options>>>
+>;
 
 function schemaToOptions<Shape extends z.ZodRawShape>(
   store: "base",
   schema: z.ZodObject<Shape>,
   demandRequired?: boolean
 ): Record<CamelToKebab<string & keyof Shape>, Options>;
+function schemaToOptions<Store extends StoreName, Shape extends z.ZodRawShape>(
+  store: Store,
+  schema: z.ZodObject<Shape>,
+  demandRequired?: boolean
+): Record<`${Store}-${CamelToKebab<string & keyof Shape>}`, Options>;
 function schemaToOptions(store: string, schema: z.ZodTypeAny, demandRequired?: boolean): Record<string, Options>;
 function schemaToOptions(store: string | "base", schema: z.ZodTypeAny, demandRequired = false) {
   const options: Record<string, Options> = {};
@@ -73,20 +81,15 @@ function buildAllStoreOptionsFromRegistry() {
   return combinedOptionsFromSchemas;
 }
 
-const perStoreOptionsFromRegistry = Object.fromEntries(
-  storeRegistry.map(store => [store.name, {}])
-);
+const perStoreOptionsFromRegistry: PerStoreCliOptions = {};
 const allStoreOptionsCombined = buildAllStoreOptionsFromRegistry();
-
-for (const store of storeRegistry) {
-  perStoreOptionsFromRegistry[store.name] = schemaToOptions(store.name, store.schema);
-}
 const storeOptionGroups: Partial<Record<StoreName, string[]>> = {};
 let envModeCliOnlyOptions: Record<string, Options> = {};
 for (const store of storeRegistry) {
-  const options = perStoreOptionsFromRegistry[store.name];
-  storeOptionGroups[store.name] = Object.keys(options);
-  envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, options) };
+  const storeOptionsFromSchema = schemaToOptions(store.name, store.schema);
+  perStoreOptionsFromRegistry[store.name] = storeOptionsFromSchema;
+  storeOptionGroups[store.name] = Object.keys(storeOptionsFromSchema);
+  envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, storeOptionsFromSchema) };
 }
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
