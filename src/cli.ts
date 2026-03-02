@@ -19,9 +19,8 @@ type StoreCliOptionKeys<Store extends typeof storeRegistry[number]> =
     : never;
 
 type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
-type PerStoreCliOptions = Partial<
-  Record<StoreName, Partial<Record<AllCliOptionKeys, Options>>>
->;
+type AllStoreCliOptions = Partial<Record<AllCliOptionKeys, Options>>;
+type PerStoreCliOptions = Partial<Record<StoreName, AllStoreCliOptions>>;
 
 function schemaToOptions<Shape extends z.ZodRawShape>(
   store: "base",
@@ -71,7 +70,7 @@ function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<s
 }
 
 function buildAllStoreOptionsFromRegistry() {
-  let combinedOptionsFromSchemas: Partial<Record<AllCliOptionKeys, Options>> = {};
+  let combinedOptionsFromSchemas: AllStoreCliOptions = {};
 
   for (const store of storeRegistry) {
     const storeOptionsFromSchema = schemaToOptions(store.name, store.schema);
