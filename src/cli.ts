@@ -3,6 +3,7 @@ import { runDeploy } from "./deploy-all-stores.js";
 import { BaseOptionsSchema, publishOnlyDescription } from "./store-argument-parser.js";
 import { ChromeTokenOptionsSchema, runChromeToken } from "./stores/chrome/chrome-token.js";
 import { getStoreDisplayName, storeRegistry } from "./stores/registry.js";
+import type { StoreName } from "./types.js";
 import { buildHelpTableData, renderApplicationError, renderHelpTables } from "./ui/ink-logger.js";
 import { kebabCase } from "./utils/case-conversion.js";
 import { toError } from "./utils/retry.js";
@@ -36,7 +37,7 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny, demandReq
 
 const allStoreOptions: Record<string, Options> = {};
 const envOverrideStoreOptions: Record<string, Options> = {};
-const storeOptionGroups: Record<string, string[]> = {};
+const storeOptionGroups: Partial<Record<StoreName, string[]>> = {};
 for (const store of storeRegistry) {
   const options = schemaToOptions(store.name, store.schema);
   Object.assign(allStoreOptions, options);
@@ -57,9 +58,12 @@ for (const store of storeRegistry) {
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
 
-function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Record<string, string[]> = storeOptionGroups) {
-  for (const [store, keys] of Object.entries(groups)) {
-    builder = builder.group(keys, `${getStoreDisplayName(store)}:`);
+function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, string[]>> = storeOptionGroups) {
+  for (const { name } of storeRegistry) {
+    const keys = groups[name];
+    if (keys) {
+      builder = builder.group(keys, `${getStoreDisplayName(name)}:`);
+    }
   }
   return builder;
 }

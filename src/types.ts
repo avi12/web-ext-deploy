@@ -1,13 +1,11 @@
 import { z } from "zod";
 
-export const StoreStatus = {
-  Pending: "pending",
-  Running: "running",
-  Success: "success",
-  Error: "error"
-} as const;
-
-export type StoreStatus = typeof StoreStatus[keyof typeof StoreStatus];
+export enum StoreStatus {
+  Pending = "pending",
+  Running = "running",
+  Success = "success",
+  Error = "error"
+}
 
 export type StoreLogger = {
   info: (message: string) => void;
@@ -25,8 +23,15 @@ export type DeployContext = {
   setZipPath?: (zipPath: string) => void;
 };
 
+export enum StoreName {
+  Chrome = "chrome",
+  Firefox = "firefox",
+  Edge = "edge",
+  Opera = "opera"
+}
+
 export type StoreDefinition = {
-  name: string;
+  name: StoreName;
   schema: z.ZodType;
   prepare: (options: unknown) => unknown;
   deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;

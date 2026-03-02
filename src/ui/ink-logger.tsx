@@ -1,5 +1,5 @@
 import { getStoreDisplayName } from "../stores/registry.js";
-import { type StoreLogger, StoreStatus } from "../types.js";
+import { type StoreLogger, StoreStatus, type StoreName } from "../types.js";
 import { kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
 import {
   getZodBaseType,
@@ -21,45 +21,47 @@ enum LogLevel {
   Error = "error"
 }
 
-interface LogEntry {
-  store: string;
+type LogSource = StoreName | "System";
+
+type LogEntry = {
+  store: LogSource;
   level: LogLevel;
   message: string;
   timestamp: Date;
-}
-
-const statusIcons: Partial<Record<StoreStatus, string>> = {
-  [StoreStatus.Pending]: "○",
-  [StoreStatus.Success]: "✔",
-  [StoreStatus.Error]: "✖"
 };
 
-const statusColors: Record<StoreStatus, string> = {
-  [StoreStatus.Pending]: "blue",
-  [StoreStatus.Running]: "cyan",
-  [StoreStatus.Success]: "green",
-  [StoreStatus.Error]: "red"
-};
+const statusIcons = {
+  pending: "○",
+  success: "✔",
+  error: "✖"
+} as const;
 
-const deployStatusTexts: Record<StoreStatus, string> = {
-  [StoreStatus.Pending]: "Waiting...",
-  [StoreStatus.Running]: "Deploying...",
-  [StoreStatus.Success]: "Published!",
-  [StoreStatus.Error]: "Failed"
-};
+const statusColors = {
+  pending: "blue",
+  running: "cyan",
+  success: "green",
+  error: "red"
+} as const;
 
-const dryRunStatusTexts: Record<StoreStatus, string> = {
-  [StoreStatus.Pending]: "Waiting...",
-  [StoreStatus.Running]: "Validating...",
-  [StoreStatus.Success]: "Valid",
-  [StoreStatus.Error]: "Invalid"
-};
+const deployStatusTexts = {
+  pending: "Waiting...",
+  running: "Deploying...",
+  success: "Published!",
+  error: "Failed"
+} as const;
 
-const logLevelColors: Record<LogLevel, string> = {
-  [LogLevel.Info]: "white",
-  [LogLevel.Warning]: "yellow",
-  [LogLevel.Error]: "red"
-};
+const dryRunStatusTexts = {
+  pending: "Waiting...",
+  running: "Validating...",
+  success: "Valid",
+  error: "Invalid"
+} as const;
+
+const logLevelColors = {
+  info: "white",
+  warning: "yellow",
+  error: "red"
+} as const;
 
 function stripAnsi(str: string) {
   // eslint-disable-next-line no-control-regex
@@ -135,7 +137,7 @@ function unwrapZodType(zodValue: z.ZodTypeAny) {
 }
 
 export function buildHelpTableData(
-  storeName: string,
+  storeName: StoreName,
   schema: z.ZodType,
   mode?: "cli" | "env",
   missingFields?: string[],
@@ -337,10 +339,11 @@ export async function renderApplicationError(error: Error): Promise<void> {
   inkInstance.unmount();
 }
 
-export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerbose?: boolean) {
-  const sharedStatuses: Record<string, StoreStatus> = Object.fromEntries(
-    storeNames.map(store => [store, StoreStatus.Pending])
-  );
+export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isVerbose?: boolean) {
+  const sharedStatuses: Partial<Record<StoreName, StoreStatus>> = {};
+  for (const store of storeNames) {
+    sharedStatuses[store] = StoreStatus.Pending;
+  }
   const sharedEntries: LogEntry[] = [];
   let sharedHelpTables: HelpTableData[] = [];
   let triggerRender: (() => void) | null = null;
@@ -407,7 +410,8 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
       <Box flexDirection="column">
         <Text bold color="cyan">Web Extension Deployment</Text>
         <Newline />
-        {Object.entries(sharedStatuses).map(([store, status]) => {
+        {storeNames.map(store => {
+          const status = sharedStatuses[store] ?? StoreStatus.Pending;
           const icon = status === StoreStatus.Running
             ? SPINNER_FRAMES[spinnerFrame]
             : (statusIcons[status] ?? "?");
@@ -440,7 +444,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
             <Text bold color="gray">Recent Activity:</Text>
             {activityEntries.slice(-(storeNames.length * 2 + 2)).map((entry, i) => (
               <Text key={i} color={logLevelColors[entry.level]}>
-                [{entry.timestamp.toLocaleTimeString()}] {getStoreDisplayName(entry.store)}: {stripAnsi(entry.message)}
+                [{entry.timestamp.toLocaleTimeString()}] {entry.store === "System" ? "System" : getStoreDisplayName(entry.store)}: {stripAnsi(entry.message)}
               </Text>
             ))}
           </Box>
@@ -460,16 +464,18 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
 
   function addLogEntry(entry: LogEntry, overrideStatus?: StoreStatus) {
     sharedEntries.push(entry);
-    if (overrideStatus !== undefined) {
-      sharedStatuses[entry.store] = overrideStatus;
-    } else if (sharedStatuses[entry.store] === StoreStatus.Pending) {
-      sharedStatuses[entry.store] = StoreStatus.Running;
+    if (entry.store !== "System") {
+      if (overrideStatus !== undefined) {
+        sharedStatuses[entry.store] = overrideStatus;
+      } else if (sharedStatuses[entry.store] === StoreStatus.Pending) {
+        sharedStatuses[entry.store] = StoreStatus.Running;
+      }
     }
     triggerRender?.();
   }
 
   const logger = {
-    info(store: string, message: string) {
+    info(store: LogSource, message: string) {
       addLogEntry({
         store,
         level: LogLevel.Info,
@@ -477,7 +483,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
         timestamp: new Date()
       });
     },
-    warning(store: string, message: string) {
+    warning(store: LogSource, message: string) {
       addLogEntry({
         store,
         level: LogLevel.Warning,
@@ -485,7 +491,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
         timestamp: new Date()
       });
     },
-    error(store: string, message: string) {
+    error(store: LogSource, message: string) {
       addLogEntry({
         store,
         level: LogLevel.Error,
@@ -496,7 +502,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
   };
 
   const monitor = {
-    updateStore(store: string, status: StoreStatus, message?: string) {
+    updateStore(store: StoreName, status: StoreStatus, message?: string) {
       if (sharedStatuses[store] === status) {
         return;
       }
@@ -511,7 +517,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
       }
       triggerRender?.();
     },
-    setZipPath(store: string, zipPath: string) {
+    setZipPath(store: StoreName, zipPath: string) {
       addLogEntry({
         store,
         level: LogLevel.Info,
@@ -529,7 +535,7 @@ export function createInkLogger(storeNames: string[], isDryRun?: boolean, isVerb
     ready,
     logger,
     monitor,
-    forStore: (store: string) => ({
+    forStore: (store: StoreName) => ({
       info: message => logger.info(store, message),
       warning: message => logger.warning(store, message),
       error: message => logger.error(store, message)

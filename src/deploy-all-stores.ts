@@ -1,14 +1,14 @@
 import { deployStore, StoreValidationError } from "./deploy-single-store.js";
 import { createCookieRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
-import { StoreStatus } from "./types.js";
+import { StoreStatus, type StoreName } from "./types.js";
 import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
 import { toError } from "./utils/retry.js";
 import type { Arguments } from "yargs";
 import { z } from "zod";
 
 async function runStoreDeploy(
-  store: string,
+  store: StoreName,
   json: Record<string, unknown>,
   inkLogger: ReturnType<typeof createInkLogger>,
   isDryRun?: boolean,
@@ -49,7 +49,7 @@ export async function runDeploy(argv: Arguments) {
   }
   preDeployUI.unmount();
 
-  const storeEntries: [string, Record<string, unknown>][] = [];
+  const storeEntries: [StoreName, Record<string, unknown>][] = [];
   for (const [store, json] of Object.entries(storeJsons)) {
     if (isSupportedStore(store) && json !== undefined) {
       storeEntries.push([store, json]);

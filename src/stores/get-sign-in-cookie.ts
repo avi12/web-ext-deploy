@@ -1,3 +1,4 @@
+import type { StoreName } from "../types.js";
 import { config, parse } from "../utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "../utils/helpers.js";
 import { execSync } from "node:child_process";
@@ -8,7 +9,7 @@ function getFilename(site: string) {
   return `./${site}.env`;
 }
 
-function extractCookies(cookiesInput: string, cookiesToLogin: Array<string>) {
+function extractCookies(cookiesInput: string, cookiesToLogin: string[]) {
   return cookiesInput
     .split("; ")
     .filter(cookieName => cookieName.match(new RegExp("^(" + cookiesToLogin.join("|") + ")")))
@@ -26,7 +27,7 @@ async function addNavigationListener({
   resolve
 }: {
   page: Page;
-  cookiesToLogin: Array<string>;
+  cookiesToLogin: string[];
   urlToEnd: string;
   resolve: (value: PromiseLike<unknown> | unknown) => void;
 }) {
@@ -69,7 +70,7 @@ function appendToEnv(filename: string, headers: string) {
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
-export async function getSignInCookie(siteNames: Array<string>) {
+export async function getSignInCookie(siteNames: StoreName[]) {
   const width = 1280;
   const height = 720;
   const launchOptions = { headless: false, args: [`--window-size=${width},${height}`] };

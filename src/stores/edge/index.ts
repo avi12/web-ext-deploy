@@ -1,9 +1,9 @@
-import { defineStore } from "../../types.js";
+import { defineStore, StoreName } from "../../types.js";
 import { deployToEdgePublishApi } from "./edge-deploy.js";
 import { EdgeOptionsPublishApiSchema, prepareEdgeOptions } from "./edge-input.js";
 
 export const edge = defineStore({
-  name: "edge",
+  name: StoreName.Edge,
   schema: EdgeOptionsPublishApiSchema,
   prepare: prepareEdgeOptions,
   deploy: deployToEdgePublishApi,

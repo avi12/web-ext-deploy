@@ -1,9 +1,9 @@
-import { defineStore } from "../../types.js";
+import { defineStore, StoreName } from "../../types.js";
 import { deployToOpera } from "./opera-deploy.js";
 import { OperaOptionsSchema, prepareOperaOptions } from "./opera-input.js";
 
 export const opera = defineStore({
-  name: "opera",
+  name: StoreName.Opera,
   schema: OperaOptionsSchema,
   prepare: prepareOperaOptions,
   deploy: deployToOpera,

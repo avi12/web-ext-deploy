@@ -1,6 +1,13 @@
+import { StoreName } from "../../types.js";
 import { config } from "../../utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
-import { Box, Newline, render, Text, useApp } from "ink";
+import {
+  Box,
+  Newline,
+  render,
+  Text,
+  useApp
+} from "ink";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createServer, type Server } from "node:http";
@@ -237,7 +244,7 @@ export async function runChromeToken(clientId: string, clientSecret: string, pri
   const envFile = "chrome.env";
   const { parsed: envCurrent = {} } = config({ path: envFile });
   fs.writeFileSync(envFile, headersToEnv({ ...envCurrent, REFRESH_TOKEN: refreshToken }));
-  createGitIgnoreIfNeeded(["chrome"]);
+  createGitIgnoreIfNeeded([StoreName.Chrome]);
   console.log("\nSaved refresh token to chrome.env");
 }
 

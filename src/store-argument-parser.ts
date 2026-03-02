@@ -6,6 +6,7 @@ import {
   storeNames,
   storeRegistry
 } from "./stores/registry.js";
+import type { StoreName } from "./types.js";
 import { buildGlobalHelpTableData, buildHelpTableData, MissingArgsError, NoStoresError } from "./ui/ink-logger.js";
 import { camelCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
@@ -28,9 +29,9 @@ export const EnvOptionsSchema = z.object({
 });
 
 type StoreConfig = Record<string, unknown>;
-type StoreConfigMap = Partial<Record<string, StoreConfig>>;
+type StoreConfigMap = Partial<Record<StoreName, StoreConfig>>;
 
-function getJsonsFromArgs(store: string, argv: Arguments) {
+function getJsonsFromArgs(store: StoreName, argv: Arguments) {
   return mapStoreArgs(Object.fromEntries(Object.entries(argv)), store);
 }
 
@@ -86,7 +87,7 @@ export function readCookiesFromEnv(storeName: string, cookieFields: string[]) {
   return result;
 }
 
-export function getCookies(siteNames: Array<string>) {
+export function getCookies(siteNames: StoreName[]) {
   return getSignInCookie(siteNames);
 }
 
@@ -131,7 +132,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
 }
 
 function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: boolean) {
-  const missingArgs: Record<string, { required: string[]; optional?: string[] }> = {};
+  const missingArgs: Partial<Record<StoreName, { required: string[]; optional?: string[] }>> = {};
 
   for (const store of storeRegistry) {
     const storeConfig = jsonStoresRaw[store.name];
@@ -220,20 +221,20 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   if (!isObjectEmpty(missingArgs)) {
     const isCliMode = command === "cli";
     const tables = [];
-    for (const storeName in missingArgs) {
-      const store = getStore(storeName);
-      if (store) {
-        const { required, optional = [] } = missingArgs[storeName];
-        const allMissingFields = [...required, ...optional];
-        const tableData = buildHelpTableData(storeName, store.schema, isCliMode ? "cli" : "env", allMissingFields, store.dynamicFields, store.cliOverridableFields);
-        if (tableData) {
-          tables.push(tableData);
-        }
+    for (const store of storeRegistry) {
+      const missingEntry = missingArgs[store.name];
+      if (!missingEntry) {
+        continue;
+      }
+      const { required, optional = [] } = missingEntry;
+      const allMissingFields = [...required, ...optional];
+      const tableData = buildHelpTableData(store.name, store.schema, isCliMode ? "cli" : "env", allMissingFields, store.dynamicFields, store.cliOverridableFields);
+      if (tableData) {
+        tables.push(tableData);
       }
     }
-    const hasCookieStores = Object.keys(missingArgs).some(storeName => {
-      const store = getStore(storeName);
-      return store?.cookieFields && store.cookieFields.length > 0;
+    const hasCookieStores = storeRegistry.some(store => {
+      return missingArgs[store.name] && store.cookieFields && store.cookieFields.length > 0;
     });
     const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
     const globalTableData = missingGlobalArgs.length > 0
@@ -248,7 +249,7 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   return jsonStoresRaw;
 }
 
-export function createCookieRefreshCallback(store: string, cookieFields: string[]) {
+export function createCookieRefreshCallback(store: StoreName, cookieFields: string[]) {
   return async () => {
     await getCookies([store]);
     return readCookiesFromEnv(store, cookieFields);
