@@ -1,13 +1,14 @@
 import { z } from "zod";
 
-const OperationStatus = z.enum(["InProgress", "Succeeded", "Failed"]);
+const OperationStatusSchema = z.enum(["InProgress", "Succeeded", "Failed"]);
+export const OperationStatus = OperationStatusSchema.enum;
 
 // https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-status-of-a-package-upload
 export const StatusPackageUploadSchema = z.object({
   id: z.string(),
   createdTime: z.string(),
   lastUpdatedTime: z.string(),
-  status: OperationStatus,
+  status: OperationStatusSchema,
   message: z.string().nullable(),
   errorCode: z.string().nullable(),
   errors: z.array(z.string()).nullable()
@@ -32,7 +33,7 @@ export const PublishOperationStatusSchema = z.union([
   BaseOperationResponse.extend({
     createdTime: z.string(),
     lastUpdatedTime: z.string(),
-    status: OperationStatus,
+    status: OperationStatusSchema,
     errorCode: z.union([PublishErrorCode, z.string()]).nullable(),
     errors: z.array(z.object({ message: z.string() })).nullable()
   }),

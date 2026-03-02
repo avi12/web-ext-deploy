@@ -9,13 +9,14 @@ import {
 } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
-import { PublishOperationStatusSchema, StatusPackageUploadSchema } from "./edge-types.js";
+import { OperationStatus, PublishOperationStatusSchema, StatusPackageUploadSchema } from "./edge-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
+/** @see https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-status-of-a-package-upload */
 async function checkStatusOfPackageUpload({
   productId,
   operationId,
@@ -28,9 +29,10 @@ async function checkStatusOfPackageUpload({
   onRateLimit?: RateLimitHandler;
 }) {
   const pollIntervalMs = 5_000;
+  let data: z.infer<typeof StatusPackageUploadSchema>;
 
-  for (;;) {
-    const data = await requestWithRetry({
+  while (true) {
+    data = await requestWithRetry({
       sendRequest: () => httpClient.get(`products/${productId}/submissions/draft/package/operations/${operationId}`),
       parseResponse(response) {
         const result = StatusPackageUploadSchema.safeParse(response.data);
@@ -44,16 +46,17 @@ async function checkStatusOfPackageUpload({
       logger,
       onRateLimit
     });
-
-    if (data.status === "Failed") {
-      const errors = (data.errors || []).join("\n");
-      throw new Error(storeError(errors));
-    }
-    if (data.status !== "InProgress") {
-      return data;
+    if (data.status !== OperationStatus.InProgress) {
+      break;
     }
     await setTimeout(pollIntervalMs);
   }
+
+  if (data.status === OperationStatus.Failed) {
+    const errors = (data.errors || []).join("\n");
+    throw new Error(storeError(errors));
+  }
+  return data;
 }
 
 function parseLocation(response: HttpLikeResponse) {
@@ -64,6 +67,7 @@ function parseLocation(response: HttpLikeResponse) {
   return result.data;
 }
 
+/** @see https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#upload-a-package-to-update-an-existing-submission */
 function uploadZip({
   zip,
   productId,
@@ -85,6 +89,7 @@ function uploadZip({
   });
 }
 
+/** @see https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#publish-the-product-draft-submission */
 function publishSubmission({
   productId,
   devChangelog,
@@ -106,6 +111,7 @@ function publishSubmission({
   });
 }
 
+/** @see https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-publishing-status */
 async function checkPublishStatus({
   productId,
   operationId,
@@ -135,7 +141,7 @@ async function checkPublishStatus({
   if (!("status" in data)) {
     throw new Error(storeError(data.message));
   }
-  if (data.status === "Failed") {
+  if (data.status === OperationStatus.Failed) {
     const errors = (data.errors || []).map(error => error.message);
     if (errors.length === 0) {
       errors.push(data.message);

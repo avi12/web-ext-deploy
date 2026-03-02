@@ -17,6 +17,7 @@ import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#upload-create */
 function uploadZip({
   zip,
   jwtIssuer,
@@ -51,6 +52,7 @@ function uploadZip({
   });
 }
 
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#version-create */
 async function createNewVersion({
   slug,
   uuid,
@@ -105,15 +107,17 @@ async function createNewVersion({
   });
 }
 
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#upload-detail */
 async function validateUpload({ uuid, logger, onRateLimit }: {
   uuid: string;
   logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   const pollIntervalMs = 5_000;
+  let data: z.infer<typeof FirefoxUploadDetailSchema>;
 
-  for (;;) {
-    const data = await requestWithRetry({
+  while (true) {
+    data = await requestWithRetry({
       sendRequest: () => httpClient.get(`upload/${uuid}/`),
       parseResponse(response) {
         const result = FirefoxUploadDetailSchema.safeParse(response.data);
@@ -127,21 +131,22 @@ async function validateUpload({ uuid, logger, onRateLimit }: {
       logger,
       onRateLimit
     });
-
     if (data.processed) {
-      const errors = (data.validation.messages || [])
-        .filter(message => message.type === "error")
-        .map(message => message.message);
-      if (errors.length > 0) {
-        throw new Error(storeError(errors.join("\n")));
-      }
-      return data;
+      break;
     }
-
     await setTimeout(pollIntervalMs);
   }
+
+  const errors = (data.validation.messages || [])
+    .filter(message => message.type === "error")
+    .map(message => message.message);
+  if (errors.length > 0) {
+    throw new Error(storeError(errors.join("\n")));
+  }
+  return data;
 }
 
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#version-edit */
 function uploadSourceCodeIfNeeded({
   slug,
   zipSource,

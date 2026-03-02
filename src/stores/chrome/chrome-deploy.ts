@@ -13,11 +13,13 @@ import {
 } from "./chrome-types.js";
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
+import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
 const PENDING_REVIEW_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED];
 
+/** @see https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/fetchStatus */
 function fetchStatus({
   extId,
   publisherId,
@@ -45,6 +47,7 @@ function fetchStatus({
   });
 }
 
+/** @see https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/cancelSubmission */
 async function cancelSubmissionIfPending({
   extId,
   publisherId,
@@ -81,6 +84,7 @@ async function cancelSubmissionIfPending({
   await setTimeout(60_000);
 }
 
+/** @see https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/fetchStatus */
 async function waitForUpload({
   extId,
   publisherId,
@@ -93,8 +97,9 @@ async function waitForUpload({
   onRateLimit?: RateLimitHandler;
 }) {
   const pollIntervalMs = 5_000;
+  let lastAsyncUploadState: z.infer<typeof FetchStatusSchema>["lastAsyncUploadState"];
 
-  for (;;) {
+  while (true) {
     const data = await requestWithRetry({
       sendRequest: () => httpClient.get(`v2/publishers/${publisherId}/items/${extId}:fetchStatus`),
       parseResponse(response) {
@@ -109,18 +114,19 @@ async function waitForUpload({
       logger,
       onRateLimit
     });
-
-    const { lastAsyncUploadState } = data;
-    if (lastAsyncUploadState === UploadState.SUCCEEDED) {
-      return;
-    }
+    lastAsyncUploadState = data.lastAsyncUploadState;
     if (lastAsyncUploadState !== UploadState.IN_PROGRESS) {
-      throw new Error(storeError(`Upload failed with state: ${lastAsyncUploadState}`));
+      break;
     }
     await setTimeout(pollIntervalMs);
   }
+
+  if (lastAsyncUploadState !== UploadState.SUCCEEDED) {
+    throw new Error(storeError(`Upload failed with state: ${lastAsyncUploadState}`));
+  }
 }
 
+/** @see https://developer.chrome.com/docs/webstore/api/reference/rest/v2/media/upload */
 async function uploadZip({
   zip,
   extId,
@@ -166,6 +172,7 @@ async function uploadZip({
 
 const PUBLISH_SUCCESS_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED, ItemState.PUBLISHED, ItemState.PUBLISHED_TO_TESTERS];
 
+/** @see https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/publish */
 async function publishExtension({
   extId,
   publisherId,
