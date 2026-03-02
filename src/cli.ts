@@ -19,22 +19,16 @@ type StoreCliOptionKeys<Store extends typeof storeRegistry[number]> =
     : never;
 
 type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
+type BaseCliOptionKeys =
+  | CamelToKebab<string & ExtractSchemaKeys<typeof BaseOptionsSchema>>
+  | CamelToKebab<string & ExtractSchemaKeys<typeof ChromeTokenOptionsSchema>>;
+type KnownCliOptionKeys = AllCliOptionKeys | BaseCliOptionKeys;
+type CliOptionsByKnownKey = Partial<Record<KnownCliOptionKeys, Options>>;
 type AllStoreCliOptions = Partial<Record<AllCliOptionKeys, Options>>;
 type PerStoreCliOptions = Partial<Record<StoreName, AllStoreCliOptions>>;
 
-function schemaToOptions<Shape extends z.ZodRawShape>(
-  store: "base",
-  schema: z.ZodObject<Shape>,
-  demandRequired?: boolean
-): Record<CamelToKebab<string & keyof Shape>, Options>;
-function schemaToOptions<Store extends StoreName, Shape extends z.ZodRawShape>(
-  store: Store,
-  schema: z.ZodObject<Shape>,
-  demandRequired?: boolean
-): Record<`${Store}-${CamelToKebab<string & keyof Shape>}`, Options>;
-function schemaToOptions(store: string, schema: z.ZodTypeAny, demandRequired?: boolean): Record<string, Options>;
-function schemaToOptions(store: string | "base", schema: z.ZodTypeAny, demandRequired = false) {
-  const options: Record<string, Options> = {};
+function schemaToOptions(store: StoreName | "base", schema: z.ZodTypeAny, demandRequired = false): CliOptionsByKnownKey {
+  let options: CliOptionsByKnownKey = {};
   if (!(schema instanceof z.ZodObject)) {
     return options;
   }
@@ -47,11 +41,12 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny, demandReq
     const isOptional = isZodOptional(value);
     const type = getZodBaseType(unwrapZod(value));
     const description = getZodDescription(value);
-    options[optionName] = {
+    const option = {
       type,
       description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description,
       ...(demandRequired && !isOptional && { demandOption: true })
     };
+    options = { ...options, [optionName]: option };
   }
 
   return options;
