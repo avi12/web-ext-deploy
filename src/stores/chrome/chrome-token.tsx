@@ -1,12 +1,6 @@
 import { config } from "../../utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
-import {
-  Box,
-  Newline,
-  render,
-  Text,
-  useApp
-} from "ink";
+import { Box, Newline, render, Text, useApp } from "ink";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createServer, type Server } from "node:http";
@@ -20,23 +14,23 @@ export const ChromeTokenOptionsSchema = z.object({
 });
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#creatingclient
-const AuthRequestSchema = z.object({
-  client_id: z.string(),
-  redirect_uri: z.string(),
-  response_type: z.literal("code"),
-  access_type: z.literal("offline"),
-  scope: z.string(),
-  prompt: z.literal("consent")
-});
+type AuthRequest = {
+  client_id: string;
+  redirect_uri: string;
+  response_type: "code";
+  access_type: "offline";
+  scope: string;
+  prompt: "consent";
+};
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#exchange-authorization-code
-const TokenRequestSchema = z.object({
-  code: z.string(),
-  client_id: z.string(),
-  client_secret: z.string(),
-  redirect_uri: z.string(),
-  grant_type: z.literal("authorization_code")
-});
+type TokenRequest = {
+  code: string;
+  client_id: string;
+  client_secret: string;
+  redirect_uri: string;
+  grant_type: "authorization_code";
+};
 
 const TokenResponseSchema = z.object({
   access_token: z.string(),
@@ -46,7 +40,6 @@ const TokenResponseSchema = z.object({
   token_type: z.literal("Bearer")
 });
 
-const SCOPE = "https://www.googleapis.com/auth/chromewebstore";
 const PORT = 8818;
 const REDIRECT_URI = `http://localhost:${PORT}`;
 const HTTP_OK = 200;
@@ -71,31 +64,19 @@ async function exchangeCodeForToken(code: string, clientId: string, clientSecret
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(TokenRequestSchema.parse({
+    body: new URLSearchParams({
       code,
       client_id: clientId,
       client_secret: clientSecret,
       redirect_uri: REDIRECT_URI,
       grant_type: "authorization_code"
-    }))
+    } satisfies TokenRequest)
   });
   const result = TokenResponseSchema.safeParse(await response.json());
   if (!result.success) {
     return { error: result.error };
   }
   return result.data;
-}
-
-function buildAuthUrl(clientId: string) {
-  const authParams = new URLSearchParams(AuthRequestSchema.parse({
-    client_id: clientId,
-    redirect_uri: REDIRECT_URI,
-    response_type: "code",
-    access_type: "offline",
-    scope: SCOPE,
-    prompt: "consent"
-  }));
-  return `https://accounts.google.com/o/oauth2/v2/auth?${authParams}`;
 }
 
 enum Step {
@@ -145,7 +126,14 @@ function App({
   const { exit } = useApp();
   const [step, setStep] = useState<Step>(Step.Waiting);
   const [errorMessage, setErrorMessage] = useState("");
-  const authUrl = buildAuthUrl(clientId);
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: REDIRECT_URI,
+    response_type: "code",
+    access_type: "offline",
+    scope: "https://www.googleapis.com/auth/chromewebstore",
+    prompt: "consent"
+  } satisfies AuthRequest)}`;
 
   useEffect(() => {
     const server: Server = createServer(async (request, response) => {
