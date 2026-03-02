@@ -31,11 +31,3 @@ export const FirefoxOptionsSubmissionApiSchema = z.object({
 });
 
 export type FirefoxOptionsSubmissionApi = z.infer<typeof FirefoxOptionsSubmissionApiSchema>;
-
-export function prepareFirefoxOptions(options: unknown): FirefoxOptionsSubmissionApi {
-  const parseResult = FirefoxOptionsSubmissionApiSchema.safeParse(options);
-  if (!parseResult.success) {
-    throw parseResult.error;
-  }
-  return parseResult.data;
-}

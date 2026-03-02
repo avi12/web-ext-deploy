@@ -19,11 +19,3 @@ export const OperaOptionsSchema = z.object({
 });
 
 export type OperaOptions = z.infer<typeof OperaOptionsSchema>;
-
-export function prepareOperaOptions(options: unknown): OperaOptions {
-  const parseResult = OperaOptionsSchema.safeParse(options);
-  if (!parseResult.success) {
-    throw parseResult.error;
-  }
-  return parseResult.data;
-}

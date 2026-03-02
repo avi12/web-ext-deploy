@@ -20,11 +20,3 @@ export const EdgeOptionsPublishApiSchema = z.object({
 });
 
 export type EdgeOptionsPublishApi = z.infer<typeof EdgeOptionsPublishApiSchema>;
-
-export function prepareEdgeOptions(options: unknown): EdgeOptionsPublishApi {
-  const parseResult = EdgeOptionsPublishApiSchema.safeParse(options);
-  if (!parseResult.success) {
-    throw parseResult.error;
-  }
-  return parseResult.data;
-}

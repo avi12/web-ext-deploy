@@ -33,7 +33,6 @@ export enum StoreName {
 export type StoreDefinition = {
   name: StoreName;
   schema: z.ZodType;
-  prepare: (options: unknown) => unknown;
   deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
@@ -43,7 +42,6 @@ export type StoreDefinition = {
 export function defineStore<T, Name extends string>(config: {
   name: Name;
   schema: z.ZodType<T>;
-  prepare: (options: unknown) => T;
   deploy: (options: T, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
@@ -52,9 +50,6 @@ export function defineStore<T, Name extends string>(config: {
   return {
     name: config.name,
     schema: config.schema,
-    prepare(options: unknown) {
-      return config.prepare(options);
-    },
     deploy(options: unknown, context?: DeployContext) {
       const result = config.schema.safeParse(options);
       if (!result.success) {

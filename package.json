@@ -68,6 +68,7 @@
     "clean": "rimraf dist-esm",
     "prepare": "pnpm clean && pnpm build",
     "build": "pnpm build:esm",
+
     "build:esm": "tsc",
     "watch": "tsc --watch",
     "types:check": "tsc --noEmit",

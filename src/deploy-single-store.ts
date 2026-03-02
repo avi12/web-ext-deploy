@@ -2,7 +2,6 @@ import { storeRegistry } from "./stores/registry.js";
 import { StoreStatus, type DeployContext } from "./types.js";
 import { buildHelpTableData, type HelpTableData } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
-import { ZodError } from "zod";
 
 export class StoreValidationError extends Error {
   helpTables: HelpTableData[];
@@ -25,27 +24,24 @@ export function deployStore(
   if (!store) {
     throw new Error(red(`Unknown store: ${storeName}`));
   }
-  let prepared: unknown;
-  try {
-    prepared = store.prepare(options);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const messages = error.issues.map(issue => issue.message);
-      const structuralIssues = error.issues.filter(issue => issue.code !== "custom");
-      if (structuralIssues.length > 0) {
-        const failedFields = [...new Set(
-          structuralIssues
-            .map(issue => issue.path[0])
-            .filter((path): path is string => typeof path === "string")
-        )];
-        const missingFields = failedFields.length > 0 ? failedFields : undefined;
-        const helpTableData = buildHelpTableData(store.name, store.schema, context?.mode, missingFields, store.dynamicFields, store.cliOverridableFields);
-        throw new StoreValidationError(messages.join("\n"), helpTableData ? [helpTableData] : [], error);
-      }
-      throw new Error(messages.join("\n"), { cause: error });
+  const parseResult = store.schema.safeParse(options);
+  if (!parseResult.success) {
+    const { error } = parseResult;
+    const messages = error.issues.map(issue => issue.message);
+    const structuralIssues = error.issues.filter(issue => issue.code !== "custom");
+    if (structuralIssues.length > 0) {
+      const failedFields = [...new Set(
+        structuralIssues
+          .map(issue => issue.path[0])
+          .filter(path => typeof path === "string")
+      )];
+      const missingFields = failedFields.length > 0 ? failedFields : undefined;
+      const helpTableData = buildHelpTableData(store.name, store.schema, context?.mode, missingFields, store.dynamicFields, store.cliOverridableFields);
+      throw new StoreValidationError(messages.join("\n"), helpTableData ? [helpTableData] : [], error);
     }
-    throw error;
+    throw new Error(messages.join("\n"), { cause: error });
   }
+  const prepared = parseResult.data;
   if (context?.isDryRun) {
     context.logger?.info("Dry run: validation passed");
     context.setStatus?.(StoreStatus.Success);

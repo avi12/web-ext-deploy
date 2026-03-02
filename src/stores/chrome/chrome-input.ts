@@ -20,11 +20,3 @@ export const ChromeOptionsSchema = z.object({
 });
 
 export type ChromeOptions = z.infer<typeof ChromeOptionsSchema>;
-
-export function prepareChromeOptions(options: unknown): ChromeOptions {
-  const parseResult = ChromeOptionsSchema.safeParse(options);
-  if (!parseResult.success) {
-    throw parseResult.error;
-  }
-  return parseResult.data;
-}

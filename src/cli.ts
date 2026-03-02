@@ -3,7 +3,7 @@ import { runDeploy } from "./deploy-all-stores.js";
 import { BaseOptionsSchema, publishOnlyDescription } from "./store-argument-parser.js";
 import { ChromeTokenOptionsSchema, runChromeToken } from "./stores/chrome/chrome-token.js";
 import { getStoreDisplayName, storeRegistry } from "./stores/registry.js";
-import type { StoreName } from "./types.js";
+import type { StoreDefinition, StoreName } from "./types.js";
 import { buildHelpTableData, renderApplicationError, renderHelpTables } from "./ui/ink-logger.js";
 import { kebabCase } from "./utils/case-conversion.js";
 import { toError } from "./utils/retry.js";
@@ -35,25 +35,26 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny, demandReq
   return options;
 }
 
-const allStoreOptions: Record<string, Options> = {};
-const envOverrideStoreOptions: Record<string, Options> = {};
-const storeOptionGroups: Partial<Record<StoreName, string[]>> = {};
-for (const store of storeRegistry) {
-  const options = schemaToOptions(store.name, store.schema);
-  Object.assign(allStoreOptions, options);
-  storeOptionGroups[store.name] = Object.keys(options);
-  // In env mode, dynamic fields and cliOverridableFields are registered so yargs can parse
-  // them, but all are hidden from the option list — the epilogue tables show everything.
-  const envCliOptionNames = new Set([
+function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<string, Options>) {
+  const cliOverridableInEnvMode = new Set([
     ...(store.dynamicFields ?? []).map(key => `${store.name}-${kebabCase(key)}`),
     ...(store.cliOverridableFields ?? []).map(key => `${store.name}-${kebabCase(key)}`)
   ]);
-  const envOptions = Object.fromEntries(
-    Object.entries(options)
-      .filter(([key]) => envCliOptionNames.has(key))
+  return Object.fromEntries(
+    Object.entries(allOptions)
+      .filter(([key]) => cliOverridableInEnvMode.has(key))
       .map(([key, option]) => [key, { ...option, description: (option.description ?? "").replace(" [required]", "") }])
   );
-  Object.assign(envOverrideStoreOptions, envOptions);
+}
+
+let allStoreOptions: Record<string, Options> = {};
+let envModeCliOnlyOptions: Record<string, Options> = {};
+const storeOptionGroups: Partial<Record<StoreName, string[]>> = {};
+for (const store of storeRegistry) {
+  const options = schemaToOptions(store.name, store.schema);
+  allStoreOptions = { ...allStoreOptions, ...options };
+  storeOptionGroups[store.name] = Object.keys(options);
+  envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, options) };
 }
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
@@ -93,9 +94,9 @@ export const parser = yargs(process.argv.slice(2))
           type: "array",
           description: publishOnlyDescription
         },
-        ...envOverrideStoreOptions
+        ...envModeCliOnlyOptions
       });
-      for (const name in envOverrideStoreOptions) {
+      for (const name in envModeCliOnlyOptions) {
         builder = builder.hide(name);
       }
       return builder.version(false).epilogue("Create a .env file for each store you want to deploy to (e.g. chrome.env, firefox.env)\n" +
