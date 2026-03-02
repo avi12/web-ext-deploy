@@ -1,15 +1,16 @@
 #!/usr/bin/env node
+import { runDeploy } from "./deploy-all-stores.js";
 import { BaseOptionsSchema, publishOnlyDescription } from "./store-argument-parser.js";
+import { ChromeTokenOptionsSchema, runChromeToken } from "./stores/chrome/chrome-token.js";
 import { getStoreDisplayName, storeRegistry } from "./stores/registry.js";
 import { buildHelpTableData, renderApplicationError, renderHelpTables } from "./ui/ink-logger.js";
 import { kebabCase } from "./utils/case-conversion.js";
-import { mapStoreArgs } from "./utils/helpers.js";
 import { toError } from "./utils/retry.js";
 import { getZodBaseType, getZodDescription, isZodOptional, unwrapZod } from "./utils/zod.js";
 import yargs, { type Arguments, type Options } from "yargs";
 import { z } from "zod";
 
-function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
+function schemaToOptions(store: string | "base", schema: z.ZodTypeAny, demandRequired = false) {
   const options: Record<string, Options> = {};
   if (!(schema instanceof z.ZodObject)) {
     return options;
@@ -23,7 +24,11 @@ function schemaToOptions(store: string | "base", schema: z.ZodTypeAny) {
     const isOptional = isZodOptional(value);
     const type = getZodBaseType(unwrapZod(value));
     const description = getZodDescription(value);
-    options[optionName] = { type, description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description };
+    options[optionName] = {
+      type,
+      description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description,
+      ...(demandRequired && !isOptional && { demandOption: true })
+    };
   }
 
   return options;
@@ -109,15 +114,8 @@ export const parser = yargs(process.argv.slice(2))
   .command(
     "chrome-token",
     "Get a Chrome Web Store refresh token",
-    builder => builder.version(false).options({
-      "client-id": { type: "string", description: "OAuth client ID", demandOption: true },
-      "client-secret": { type: "string", description: "OAuth client secret", demandOption: true },
-      "print-only": { type: "boolean", description: "Print token to terminal instead of saving to chrome.env" }
-    }),
-    async argv => {
-      const { runChromeToken } = await import("./stores/chrome/chrome-token.js");
-      await runChromeToken(argv.clientId, argv.clientSecret, argv.printOnly);
-    }
+    builder => builder.version(false).options(schemaToOptions("base", ChromeTokenOptionsSchema, true)),
+    handleChromeToken
   )
   .demandCommand(1, "You need at least one command before moving on")
   .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options`)
@@ -132,26 +130,38 @@ export const parser = yargs(process.argv.slice(2))
   .exitProcess(false)
   .help();
 
-async function handleDeploy(argv: Arguments) {
-  const { runDeploy } = await import("./deploy-all-stores.js");
+async function handleCommand(run: () => Promise<void>) {
   try {
-    await runDeploy(argv);
+    await run();
   } catch (error) {
     await renderApplicationError(toError(error));
     process.exit(1);
   }
 }
 
-export { mapStoreArgs };
-
-const argv = await parser.parseAsync();
-if (argv.help) {
-  const command = z.string().safeParse(argv._[0]).data;
-  if (command === "env") {
-    const tables = storeRegistry
-      .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
-      .filter(table => table !== null);
-    await renderHelpTables(tables);
-  }
-  process.exit(0);
+function handleChromeToken(argv: Arguments) {
+  return handleCommand(() => {
+    const { clientId, clientSecret, printOnly } = ChromeTokenOptionsSchema.parse(argv);
+    return runChromeToken(clientId, clientSecret, printOnly);
+  });
 }
+
+function handleDeploy(argv: Arguments) {
+  return handleCommand(() => runDeploy(argv));
+}
+
+async function init() {
+  const argv = await parser.parseAsync();
+  if (argv.help) {
+    const command = z.string().safeParse(argv._[0]).data;
+    if (command === "env") {
+      const tables = storeRegistry
+        .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
+        .filter(table => table !== null);
+      await renderHelpTables(tables);
+    }
+    process.exit(0);
+  }
+}
+
+init();

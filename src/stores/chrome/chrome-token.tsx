@@ -13,6 +13,12 @@ import { createServer, type Server } from "node:http";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
 
+export const ChromeTokenOptionsSchema = z.object({
+  clientId: z.string().nonempty().describe("OAuth client ID"),
+  clientSecret: z.string().nonempty().describe("OAuth client secret"),
+  printOnly: z.boolean().optional().describe("Print token to terminal instead of saving to chrome.env")
+});
+
 // https://developers.google.com/identity/protocols/oauth2/web-server#creatingclient
 const AuthRequestSchema = z.object({
   client_id: z.string(),
