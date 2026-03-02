@@ -30,23 +30,26 @@ export enum StoreName {
   Opera = "opera"
 }
 
-export type StoreDefinition = {
-  name: StoreName;
-  schema: z.ZodType;
+export type StoreDefinition<
+  Name extends StoreName = StoreName,
+  Schema extends z.ZodTypeAny = z.ZodTypeAny
+> = {
+  name: Name;
+  schema: Schema;
   deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
   cliOverridableFields?: string[];
 };
 
-export function defineStore<T, Name extends string>(config: {
+export function defineStore<Schema extends z.ZodTypeAny, Name extends StoreName>(config: {
   name: Name;
-  schema: z.ZodType<T>;
-  deploy: (options: T, context?: DeployContext) => Promise<boolean>;
+  schema: Schema;
+  deploy: (options: z.infer<Schema>, context?: DeployContext) => Promise<boolean>;
   cookieFields?: string[];
   dynamicFields?: string[];
   cliOverridableFields?: string[];
-}) {
+}): StoreDefinition<Name, Schema> {
   return {
     name: config.name,
     schema: config.schema,

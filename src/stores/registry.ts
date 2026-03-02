@@ -1,4 +1,3 @@
-import type { StoreDefinition } from "../types.js";
 import { StoreName } from "../types.js";
 import { chrome } from "./chrome/index.js";
 import { edge } from "./edge/index.js";
@@ -7,16 +6,16 @@ import { opera } from "./opera/index.js";
 import { z } from "zod";
 
 // To add a new store: import it, add it to this array, and add its name to StoreName in types.ts.
-export const storeRegistry: StoreDefinition[] = [chrome, firefox, edge, opera];
+export const storeRegistry = [chrome, firefox, edge, opera] as const;
 
 export const storeNames: StoreName[] = storeRegistry.map(store => store.name);
 
-const storeDisplayNames = {
+const storeDisplayNames: Record<StoreName, string> = {
   [StoreName.Chrome]: "Chrome Web Store",
   [StoreName.Firefox]: "Firefox Add-ons Store",
   [StoreName.Edge]: "Microsoft Partner Center",
   [StoreName.Opera]: "Opera Add-ons Store"
-} satisfies Record<StoreName, string>;
+};
 
 export function getStoreDisplayName(name: StoreName) {
   return storeDisplayNames[name] ?? name;
