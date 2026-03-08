@@ -2,7 +2,7 @@ import { createHttpClient } from "../../http/client.js";
 import { buildFormData } from "../../http/form-data.js";
 import { generateJwt } from "../../http/jwt.js";
 import { StoreStatus, type DeployContext } from "../../types.js";
-import { storeError } from "../../ui/logging.js";
+import { green, storeError } from "../../ui/logging.js";
 import { createRateLimitHandler, requestWithRetry, type RateLimitHandler } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
@@ -257,7 +257,7 @@ export async function deployToFirefox(
     });
   }
 
-  logger?.info("Successfully published to Firefox Add-ons!");
+  logger?.info(green("Successfully published to Firefox Add-ons!"));
   setStatus?.(StoreStatus.Success);
   return true;
 }

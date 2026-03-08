@@ -1,6 +1,6 @@
 import { createHttpClient } from "../../http/client.js";
 import { StoreStatus, type DeployContext } from "../../types.js";
-import { storeError } from "../../ui/logging.js";
+import { green, storeError } from "../../ui/logging.js";
 import {
   createRateLimitHandler,
   requestWithRetry,
@@ -221,7 +221,7 @@ export async function deployToEdgePublishApi(
     onRateLimit
   });
 
-  logger?.info("Successfully published to Edge Add-ons!");
+  logger?.info(green("Successfully published to Edge Add-ons!"));
   setStatus?.(StoreStatus.Success);
   return true;
 }
