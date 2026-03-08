@@ -11,6 +11,7 @@ export type StoreLogger = {
   info: (message: string) => void;
   warning: (message: string) => void;
   error: (message: string) => void;
+  countdown?: (seconds: number, getMessage: (remaining: number) => string) => Promise<void>;
 };
 
 type CookieRefreshCallback = () => Promise<Record<string, string>>;

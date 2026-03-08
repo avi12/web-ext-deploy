@@ -240,9 +240,9 @@ export async function deployToEdgePublishApi(
     if (!(error instanceof InProgressSubmissionError)) {
       throw error;
     }
-    const retryAt = new Date(Date.now() + inProgressRetryIntervalMs).toLocaleTimeString();
-    logger?.warning(`A submission is already in progress. Will retry at ${retryAt}`);
-    await setTimeout(inProgressRetryIntervalMs);
+    await (logger?.countdown?.(inProgressRetryIntervalMs / 1000, remaining =>
+      `A submission is already in progress. Retrying in ${remaining}s`
+    ) ?? setTimeout(inProgressRetryIntervalMs));
     await publishAndVerify();
   }
 

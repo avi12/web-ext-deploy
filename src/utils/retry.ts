@@ -43,9 +43,9 @@ export function createRateLimitHandler({
     if (secondsToWait > maxWaitSeconds) {
       throw new Error(formatError(`Too many API requests. Deploy manually at ${manualDeployUrl}`));
     }
-    const retryAt = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
-    logger?.warning(`Too many requests. A retry will automatically be at ${retryAt}\nOr, you can deploy manually: ${manualDeployUrl}`);
-    await setTimeout(secondsToWait * 1000);
+    await (logger?.countdown?.(secondsToWait, remaining =>
+      `Too many requests. Retrying in ${remaining}s\nOr, you can deploy manually: ${manualDeployUrl}`
+    ) ?? setTimeout(secondsToWait * 1000));
   };
 }
 

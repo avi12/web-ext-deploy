@@ -9,6 +9,7 @@ import {
   unwrapZod
 } from "../utils/zod.js";
 import { Box, Newline, render, Text } from "ink";
+import { setTimeout as setTimeoutPromise } from "node:timers/promises";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -538,7 +539,25 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
     forStore: (store: StoreName) => ({
       info: message => logger.info(store, message),
       warning: message => logger.warning(store, message),
-      error: message => logger.error(store, message)
+      error: message => logger.error(store, message),
+      async countdown(seconds, getMessage) {
+        const entry: LogEntry = {
+          store,
+          level: LogLevel.Warning,
+          message: `Warning: ${getMessage(seconds)}`,
+          timestamp: new Date()
+        };
+        if (sharedStatuses[store] === StoreStatus.Pending) {
+          sharedStatuses[store] = StoreStatus.Running;
+        }
+        sharedEntries.push(entry);
+        triggerRender?.();
+        for (let remaining = seconds - 1; remaining >= 0; remaining--) {
+          await setTimeoutPromise(1000);
+          entry.message = `Warning: ${getMessage(remaining)}`;
+          triggerRender?.();
+        }
+      }
     } satisfies StoreLogger),
     waitForRender(): Promise<void> {
       return new Promise<void>(resolve => {
