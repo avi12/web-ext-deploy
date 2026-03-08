@@ -14,6 +14,13 @@ import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
 
+class InProgressSubmissionError extends Error {
+  constructor() {
+    super("A submission is already in progress");
+    this.name = "InProgressSubmissionError";
+  }
+}
+
 let httpClient: ReturnType<typeof createHttpClient>;
 
 /** @see https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-status-of-a-package-upload */
@@ -142,6 +149,9 @@ async function checkPublishStatus({
     throw new Error(storeError(data.message));
   }
   if (data.status === OperationStatus.Failed) {
+    if (data.errorCode === "InProgressSubmission") {
+      throw new InProgressSubmissionError();
+    }
     const errors = (data.errors || []).map(error => error.message);
     if (errors.length === 0) {
       errors.push(data.message);
@@ -203,23 +213,36 @@ export async function deployToEdgePublishApi(
     logger?.info("Publishing submission");
   }
 
-  const publishOperationId = await publishSubmission({
-    productId,
-    devChangelog,
-    logger,
-    onRateLimit
-  });
+  const inProgressRetryIntervalMs = 30_000;
+  while (true) {
+    const publishOperationId = await publishSubmission({
+      productId,
+      devChangelog,
+      logger,
+      onRateLimit
+    });
 
-  if (isVerbose) {
-    logger?.info("Checking the submission status");
+    if (isVerbose) {
+      logger?.info("Checking the submission status");
+    }
+
+    try {
+      await checkPublishStatus({
+        productId,
+        operationId: publishOperationId,
+        logger,
+        onRateLimit
+      });
+      break;
+    } catch (error) {
+      if (!(error instanceof InProgressSubmissionError)) {
+        throw error;
+      }
+      const retryAt = new Date(Date.now() + inProgressRetryIntervalMs).toLocaleTimeString();
+      logger?.warning(`A submission is already in progress. Will retry at ${retryAt}`);
+      await setTimeout(inProgressRetryIntervalMs);
+    }
   }
-
-  await checkPublishStatus({
-    productId,
-    operationId: publishOperationId,
-    logger,
-    onRateLimit
-  });
 
   logger?.info(green("Successfully published to Edge Add-ons!"));
   setStatus?.(StoreStatus.Success);
