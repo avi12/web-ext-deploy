@@ -38,6 +38,6 @@ export function mapStoreArgs(rawArgs: Record<string, unknown>, store: StoreName)
 
 export function headersToEnv(headersTotal: Record<string, unknown>) {
   return Object.entries(headersTotal)
-    .map(([header, value]) => `${header}="${value}"`)
+    .map(([header, value]) => `${header.toUpperCase()}="${value}"`)
     .join("\n");
 }
