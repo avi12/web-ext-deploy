@@ -45,3 +45,17 @@ Use `--print-only` to print the token to the terminal instead of saving it:
 ```shell
 web-ext-deploy chrome-token --client-id CLIENT_ID --client-secret CLIENT_SECRET --print-only
 ```
+
+### 5. Set up chrome.env
+
+Add all credentials to `chrome.env`:
+
+```ini
+EXT_ID=your-extension-id
+PUBLISHER_ID=your-publisher-id
+CLIENT_ID=your-client-id
+CLIENT_SECRET=your-client-secret
+REFRESH_TOKEN=your-refresh-token
+```
+
+`REFRESH_TOKEN` is saved automatically by the `chrome-token` command. `CLIENT_ID` and `CLIENT_SECRET` must be added manually.

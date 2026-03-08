@@ -1,7 +1,6 @@
 import { createHttpClient } from "../../http/client.js";
 import { type DeployContext, StoreStatus } from "../../types.js";
-import { storeError } from "../../ui/logging.js";
-import { isObjectEmpty } from "../../utils/helpers.js";
+import { green, storeError } from "../../ui/logging.js";
 import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "../../utils/retry.js";
 import { ChromeOptions } from "./chrome-input.js";
 import {
@@ -14,6 +13,37 @@ import {
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
+
+// https://developers.google.com/identity/protocols/oauth2/web-server#refreshing-an-expired-access-token
+type RefreshTokenRequest = {
+  client_id: string;
+  client_secret: string;
+  refresh_token: string;
+  grant_type: "refresh_token";
+};
+
+const AccessTokenResponseSchema = z.object({
+  access_token: z.string(),
+  token_type: z.literal("Bearer")
+});
+
+async function exchangeRefreshTokenForAccessToken(clientId: string, clientSecret: string, refreshToken: string) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token"
+    } satisfies RefreshTokenRequest)
+  });
+  const result = AccessTokenResponseSchema.safeParse(await response.json());
+  if (!result.success) {
+    throw new Error(storeError("Failed to exchange refresh token for access token"));
+  }
+  return result.data.access_token;
+}
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
@@ -190,15 +220,14 @@ async function publishExtension({
 }) {
   const body = {
     ...skipReview && { skipReview: true },
-    ...deployPercentage !== undefined && { deployPercentage }
+    ...deployPercentage !== undefined && { deployInfos: [{ deployPercentage }] }
   };
 
-  const hasBody = !isObjectEmpty(body);
   const data = await requestWithRetry({
     sendRequest: () => httpClient.post(
       `v2/publishers/${publisherId}/items/${extId}:publish`,
-      hasBody ? JSON.stringify(body) : undefined,
-      hasBody ? { headers: { "Content-Type": "application/json" } } : {}
+      JSON.stringify(body),
+      { headers: { "Content-Type": "application/json" } }
     ),
     parseResponse(response) {
       const result = PublishResponseSchema.safeParse(response.data);
@@ -249,14 +278,15 @@ async function verifySubmission({
 
 export async function deployToChrome(
   {
-    extId, publisherId, refreshToken, zip, skipReview, deployPercentage
+    extId, publisherId, clientId, clientSecret, refreshToken, zip, skipReview, deployPercentage
   }: ChromeOptions,
   {
     logger, isVerbose, setStatus, setZipPath
   }: DeployContext = {}
 ) {
   setZipPath?.(zip);
-  httpClient = createHttpClient("https://chromewebstore.googleapis.com", { Authorization: `Bearer ${refreshToken}` });
+  const accessToken = await exchangeRefreshTokenForAccessToken(clientId, clientSecret, refreshToken);
+  httpClient = createHttpClient("https://chromewebstore.googleapis.com", { Authorization: `Bearer ${accessToken}` });
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://chrome.google.com/webstore/devconsole/${publisherId}/${extId}/edit/package`,
@@ -296,7 +326,7 @@ export async function deployToChrome(
     extId, publisherId, logger, onRateLimit
   });
 
-  logger?.info("Successfully published to Chrome Web Store!");
+  logger?.info(green("Successfully published to Chrome Web Store!"));
   setStatus?.(StoreStatus.Success);
   return true;
 }
