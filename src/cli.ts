@@ -11,48 +11,40 @@ import { getZodBaseType, getZodDescription, isZodOptional, unwrapZod } from "./u
 import yargs, { type Arguments, type Options } from "yargs";
 import { z } from "zod";
 
-type ExtractSchemaKeys<T> = T extends z.ZodObject<infer Shape> ? keyof Shape : never;
+type ExtractSchemaKeys<T> = T extends z.ZodObject<infer Shape> ? string & keyof Shape : never;
 
 type StoreCliOptionKeys<Store extends typeof storeRegistry[number]> =
-  ExtractSchemaKeys<Store["schema"]> extends string
-    ? `${Store["name"]}-${CamelToKebab<ExtractSchemaKeys<Store["schema"]>>}`
-    : never;
+  `${Store["name"]}-${CamelToKebab<ExtractSchemaKeys<Store["schema"]>>}`;
 
 type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
-type BaseCliOptionKeys =
-  | CamelToKebab<string & ExtractSchemaKeys<typeof BaseOptionsSchema>>
-  | CamelToKebab<string & ExtractSchemaKeys<typeof ChromeTokenOptionsSchema>>;
-type KnownCliOptionKeys = AllCliOptionKeys | BaseCliOptionKeys;
-type CliOptionsByKnownKey = Partial<Record<KnownCliOptionKeys, Options>>;
-type AllStoreCliOptions = Partial<Record<AllCliOptionKeys, Options>>;
-type PerStoreCliOptions = Partial<Record<StoreName, AllStoreCliOptions>>;
 
-function schemaToOptions(store: StoreName | "base", schema: z.ZodTypeAny, demandRequired = false): CliOptionsByKnownKey {
-  let options: CliOptionsByKnownKey = {};
-  if (!(schema instanceof z.ZodObject)) {
-    return options;
-  }
+function typedEntries<Key extends string>(schema: z.ZodObject<Record<Key, z.ZodTypeAny>>) {
+  return Object.entries(schema.shape).filter(
+    (entry): entry is [Key, z.ZodTypeAny] => entry[0] in schema.shape
+  );
+}
 
-  for (const [key, value] of Object.entries(schema.shape)) {
+function schemaToOptions<Key extends string>(store: StoreName | "base", schema: z.ZodObject<Record<Key, z.ZodTypeAny>>, demandRequired = false): Record<AllCliOptionKeys, Options> {
+  const options: Record<string, Options> = {};
+
+  for (const [key, value] of typedEntries(schema)) {
     if (key === "verbose" && store !== "base") {
       continue;
     }
     const optionName = store === "base" ? kebabCase(key) : `${store}-${kebabCase(key)}`;
     const isOptional = isZodOptional(value);
-    const type = getZodBaseType(unwrapZod(value));
     const description = getZodDescription(value);
-    const option = {
-      type,
+    options[optionName] = {
+      type: getZodBaseType(unwrapZod(value)),
       description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description,
       ...(demandRequired && !isOptional && { demandOption: true })
     };
-    options = { ...options, [optionName]: option };
   }
 
   return options;
 }
 
-function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<string, Options>) {
+function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<AllCliOptionKeys, Options>) {
   const cliOverridableInEnvMode = new Set([
     ...(store.dynamicFields ?? []).map(key => `${store.name}-${kebabCase(key)}`),
     ...(store.cliOverridableFields ?? []).map(key => `${store.name}-${kebabCase(key)}`)
@@ -64,31 +56,21 @@ function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<s
   );
 }
 
-function buildAllStoreOptionsFromRegistry() {
-  let combinedOptionsFromSchemas: AllStoreCliOptions = {};
-
-  for (const store of storeRegistry) {
-    const storeOptionsFromSchema = schemaToOptions(store.name, store.schema);
-    combinedOptionsFromSchemas = { ...combinedOptionsFromSchemas, ...storeOptionsFromSchema };
-  }
-
-  return combinedOptionsFromSchemas;
-}
-
-const perStoreOptionsFromRegistry: PerStoreCliOptions = {};
-const allStoreOptionsCombined = buildAllStoreOptionsFromRegistry();
-const storeOptionGroups: Partial<Record<StoreName, string[]>> = {};
-let envModeCliOnlyOptions: Record<string, Options> = {};
+let allStoreOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
+const storeOptionGroups: Partial<Record<StoreName, AllCliOptionKeys[]>> = {};
+let envModeCliOnlyOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
 for (const store of storeRegistry) {
-  const storeOptionsFromSchema = schemaToOptions(store.name, store.schema);
-  perStoreOptionsFromRegistry[store.name] = storeOptionsFromSchema;
-  storeOptionGroups[store.name] = Object.keys(storeOptionsFromSchema);
-  envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, storeOptionsFromSchema) };
+  const storeOptions = schemaToOptions<string>(store.name, store.schema);
+  allStoreOptions = { ...allStoreOptions, ...storeOptions };
+  storeOptionGroups[store.name] = Object.keys(storeOptions).filter(
+    (key): key is AllCliOptionKeys => storeRegistry.some(({ name }) => key.startsWith(`${name}-`))
+  );
+  envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, storeOptions) };
 }
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
 
-function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, string[]>> = storeOptionGroups) {
+function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, AllCliOptionKeys[]>> = storeOptionGroups) {
   for (const { name } of storeRegistry) {
     const keys = groups[name];
     if (keys) {
@@ -137,7 +119,7 @@ export const parser = yargs(process.argv.slice(2))
     "cli",
     "Pass arguments directly",
     builder => {
-      builder = builder.options({ ...baseOptions, ...allStoreOptionsCombined });
+      builder = builder.options({ ...baseOptions, ...allStoreOptions });
       builder = applyStoreGroups(builder);
       return builder.version(false).epilogue("Choose which stores to deploy to by supplying their options\n" +
         "Only stores with at least one argument will be included\n" +
