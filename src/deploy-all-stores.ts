@@ -75,7 +75,7 @@ export async function runDeploy(argv: Arguments) {
     storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCookies, mode))
   );
 
-  const failures: string[] = [];
+  const failures: StoreName[] = [];
   const helpTables: HelpTableData[] = [];
   for (const [index, result] of results.entries()) {
     const [store] = storeEntries[index];

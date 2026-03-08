@@ -73,7 +73,7 @@ function getJsons(command: string, argv: Arguments) {
   return result;
 }
 
-export function readCookiesFromEnv(storeName: string, cookieFields: string[]) {
+export function readCookiesFromEnv(storeName: StoreName, cookieFields: string[]) {
   const { parsed: rawParsed = {} } = config({ path: `${storeName}.env` });
   const parsed = Object.fromEntries(
     Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
