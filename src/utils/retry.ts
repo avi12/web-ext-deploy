@@ -89,7 +89,15 @@ export async function requestWithRetry<T>({
 
     const isClientError = response.status >= 400 && response.status < 500;
     if (isClientError) {
-      const message = formatError(`${errorContext}: ${response.statusText}`);
+      const apiMessage =
+        response.data !== null &&
+        typeof response.data === "object" &&
+        "error" in response.data &&
+        typeof (response.data as { error: unknown }).error === "object" &&
+        (response.data as { error: { message?: unknown } }).error.message
+          ? String((response.data as { error: { message: unknown } }).error.message)
+          : response.statusText;
+      const message = formatError(`${errorContext}: ${apiMessage}`);
       logger?.error(message);
       throw new Error(message);
     }
