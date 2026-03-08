@@ -213,8 +213,7 @@ export async function deployToEdgePublishApi(
     logger?.info("Publishing submission");
   }
 
-  const inProgressRetryIntervalMs = 30_000;
-  while (true) {
+  async function publishAndVerify() {
     const publishOperationId = await publishSubmission({
       productId,
       devChangelog,
@@ -226,22 +225,25 @@ export async function deployToEdgePublishApi(
       logger?.info("Checking the submission status");
     }
 
-    try {
-      await checkPublishStatus({
-        productId,
-        operationId: publishOperationId,
-        logger,
-        onRateLimit
-      });
-      break;
-    } catch (error) {
-      if (!(error instanceof InProgressSubmissionError)) {
-        throw error;
-      }
-      const retryAt = new Date(Date.now() + inProgressRetryIntervalMs).toLocaleTimeString();
-      logger?.warning(`A submission is already in progress. Will retry at ${retryAt}`);
-      await setTimeout(inProgressRetryIntervalMs);
+    await checkPublishStatus({
+      productId,
+      operationId: publishOperationId,
+      logger,
+      onRateLimit
+    });
+  }
+
+  const inProgressRetryIntervalMs = 60_000;
+  try {
+    await publishAndVerify();
+  } catch (error) {
+    if (!(error instanceof InProgressSubmissionError)) {
+      throw error;
     }
+    const retryAt = new Date(Date.now() + inProgressRetryIntervalMs).toLocaleTimeString();
+    logger?.warning(`A submission is already in progress. Will retry at ${retryAt}`);
+    await setTimeout(inProgressRetryIntervalMs);
+    await publishAndVerify();
   }
 
   logger?.info(green("Successfully published to Edge Add-ons!"));
