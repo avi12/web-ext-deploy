@@ -1,5 +1,5 @@
 import { storeRegistry } from "./stores/registry.js";
-import { StoreName, StoreStatus, type DeployContext } from "./types.js";
+import { StoreStatus, type DeployContext } from "./types.js";
 import { buildHelpTableData, type HelpTableData } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 
@@ -17,7 +17,7 @@ export class StoreValidationError extends Error {
 
 export function deployStore(
   options: unknown,
-  storeName: StoreName,
+  storeName: string,
   context?: DeployContext & { isDryRun?: boolean; mode?: "cli" | "env" }
 ) {
   const store = storeRegistry.find(store => store.name === storeName);

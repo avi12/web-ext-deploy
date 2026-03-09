@@ -27,7 +27,7 @@ export function createGitIgnoreIfNeeded(stores: StoreName[]) {
   fs.appendFileSync(filename, storesToAppend.map(store => `${store}.env`).join("\n"));
 }
 
-export function mapStoreArgs(rawArgs: Record<string, unknown>, store: StoreName) {
+export function mapStoreArgs(rawArgs: Record<string, unknown>, store: string) {
   const prefix = `${store}-`;
   return Object.fromEntries(
     Object.entries(rawArgs)

@@ -26,7 +26,7 @@ type LogSource = StoreName | "System";
 
 export type LogEntry = {
   store: LogSource;
-  level: LogLevel;
+  level: "info" | "warning" | "error";
   message: string;
   timestamp: Date;
 };
@@ -155,14 +155,14 @@ export function buildHelpTableData(
     if (mode === "cli" || (mode === "env" && isDynamic)) {
       return `--${kebabCase(storeName)}-${kebabCase(key)}`;
     }
-    if (mode === "env") {
-      const envName = screamingSnakeCase(key);
-      if (isOverridable) {
-        return `${envName} / --${kebabCase(storeName)}-${kebabCase(key)}`;
-      }
-      return envName;
+    if (mode !== "env") {
+      return key;
     }
-    return key;
+    const envName = screamingSnakeCase(key);
+    if (isOverridable) {
+      return `${envName} / --${kebabCase(storeName)}-${kebabCase(key)}`;
+    }
+    return envName;
   }
 
   const fields: HelpField[] = [];
