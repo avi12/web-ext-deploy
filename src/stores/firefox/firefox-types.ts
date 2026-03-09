@@ -2,11 +2,11 @@ import { z } from "zod";
 
 const FirefoxErrorMessageSchema = z.object({
   message: z.string(),
-  description: z.string(),
-  instancePath: z.string(),
+  description: z.string().optional(),
+  instancePath: z.string().optional(),
   type: z.enum(["error", "warning"]),
-  id: z.array(z.string()),
-  tier: z.number()
+  id: z.array(z.string()).optional(),
+  tier: z.number().optional()
 });
 
 // https://mozilla.github.io/addons-server/topics/api/addons.html#upload-detail
@@ -17,7 +17,7 @@ export const FirefoxUploadDetailSchema = z.object({
   submitted: z.boolean(),
   url: z.string(),
   valid: z.boolean(),
-  validation: z.object({ messages: z.array(FirefoxErrorMessageSchema).optional() }),
+  validation: z.object({ messages: z.array(FirefoxErrorMessageSchema).optional() }).nullable(),
   version: z.string(),
   detail: z.string().optional()
 });
