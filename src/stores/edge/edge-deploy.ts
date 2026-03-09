@@ -1,6 +1,6 @@
 import { createHttpClient } from "../../http/client.js";
 import { StoreStatus, type DeployContext } from "../../types.js";
-import { green, storeError } from "../../ui/logging.js";
+import { storeError } from "../../ui/logging.js";
 import {
   createRateLimitHandler,
   requestWithRetry,
@@ -27,12 +27,10 @@ let httpClient: ReturnType<typeof createHttpClient>;
 async function checkStatusOfPackageUpload({
   productId,
   operationId,
-  logger,
   onRateLimit
 }: {
   productId: string;
   operationId: string;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   const pollIntervalMs = 5_000;
@@ -50,7 +48,6 @@ async function checkStatusOfPackageUpload({
       },
       formatError: storeError,
       errorContext: "Upload verification failed",
-      logger,
       onRateLimit
     });
     if (data.status !== OperationStatus.InProgress) {
@@ -78,12 +75,10 @@ function parseLocation(response: HttpLikeResponse) {
 function uploadZip({
   zip,
   productId,
-  logger,
   onRateLimit
 }: {
   zip: string;
   productId: string;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
@@ -91,7 +86,6 @@ function uploadZip({
     parseResponse: parseLocation,
     formatError: storeError,
     errorContext: "Upload failed",
-    logger,
     onRateLimit
   });
 }
@@ -100,12 +94,10 @@ function uploadZip({
 function publishSubmission({
   productId,
   devChangelog,
-  logger,
   onRateLimit
 }: {
   productId: string;
   devChangelog: string;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
@@ -113,7 +105,6 @@ function publishSubmission({
     parseResponse: parseLocation,
     formatError: storeError,
     errorContext: "Publish failed",
-    logger,
     onRateLimit
   });
 }
@@ -122,12 +113,10 @@ function publishSubmission({
 async function checkPublishStatus({
   productId,
   operationId,
-  logger,
   onRateLimit
 }: {
   productId: string;
   operationId: string;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   const data = await requestWithRetry({
@@ -141,7 +130,6 @@ async function checkPublishStatus({
     },
     formatError: storeError,
     errorContext: "Submission status check failed",
-    logger,
     onRateLimit
   });
 
@@ -194,7 +182,6 @@ export async function deployToEdgePublishApi(
   const uploadOperationId = await uploadZip({
     zip,
     productId,
-    logger,
     onRateLimit
   });
 
@@ -205,7 +192,6 @@ export async function deployToEdgePublishApi(
   await checkStatusOfPackageUpload({
     productId,
     operationId: uploadOperationId,
-    logger,
     onRateLimit
   });
 
@@ -217,7 +203,6 @@ export async function deployToEdgePublishApi(
     const publishOperationId = await publishSubmission({
       productId,
       devChangelog,
-      logger,
       onRateLimit
     });
 
@@ -228,7 +213,6 @@ export async function deployToEdgePublishApi(
     await checkPublishStatus({
       productId,
       operationId: publishOperationId,
-      logger,
       onRateLimit
     });
   }
@@ -246,7 +230,6 @@ export async function deployToEdgePublishApi(
     await publishAndVerify();
   }
 
-  logger?.info(green("Successfully published to Edge Add-ons!"));
   setStatus?.(StoreStatus.Success);
   return true;
 }

@@ -15,7 +15,7 @@ async function runStoreDeploy(
   isVerbose?: boolean,
   isAutoFetchCookies?: boolean,
   mode?: "cli" | "env"
-) {
+): Promise<{ store: StoreName; helpTables: HelpTableData[] } | null> {
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
@@ -23,15 +23,28 @@ async function runStoreDeploy(
     ? createCookieRefreshCallback(store, storeDef.cookieFields)
     : undefined;
 
-  return deployStore(json, store, {
-    logger: inkLogger.forStore(store),
-    onCookieExpired,
-    isDryRun,
-    isVerbose,
-    mode,
-    setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
-    setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath)
-  });
+  try {
+    await deployStore(json, store, {
+      logger: inkLogger.forStore(store),
+      onCookieExpired,
+      isDryRun,
+      isVerbose,
+      mode,
+      setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
+      setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath)
+    });
+    inkLogger.logger.info(store, isDryRun ? "Validation passed" : "Published!");
+    inkLogger.monitor.updateStore(store, StoreStatus.Success);
+    return null;
+  } catch (error) {
+    const err = toError(error);
+    for (const line of err.message.split("\n").filter(line => line.trim())) {
+      inkLogger.logger.error(store, line);
+    }
+    inkLogger.monitor.updateStore(store, StoreStatus.Error);
+    const helpTables = error instanceof StoreValidationError ? error.helpTables : [];
+    return { store, helpTables };
+  }
 }
 
 export async function runDeploy(argv: Arguments) {
@@ -71,27 +84,16 @@ export async function runDeploy(argv: Arguments) {
   }
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
 
-  const results = await Promise.allSettled(
+  const results = await Promise.all(
     storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCookies, mode))
   );
 
   const failures: StoreName[] = [];
   const helpTables: HelpTableData[] = [];
-  for (const [index, result] of results.entries()) {
-    const [store] = storeEntries[index];
-    if (result.status === "fulfilled") {
-      inkLogger.logger.info(store, isDryRun ? "Validation passed" : "Published!");
-      inkLogger.monitor.updateStore(store, StoreStatus.Success);
-    } else {
-      const error = toError(result.reason);
-      for (const line of error.message.split("\n").filter(line => line.trim())) {
-        inkLogger.logger.error(store, line);
-      }
-      inkLogger.monitor.updateStore(store, StoreStatus.Error);
-      if (error instanceof StoreValidationError) {
-        helpTables.push(...error.helpTables);
-      }
-      failures.push(store);
+  for (const result of results) {
+    if (result !== null) {
+      failures.push(result.store);
+      helpTables.push(...result.helpTables);
     }
   }
 
