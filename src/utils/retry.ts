@@ -1,8 +1,9 @@
 import type { StoreLogger } from "../types.js";
 import { setTimeout } from "node:timers/promises";
+import { ZodError } from "zod";
 
-function getBackoffDelayMs(attempt: number) {
-  return Math.min(2 ** attempt, 5) * 1000;
+function getBackoffDelayMs(attempt: number, maxMs = 5_000) {
+  return Math.min(2 ** attempt * 1000, maxMs);
 }
 
 export function toError(value: unknown) {
@@ -49,22 +50,73 @@ export function createRateLimitHandler({
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function extractApiMessage(data: unknown, statusText: string): string {
+  if (typeof data === "string" && data) {
+    return data;
+  }
+  if (!isRecord(data)) {
+    return statusText;
+  }
+  if (isRecord(data.error)) {
+    if (Array.isArray(data.error.details)) {
+      const violations = data.error.details
+        .filter(isRecord)
+        .flatMap(detail => Array.isArray(detail.fieldViolations) ? detail.fieldViolations.filter(isRecord) : [])
+        .map(violation => violation.description)
+        .filter((description): description is string => typeof description === "string");
+      if (violations.length > 0) {
+        return violations.join("\n");
+      }
+    }
+    if (typeof data.error.message === "string") {
+      return data.error.message;
+    }
+  }
+  if (typeof data.error === "string") {
+    return data.error;
+  }
+  if (typeof data.message === "string") {
+    return data.message;
+  }
+  if (typeof data.detail === "string") {
+    return data.detail;
+  }
+  const messages = Object.values(data)
+    .flatMap(value => (Array.isArray(value) ? value : [value]))
+    .filter((value): value is string => typeof value === "string");
+  if (messages.length > 0) {
+    return messages.join(", ");
+  }
+  return statusText;
+}
+
+const DEFAULT_MAX_RETRIES = 10;
+
 export async function requestWithRetry<T>({
   sendRequest,
   parseResponse,
   formatError,
   errorContext,
-  logger,
-  onRateLimit
+  onRateLimit,
+  maxRetries = DEFAULT_MAX_RETRIES,
+  maxBackoffMs = 5_000
 }: {
   sendRequest: () => Promise<HttpLikeResponse>;
   parseResponse: (response: HttpLikeResponse) => T;
   formatError: (message: string) => string;
   errorContext: string;
-  logger?: StoreLogger;
   onRateLimit?: (response: HttpLikeResponse) => Promise<void>;
+  maxRetries?: number;
+  maxBackoffMs?: number;
 }): Promise<T> {
   async function attempt(count: number) {
+    if (count > maxRetries) {
+      throw new Error(formatError(`${errorContext}: Request failed after ${maxRetries} retries`));
+    }
     const response = await sendRequest().catch((error: unknown): undefined => {
       if (error instanceof CookieAuthError) {
         throw error;
@@ -73,7 +125,7 @@ export async function requestWithRetry<T>({
     });
 
     if (!response) {
-      await setTimeout(getBackoffDelayMs(count));
+      await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
       return attempt(count + 1);
     }
 
@@ -82,33 +134,32 @@ export async function requestWithRetry<T>({
       if (onRateLimit) {
         await onRateLimit(response);
       } else {
-        await setTimeout(getBackoffDelayMs(count));
+        await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
       }
       return attempt(count + 1);
     }
 
     const isClientError = response.status >= 400 && response.status < 500;
     if (isClientError) {
-      const apiMessage =
-        response.data !== null &&
-        typeof response.data === "object" &&
-        "error" in response.data &&
-        typeof (response.data as { error: unknown }).error === "object" &&
-        (response.data as { error: { message?: unknown } }).error.message
-          ? String((response.data as { error: { message: unknown } }).error.message)
-          : response.statusText;
-      const message = formatError(`${errorContext}: ${apiMessage}`);
-      logger?.error(message);
+      const message = formatError(`${errorContext}: ${extractApiMessage(response.data, response.statusText)}`);
       throw new Error(message);
     }
 
     const IsServerError = response.status >= 500;
     if (IsServerError) {
-      await setTimeout(getBackoffDelayMs(count));
+      await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
       return attempt(count + 1);
     }
 
-    return parseResponse(response);
+    try {
+      return parseResponse(response);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const details = error.issues.map(issue => `${issue.path.join(".") || "response"}: ${issue.message}`).join(", ");
+        throw new Error(formatError(`${errorContext}: Unexpected API response (${details})`), { cause: error });
+      }
+      throw error;
+    }
   }
 
   return attempt(0);
