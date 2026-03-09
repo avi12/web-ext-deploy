@@ -104,6 +104,7 @@ export default [
         { blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"] },
         { blankLine: "any", prev: "import", next: "import" }
       ],
+      "no-control-regex": "off",
       "object-shorthand": ["error", "always", { avoidExplicitReturnArrows: true }],
       "perfectionist/sort-objects": [
         "error",
