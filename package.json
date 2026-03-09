@@ -6,14 +6,14 @@
   "typesVersions": {
     "*": {
       "*": [
-        "dist-esm/*.d.ts"
+        "dist/*.d.ts"
       ]
     }
   },
   "bin": {
-    "web-ext-deploy": "dist-esm/cli.js"
+    "web-ext-deploy": "dist/cli.js"
   },
-  "types": "./dist-esm/cli.d.ts",
+  "types": "./dist/cli.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/avi12/web-ext-deploy"
@@ -40,7 +40,7 @@
     "edge-publish-api"
   ],
   "files": [
-    "dist-esm/**/*"
+    "dist/**/*"
   ],
   "funding": [
     {
@@ -65,7 +65,7 @@
   "homepage": "https://github.com/avi12/web-ext-deploy#readme",
   "scripts": {
     "debug:dev": "nodemon --watch src --ext ts --exec \"pnpm build\"",
-    "clean": "rimraf dist-esm",
+    "clean": "rimraf dist",
     "prepare": "pnpm clean && pnpm build",
     "build": "pnpm build:esm",
     "build:esm": "tsc",

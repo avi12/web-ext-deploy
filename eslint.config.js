@@ -2,12 +2,14 @@ import eslint from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
 import importNewlines from "eslint-plugin-import-newlines";
 import perfectionist from "eslint-plugin-perfectionist";
+import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import tsEslint from "typescript-eslint";
 
 export default [
   eslint.configs.recommended,
   ...tsEslint.configs.recommended,
+  globalIgnores(["dist", "dist-esm", "node_modules"]),
   {
     files: ["**/*.{ts,tsx}", "eslint.config.js"],
     languageOptions: {
@@ -21,7 +23,7 @@ export default [
     }
   },
   {
-    ignores: ["dist-esm/**/*", "node_modules"],
+    files: ["**/*.{ts,tsx}", "eslint.config.js"],
     rules: {
       "prefer-const": "error",
       "perfectionist/sort-imports": [
@@ -60,9 +62,7 @@ export default [
       "@stylistic/comma-dangle": ["error", "never"],
       "@stylistic/no-trailing-spaces": "error",
       "@stylistic/eol-last": ["error", "always"],
-      "@stylistic/no-multiple-empty-lines": ["error", {
-        max: 1, maxEOF: 0, maxBOF: 0
-      }],
+      "@stylistic/no-multiple-empty-lines": ["error", { max: 1, maxEOF: 0, maxBOF: 0 }],
       "@stylistic/comma-spacing": ["error", { before: false, after: true }],
       "@stylistic/key-spacing": ["error", { beforeColon: false, afterColon: true }],
       "@stylistic/keyword-spacing": ["error", { before: true, after: true }],
@@ -101,12 +101,8 @@ export default [
       ],
       "@stylistic/padding-line-between-statements": [
         "error",
-        {
-          blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"]
-        },
-        {
-          blankLine: "any", prev: "import", next: "import"
-        }
+        { blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"] },
+        { blankLine: "any", prev: "import", next: "import" }
       ],
       "object-shorthand": ["error", "always", { avoidExplicitReturnArrows: true }],
       "perfectionist/sort-objects": [
@@ -119,16 +115,6 @@ export default [
       "no-nested-ternary": "error",
       "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }
       ]
-    }
-  },
-  {
-    files: ["*.config.ts", "*.config.js"],
-    rules: {
-      "@stylistic/object-curly-newline": ["error", {
-        ObjectExpression: { multiline: true, consistent: true },
-        ObjectPattern: { multiline: true, consistent: true },
-        ExportDeclaration: "never"
-      }]
     }
   }
 ];
