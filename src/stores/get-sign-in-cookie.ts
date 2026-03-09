@@ -20,52 +20,55 @@ function extractCookies(cookiesInput: string, cookiesToLogin: string[]) {
     .join("\n");
 }
 
-async function addNavigationListener({
-  page,
-  cookiesToLogin,
-  urlToEnd,
-  resolve
-}: {
-  page: Page;
-  cookiesToLogin: string[];
-  urlToEnd: string;
-  resolve: (value: PromiseLike<unknown> | unknown) => void;
-}) {
-  page.on("request", async data => {
-    const { cookie } = await data.allHeaders();
-    if (!cookie) {
-      return;
-    }
-    const isRequiredCookiesExist = cookiesToLogin.every(cookieName => cookie.includes(` ${cookieName}=`));
-    if (isRequiredCookiesExist && data.url() === urlToEnd) {
-      resolve(extractCookies(cookie, cookiesToLogin));
-    }
-  });
-}
-
 async function saveOperaHeaders(page: Page) {
   const cookiesToLogin = ["sessionid", "csrftoken"];
   const url = "https://addons.opera.com/developer/";
-  const cookiePromise = new Promise<string>(resolve => {
-    void addNavigationListener({
-      page,
-      cookiesToLogin,
-      resolve,
-      urlToEnd: url
+
+  const cookiePromise = new Promise<string>((resolve, reject) => {
+    let done = false;
+
+    page.on("request", async request => {
+      if (done) {
+        return;
+      }
+      let cookie: string | undefined;
+      try {
+        ({ cookie } = await request.allHeaders());
+      } catch {
+        return;
+      }
+      if (!cookie) {
+        return;
+      }
+      const isRequiredCookiesExist = cookiesToLogin.every(cookieName => cookie!.includes(` ${cookieName}=`));
+      if (isRequiredCookiesExist && request.url() === url) {
+        done = true;
+        resolve(extractCookies(cookie, cookiesToLogin));
+      }
+    });
+
+    page.on("close", () => {
+      if (!done) {
+        reject(new Error("Browser page closed before cookies were captured"));
+      }
     });
   });
+
   await page.goto(url);
   return cookiePromise;
 }
 
 const siteFuncs: Record<string, typeof saveOperaHeaders> = { opera: saveOperaHeaders };
 
+function normalizeKeys(record: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(record).map(([key, value]) => [key.toUpperCase(), value]));
+}
+
 function appendToEnv(filename: string, headers: string) {
   const { parsed: envCurrent = {} } = config({ path: filename });
-  const envHeaders = parse(headers);
   const envNew = {
-    ...envCurrent,
-    ...envHeaders
+    ...normalizeKeys(envCurrent),
+    ...normalizeKeys(parse(headers))
   };
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
