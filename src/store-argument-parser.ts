@@ -80,9 +80,10 @@ export function readCookiesFromEnv(storeName: StoreName, cookieFields: string[])
   );
   const result: Record<string, string> = {};
   for (const field of cookieFields) {
-    if (parsed[field]) {
-      result[field] = parsed[field];
+    if (!parsed[field]) {
+      continue;
     }
+    result[field] = parsed[field];
   }
   return result;
 }
@@ -105,9 +106,10 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
 
     const envCookies = readCookiesFromEnv(store.name, fields);
     for (const field of fields) {
-      if (!storeConfig[field] && envCookies[field]) {
-        storeConfig[field] = envCookies[field];
+      if (storeConfig[field] || !envCookies[field]) {
+        continue;
       }
+      storeConfig[field] = envCookies[field];
     }
 
     const missingFields = fields.filter(field => !storeConfig[field]);
@@ -124,9 +126,10 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
 
     const freshCookies = readCookiesFromEnv(store.name, fields);
     for (const field of fields) {
-      if (!storeConfig[field] && freshCookies[field]) {
-        storeConfig[field] = freshCookies[field];
+      if (storeConfig[field] || !freshCookies[field]) {
+        continue;
       }
+      storeConfig[field] = freshCookies[field];
     }
   }
 }
@@ -156,13 +159,11 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
     const missingRequired = requiredFields.filter(field => !storeConfig[field]);
 
     const cookieFields = store.cookieFields || [];
-    if (isAutoFetchCookies && cookieFields.length > 0) {
-      const missingCookieFields = cookieFields.filter(field => !storeConfig[field]);
-      if (missingCookieFields.length === cookieFields.length) {
-        continue;
-      }
-    } else {
-      const missingCookieFields = cookieFields.filter(field => !storeConfig[field]);
+    const missingCookieFields = cookieFields.filter(field => !storeConfig[field]);
+    if (isAutoFetchCookies && cookieFields.length > 0 && missingCookieFields.length === cookieFields.length) {
+      continue;
+    }
+    if (!isAutoFetchCookies || cookieFields.length === 0) {
       missingRequired.push(...missingCookieFields);
     }
 
@@ -218,35 +219,36 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   }
 
   const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCookies);
-  if (!isObjectEmpty(missingArgs)) {
-    const isCliMode = command === "cli";
-    const tables = [];
-    for (const store of storeRegistry) {
-      const missingEntry = missingArgs[store.name];
-      if (!missingEntry) {
-        continue;
-      }
-      const { required, optional = [] } = missingEntry;
-      const allMissingFields = [...required, ...optional];
-      const tableData = buildHelpTableData(store.name, store.schema, isCliMode ? "cli" : "env", allMissingFields, store.dynamicFields, store.cliOverridableFields);
-      if (tableData) {
-        tables.push(tableData);
-      }
-    }
-    const hasCookieStores = storeRegistry.some(store => {
-      return missingArgs[store.name] && store.cookieFields && store.cookieFields.length > 0;
-    });
-    const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
-    const globalTableData = missingGlobalArgs.length > 0
-      ? buildGlobalHelpTableData(isCliMode ? BaseOptionsSchema : EnvOptionsSchema, missingGlobalArgs, "cli")
-      : null;
-    if (globalTableData) {
-      tables.push(globalTableData);
-    }
-    throw new MissingArgsError(tables);
+  if (isObjectEmpty(missingArgs)) {
+    return jsonStoresRaw;
   }
 
-  return jsonStoresRaw;
+  const isCliMode = command === "cli";
+  const tables = [];
+  for (const store of storeRegistry) {
+    const missingEntry = missingArgs[store.name];
+    if (!missingEntry) {
+      continue;
+    }
+    const { required, optional = [] } = missingEntry;
+    const allMissingFields = [...required, ...optional];
+    const tableData = buildHelpTableData(store.name, store.schema, isCliMode ? "cli" : "env", allMissingFields, store.dynamicFields, store.cliOverridableFields);
+    if (!tableData) {
+      continue;
+    }
+    tables.push(tableData);
+  }
+  const hasCookieStores = storeRegistry.some(store => {
+    return missingArgs[store.name] && store.cookieFields && store.cookieFields.length > 0;
+  });
+  const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
+  const globalTableData = missingGlobalArgs.length > 0
+    ? buildGlobalHelpTableData(isCliMode ? BaseOptionsSchema : EnvOptionsSchema, missingGlobalArgs, "cli")
+    : null;
+  if (globalTableData) {
+    tables.push(globalTableData);
+  }
+  throw new MissingArgsError(tables);
 }
 
 export function createCookieRefreshCallback(store: StoreName, cookieFields: string[]) {
