@@ -25,18 +25,27 @@ function stringifyParams(params: Record<string, string | number>) {
   return new URLSearchParams(entries).toString();
 }
 
-async function fetchResponse(url: string, options: RequestInit) {
-  const response = await fetch(url, options);
-  const contentType = response.headers.get("content-type");
-  const data: unknown =
-    contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+const REQUEST_TIMEOUT_MS = 120_000;
 
-  return {
-    data,
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries())
-  };
+async function fetchResponse(url: string, options: RequestInit) {
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const contentType = response.headers.get("content-type");
+    const data: unknown =
+      contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+
+    return {
+      data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    };
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+  }
 }
 
 export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
