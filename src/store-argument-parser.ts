@@ -152,10 +152,10 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
       continue;
     }
 
-    const extraCookieFields = !isAutoFetchCookies || cookieFields.length === 0 ? missingCookieFields : [];
+    const missingManualCookieFields = !isAutoFetchCookies || cookieFields.length === 0 ? missingCookieFields : [];
     const missingRequired = [
       ...requiredFields.filter(field => !storeConfig[field]),
-      ...extraCookieFields
+      ...missingManualCookieFields
     ];
 
     if (missingRequired.length === 0) {
