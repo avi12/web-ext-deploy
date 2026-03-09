@@ -45,6 +45,7 @@ function getJsons(command: string, argv: Arguments) {
       if (isObjectEmpty(rawParsed)) {
         continue;
       }
+
       const parsed = Object.fromEntries(
         Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
       );
@@ -83,6 +84,7 @@ export function readCookiesFromEnv(storeName: StoreName, cookieFields: readonly 
     if (!parsed[field]) {
       continue;
     }
+
     result[field] = parsed[field];
   }
   return result;
@@ -105,6 +107,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
       if (storeConfig[field] || !envCookies[field]) {
         continue;
       }
+
       storeConfig[field] = envCookies[field];
     }
 
@@ -125,6 +128,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
       if (storeConfig[field] || !freshCookies[field]) {
         continue;
       }
+
       storeConfig[field] = freshCookies[field];
     }
   }
@@ -138,6 +142,7 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
     if (!storeConfig) {
       continue;
     }
+
     if (!(store.schema instanceof z.ZodObject)) {
       continue;
     }
@@ -157,7 +162,6 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
       ...requiredFields.filter(field => !storeConfig[field]),
       ...missingManualCookieFields
     ];
-
     if (missingRequired.length === 0) {
       continue;
     }
@@ -172,6 +176,17 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
   return missingArgs;
 }
 
+function buildEnvHelpTables() {
+  const hasCookieStores = storeRegistry.some(store => store.cookieFields && store.cookieFields.length > 0);
+  const globalKeys = zodObjectEntries(EnvOptionsSchema)
+    .map(([key]) => key)
+    .filter(key => hasCookieStores || key !== "autoFetchCookies");
+  return [
+    ...storeRegistry.map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields)),
+    buildGlobalHelpTableData(EnvOptionsSchema, globalKeys, "cli")
+  ].flatMap(data => data ? [data] : []);
+}
+
 function collectMissingGlobalArgs(argv: Arguments) {
   return zodObjectEntries(BaseOptionsSchema)
     .filter(([key]) => argv[key] === undefined)
@@ -181,21 +196,11 @@ function collectMissingGlobalArgs(argv: Arguments) {
 export async function getJsonStoresFromCli(argv: Arguments, log?: (message: string) => void) {
   const command = z.string().safeParse(argv._[0]).data ?? "";
   const jsonStoresRaw = getJsons(command, argv);
-
   if (isObjectEmpty(jsonStoresRaw)) {
     if (command === "env") {
-      const hasCookieStores = storeRegistry.some(store => store.cookieFields && store.cookieFields.length > 0);
-      const allGlobalKeys = zodObjectEntries(EnvOptionsSchema)
-        .map(([key]) => key)
-        .filter(key => hasCookieStores || key !== "autoFetchCookies");
-      const tables = [
-        ...storeRegistry
-          .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
-          .filter((data): data is NonNullable<typeof data> => data !== null),
-        buildGlobalHelpTableData(EnvOptionsSchema, allGlobalKeys, "cli")
-      ].filter((data): data is NonNullable<typeof data> => data !== null);
-      throw new NoStoresError("No .env files found. In env mode, store credentials are read from .env files", tables);
+      throw new NoStoresError("No .env files found. In env mode, store credentials are read from .env files", buildEnvHelpTables());
     }
+
     throw new NoStoresError("Supply arguments for at least one store", []);
   }
 
@@ -210,30 +215,22 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   }
 
   const isCliMode = command === "cli";
-  const tables = [];
-  for (const store of storeRegistry) {
+  const mode = isCliMode ? "cli" : "env";
+  const hasCookieStores = storeRegistry.some(store => missingArgs[store.name] && store.cookieFields && store.cookieFields.length > 0);
+  const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
+  const globalSchema = isCliMode ? BaseOptionsSchema : EnvOptionsSchema;
+  const storeTables = storeRegistry.flatMap(store => {
     const missingEntry = missingArgs[store.name];
     if (!missingEntry) {
-      continue;
+      return [];
     }
+
     const { required, optional = [] } = missingEntry;
-    const allMissingFields = [...required, ...optional];
-    const tableData = buildHelpTableData(store.name, store.schema, isCliMode ? "cli" : "env", allMissingFields, store.dynamicFields, store.cliOverridableFields);
-    if (!tableData) {
-      continue;
-    }
-    tables.push(tableData);
-  }
-  const hasCookieStores = storeRegistry.some(store => {
-    return missingArgs[store.name] && store.cookieFields && store.cookieFields.length > 0;
+    const tableData = buildHelpTableData(store.name, store.schema, mode, [...required, ...optional], store.dynamicFields, store.cliOverridableFields);
+    return tableData ? [tableData] : [];
   });
-  const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
-  const globalTableData = missingGlobalArgs.length > 0
-    ? buildGlobalHelpTableData(isCliMode ? BaseOptionsSchema : EnvOptionsSchema, missingGlobalArgs, "cli")
-    : null;
-  if (globalTableData) {
-    tables.push(globalTableData);
-  }
+  const globalTable = buildGlobalHelpTableData(globalSchema, missingGlobalArgs, "cli");
+  const tables = globalTable ? [...storeTables, globalTable] : storeTables;
   throw new MissingArgsError(tables);
 }
 
