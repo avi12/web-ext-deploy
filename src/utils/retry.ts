@@ -1,6 +1,6 @@
 import type { StoreLogger } from "../types.js";
 import { setTimeout } from "node:timers/promises";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 
 function getBackoffDelayMs(attempt: number, maxMs = 5_000) {
   return Math.min(2 ** attempt * 1000, maxMs);
@@ -38,59 +38,83 @@ export function createRateLimitHandler({
   logger?: StoreLogger;
   maxWaitSeconds?: number;
   getWaitSeconds?: (response: HttpLikeResponse) => number;
-}): RateLimitHandler {
-  return async response => {
+}) {
+  return (async response => {
     const secondsToWait = getWaitSeconds(response);
     if (secondsToWait > maxWaitSeconds) {
       throw new Error(formatError(`Too many API requests. Deploy manually at ${manualDeployUrl}`));
     }
-    await (logger?.countdown?.(secondsToWait, remaining =>
-      `Too many requests. Retrying in ${remaining}s\nOr, you can deploy manually: ${manualDeployUrl}`
-    ) ?? setTimeout(secondsToWait * 1000));
-  };
+    if (logger?.countdown) {
+      await logger.countdown(secondsToWait, remaining =>
+        `Too many requests. Retrying in ${remaining}s\nOr, you can deploy manually: ${manualDeployUrl}`
+      );
+    } else {
+      await setTimeout(secondsToWait * 1000);
+    }
+  }) satisfies RateLimitHandler;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+const recordSchema = z.record(z.string(), z.unknown());
 
-function extractApiMessage(data: unknown, statusText: string): string {
-  if (typeof data === "string" && data) {
-    return data;
+const FieldViolationSchema = z.object({ description: z.string() });
+const ViolationDetailSchema = z.object({ fieldViolations: z.array(FieldViolationSchema).optional() });
+const GoogleViolationsSchema = z.object({ error: z.object({ details: z.array(ViolationDetailSchema) }) });
+
+const ErrorMessageSchema = z.object({ error: z.object({ message: z.string() }) });
+const ErrorStringSchema = z.object({ error: z.string() });
+const MessageSchema = z.object({ message: z.string() });
+const DetailSchema = z.object({ detail: z.string() });
+
+function extractApiMessage(data: unknown, statusText: string) {
+  const asString = z.string().min(1).safeParse(data).data;
+  if (asString) {
+    return asString;
   }
-  if (!isRecord(data)) {
-    return statusText;
+
+  const violations = GoogleViolationsSchema.safeParse(data).data?.error.details
+    .flatMap(detail => detail.fieldViolations ?? [])
+    .map(violation => violation.description);
+  if (violations?.length) {
+    return violations.join("\n");
   }
-  if (isRecord(data.error)) {
-    if (Array.isArray(data.error.details)) {
-      const violations = data.error.details
-        .filter(isRecord)
-        .flatMap(detail => Array.isArray(detail.fieldViolations) ? detail.fieldViolations.filter(isRecord) : [])
-        .map(violation => violation.description)
-        .filter((description): description is string => typeof description === "string");
-      if (violations.length > 0) {
-        return violations.join("\n");
-      }
+
+  const withErrorMessage = ErrorMessageSchema.safeParse(data).data;
+  if (withErrorMessage) {
+    return withErrorMessage.error.message;
+  }
+
+  const withErrorString = ErrorStringSchema.safeParse(data).data;
+  if (withErrorString) {
+    return withErrorString.error;
+  }
+
+  const withMessage = MessageSchema.safeParse(data).data;
+  if (withMessage) {
+    return withMessage.message;
+  }
+
+  const withDetail = DetailSchema.safeParse(data).data;
+  if (withDetail) {
+    return withDetail.detail;
+  }
+
+  const record = recordSchema.safeParse(data).data;
+  if (record) {
+    const messages = Object.values(record)
+      .flatMap(value => (Array.isArray(value) ? value : [value]))
+      .flatMap(value => {
+        const parsed = z.string().safeParse(value);
+        return parsed.success ? [parsed.data] : [];
+      });
+    if (messages.length > 0) {
+      return messages.join(", ");
     }
-    if (typeof data.error.message === "string") {
-      return data.error.message;
+    const rawJson = JSON.stringify(record);
+    if (rawJson !== "{}") {
+      return rawJson;
     }
   }
-  if (typeof data.error === "string") {
-    return data.error;
-  }
-  if (typeof data.message === "string") {
-    return data.message;
-  }
-  if (typeof data.detail === "string") {
-    return data.detail;
-  }
-  const messages = Object.values(data)
-    .flatMap(value => (Array.isArray(value) ? value : [value]))
-    .filter((value): value is string => typeof value === "string");
-  if (messages.length > 0) {
-    return messages.join(", ");
-  }
+
   return statusText;
 }
 
@@ -112,41 +136,39 @@ export async function requestWithRetry<T>({
   onRateLimit?: (response: HttpLikeResponse) => Promise<void>;
   maxRetries?: number;
   maxBackoffMs?: number;
-}): Promise<T> {
+}) {
   async function attempt(count: number) {
     if (count > maxRetries) {
       throw new Error(formatError(`${errorContext}: Request failed after ${maxRetries} retries`));
     }
-    const response = await sendRequest().catch((error: unknown): undefined => {
+
+    let response: HttpLikeResponse | undefined;
+    try {
+      response = await sendRequest();
+    } catch (error) {
       if (error instanceof CookieAuthError) {
         throw error;
       }
-      return undefined;
-    });
+    }
 
     if (!response) {
       await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
       return attempt(count + 1);
     }
 
-    const isTooManyRetries = response.status === 429;
-    if (isTooManyRetries) {
-      if (onRateLimit) {
-        await onRateLimit(response);
-      } else {
-        await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
-      }
+    const isTooManyRequests = response.status === 429;
+    if (isTooManyRequests) {
+      await (onRateLimit ? onRateLimit(response) : setTimeout(getBackoffDelayMs(count, maxBackoffMs)));
       return attempt(count + 1);
     }
 
     const isClientError = response.status >= 400 && response.status < 500;
     if (isClientError) {
-      const message = formatError(`${errorContext}: ${extractApiMessage(response.data, response.statusText)}`);
-      throw new Error(message);
+      throw new Error(formatError(`${errorContext}: ${extractApiMessage(response.data, response.statusText)}`));
     }
 
-    const IsServerError = response.status >= 500;
-    if (IsServerError) {
+    const isServerError = response.status >= 500;
+    if (isServerError) {
       await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
       return attempt(count + 1);
     }
@@ -154,11 +176,11 @@ export async function requestWithRetry<T>({
     try {
       return parseResponse(response);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const details = error.issues.map(issue => `${issue.path.join(".") || "response"}: ${issue.message}`).join(", ");
-        throw new Error(formatError(`${errorContext}: Unexpected API response (${details})`), { cause: error });
+      if (!(error instanceof ZodError)) {
+        throw error;
       }
-      throw error;
+      const details = error.issues.map(issue => `${issue.path.join(".") || "response"}: ${issue.message}`).join(", ");
+      throw new Error(formatError(`${errorContext}: Unexpected API response (${details})`), { cause: error });
     }
   }
 
