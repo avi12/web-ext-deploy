@@ -31,6 +31,7 @@ function schemaToOptions<Key extends string>(store: StoreName | "base", schema: 
     if (key === "verbose" && store !== "base") {
       continue;
     }
+
     const optionName = store === "base" ? kebabCase(key) : `${store}-${kebabCase(key)}`;
     const isOptional = isZodOptional(value);
     const description = getZodDescription(value);
@@ -77,6 +78,7 @@ function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Rec
     if (!keys) {
       continue;
     }
+
     builder.group(keys, `${getStoreDisplayName(name)}:`);
   }
   return builder;
@@ -170,12 +172,16 @@ async function init() {
   if (!argv.help) {
     return;
   }
+
   if (argv._[0] === "env") {
     const tables = storeRegistry
-      .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
-      .filter(table => table !== null);
+      .flatMap(store => {
+        const table = buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields);
+        return table ? [table] : [];
+      });
     await renderHelpTables(tables);
   }
+
   process.exit(0);
 }
 
