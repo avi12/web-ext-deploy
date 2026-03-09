@@ -103,7 +103,8 @@ export default [
         "error",
         { blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"] },
         { blankLine: "any", prev: "import", next: "import" },
-        { blankLine: "never", prev: "*", next: "if" },
+        { blankLine: "always", prev: "*", next: "if" },
+        { blankLine: "never", prev: ["const", "let"], next: "if" },
         { blankLine: "always", prev: "if", next: "*" }
       ],
       "no-control-regex": "off",
