@@ -18,16 +18,10 @@ type StoreCliOptionKeys<Store extends typeof storeRegistry[number]> =
 
 type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
 
-function typedEntries<Key extends string>(schema: z.ZodObject<Record<Key, z.ZodTypeAny>>) {
-  return Object.entries(schema.shape).filter(
-    (entry): entry is [Key, z.ZodTypeAny] => entry[0] in schema.shape
-  );
-}
-
-function schemaToOptions<Key extends string>(store: StoreName | "base", schema: z.ZodObject<Record<Key, z.ZodTypeAny>>, demandRequired = false): Record<AllCliOptionKeys, Options> {
+function schemaToOptions<Key extends string>(store: StoreName | "base", schema: z.ZodObject<Record<Key, z.ZodTypeAny>>, demandRequired = false) {
   const options: Record<string, Options> = {};
 
-  for (const [key, value] of typedEntries(schema)) {
+  for (const [key, value] of Object.entries(schema.shape)) {
     if (key === "verbose" && store !== "base") {
       continue;
     }
@@ -44,7 +38,7 @@ function schemaToOptions<Key extends string>(store: StoreName | "base", schema: 
   return options;
 }
 
-function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<AllCliOptionKeys, Options>) {
+function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<string, Options>) {
   const cliOverridableInEnvMode = new Set([
     ...(store.dynamicFields ?? []).map(key => `${store.name}-${kebabCase(key)}`),
     ...(store.cliOverridableFields ?? []).map(key => `${store.name}-${kebabCase(key)}`)
@@ -57,38 +51,35 @@ function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<A
 }
 
 let allStoreOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
-const storeOptionGroups: Partial<Record<StoreName, AllCliOptionKeys[]>> = {};
+const storeOptionGroups: Partial<Record<StoreName, string[]>> = {};
 let envModeCliOnlyOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
+
 for (const store of storeRegistry) {
   const storeOptions = schemaToOptions<string>(store.name, store.schema);
   allStoreOptions = { ...allStoreOptions, ...storeOptions };
-  storeOptionGroups[store.name] = Object.keys(storeOptions).filter(
-    (key): key is AllCliOptionKeys => storeRegistry.some(({ name }) => key.startsWith(`${name}-`))
-  );
+  storeOptionGroups[store.name] = Object.keys(storeOptions);
   envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, storeOptions) };
 }
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
 
-function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, AllCliOptionKeys[]>> = storeOptionGroups) {
+function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, string[]>> = storeOptionGroups) {
   for (const { name } of storeRegistry) {
     const keys = groups[name];
-    if (keys) {
-      builder = builder.group(keys, `${getStoreDisplayName(name)}:`);
+    if (!keys) {
+      continue;
     }
+    builder.group(keys, `${getStoreDisplayName(name)}:`);
   }
   return builder;
 }
 
 function stripCamelCaseArgs(message: string) {
-  return message.replace(
-    /Unknown arguments?: (.+)/,
-    (_, args: string) => {
-      const kebabOnly = args.split(", ").filter(arg => arg.includes("-"));
-      const label = kebabOnly.length === 1 ? "Unknown argument" : "Unknown arguments";
-      return `${label}: ${kebabOnly.map(arg => `--${arg}`).join(", ")}`;
-    }
-  );
+  return message.replace(/Unknown arguments?: (.+)/, (_, args: string) => {
+    const kebabOnly = args.split(", ").filter(arg => arg.includes("-"));
+    const label = kebabOnly.length === 1 ? "Unknown argument" : "Unknown arguments";
+    return `${label}: ${kebabOnly.map(arg => `--${arg}`).join(", ")}`;
+  });
 }
 
 export const parser = yargs(process.argv.slice(2))
@@ -120,7 +111,7 @@ export const parser = yargs(process.argv.slice(2))
     "Pass arguments directly",
     builder => {
       builder = builder.options({ ...baseOptions, ...allStoreOptions });
-      builder = applyStoreGroups(builder);
+      applyStoreGroups(builder);
       return builder.version(false).epilogue("Choose which stores to deploy to by supplying their options\n" +
         "Only stores with at least one argument will be included\n" +
         "For each included store, all [required] options must be provided");
@@ -168,16 +159,16 @@ function handleDeploy(argv: Arguments) {
 
 async function init() {
   const argv = await parser.parseAsync();
-  if (argv.help) {
-    const command = z.string().safeParse(argv._[0]).data;
-    if (command === "env") {
-      const tables = storeRegistry
-        .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
-        .filter(table => table !== null);
-      await renderHelpTables(tables);
-    }
-    process.exit(0);
+  if (!argv.help) {
+    return;
   }
+  if (argv._[0] === "env") {
+    const tables = storeRegistry
+      .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
+      .filter(table => table !== null);
+    await renderHelpTables(tables);
+  }
+  process.exit(0);
 }
 
-init();
+await init();
