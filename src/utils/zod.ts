@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export function getZodBaseType(value: unknown): "boolean" | "number" | "array" | "string" {
+export function getZodBaseType(value: unknown) {
   if (value instanceof z.ZodBoolean) {
     return "boolean";
   }
@@ -13,43 +13,63 @@ export function getZodBaseType(value: unknown): "boolean" | "number" | "array" |
   return "string";
 }
 
-export function unwrapZod(value: unknown): unknown {
-  if (value instanceof z.ZodDefault || value instanceof z.ZodOptional || value instanceof z.ZodNullable) {
-    return unwrapZod(value.unwrap());
+export function unwrapZod(value: unknown) {
+  let current = value;
+  while (current instanceof z.ZodDefault || current instanceof z.ZodOptional || current instanceof z.ZodNullable || current instanceof z.ZodPipe) {
+    current = current instanceof z.ZodPipe ? current.in : current.unwrap();
   }
-  if (value instanceof z.ZodPipe) {
-    return unwrapZod(value.in);
-  }
-  return value;
+  return current;
 }
 
-export function getZodDefaultValue(value: unknown): unknown {
-  if (value instanceof z.ZodDefault) {
-    return value.def.defaultValue;
+export function getZodDefaultValue(value: unknown) {
+  let current = value;
+  while (true) {
+    if (current instanceof z.ZodDefault) {
+      return current.def.defaultValue;
+    }
+    if (current instanceof z.ZodOptional || current instanceof z.ZodNullable) {
+      current = current.unwrap();
+      continue;
+    }
+    if (current instanceof z.ZodPipe) {
+      current = current.in;
+      continue;
+    }
+    return undefined;
   }
-  if (value instanceof z.ZodOptional || value instanceof z.ZodNullable) {
-    return getZodDefaultValue(value.unwrap());
-  }
-  if (value instanceof z.ZodPipe) {
-    return getZodDefaultValue(value.in);
-  }
-  return undefined;
 }
 
-export function getZodDescription(value: unknown): string {
-  if (value instanceof z.ZodPipe) {
-    return getZodDescription(value.in);
+export function getZodDescription(value: unknown) {
+  let current = value;
+  while (true) {
+    if (current instanceof z.ZodPipe) {
+      current = current.in;
+      continue;
+    }
+    if (current instanceof z.ZodOptional || current instanceof z.ZodNullable || current instanceof z.ZodDefault) {
+      if (current.description) {
+        return current.description;
+      }
+      current = current.unwrap();
+      continue;
+    }
+    if (current instanceof z.ZodType) {
+      return current.description ?? "";
+    }
+    return "";
   }
-  if (value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault) {
-    return value.description || getZodDescription(value.unwrap());
-  }
-  if (value instanceof z.ZodType) {
-    return value.description ?? "";
-  }
-  return "";
 }
 
-export function isZodOptional(value: unknown): boolean {
+type ZodObjectKeys<T extends z.ZodObject<z.ZodRawShape>> =
+  T extends z.ZodObject<infer Shape> ? string & keyof Shape : never;
+
+export function zodObjectEntries<T extends z.ZodObject<z.ZodRawShape>>(schema: T) {
+  return Object.entries(schema.shape).filter(
+    (entry): entry is [ZodObjectKeys<T>, z.ZodTypeAny] => entry[0] in schema.shape
+  );
+}
+
+export function isZodOptional(value: unknown) {
   if (value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault) {
     return true;
   }
