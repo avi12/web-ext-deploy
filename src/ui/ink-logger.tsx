@@ -24,7 +24,7 @@ enum LogLevel {
 
 type LogSource = StoreName | "System";
 
-type LogEntry = {
+export type LogEntry = {
   store: LogSource;
   level: LogLevel;
   message: string;
@@ -340,6 +340,10 @@ export async function renderApplicationError(error: Error): Promise<void> {
   inkInstance.unmount();
 }
 
+export function getRecentActivityEntries(storeNames: StoreName[], entries: LogEntry[]): LogEntry[] {
+  return storeNames.flatMap(store => entries.filter(entry => entry.store === store).slice(-2));
+}
+
 export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isVerbose?: boolean) {
   const sharedStatuses: Partial<Record<StoreName, StoreStatus>> = {};
   for (const store of storeNames) {
@@ -443,7 +447,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
         {activityEntries.length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             <Text bold color="gray">Recent Activity:</Text>
-            {activityEntries.slice(-(storeNames.length * 2 + 2)).map((entry, i) => (
+            {getRecentActivityEntries(storeNames, activityEntries).map((entry, i) => (
               <Text key={i} color={logLevelColors[entry.level]}>
                 [{entry.timestamp.toLocaleTimeString()}] {entry.store === "System" ? "System" : getStoreDisplayName(entry.store)}: {stripAnsi(entry.message)}
               </Text>

@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { type LogEntry, getRecentActivityEntries } from "../src/ui/ink-logger.js";
 import { StoreName } from "../src/types.js";
+import { type LogEntry, getRecentActivityEntries } from "../src/ui/ink-logger.js";
+import { describe, expect, it } from "vitest";
 
 function makeEntry(store: StoreName, message: string): LogEntry {
-  return { store, level: "info" as never, message, timestamp: new Date() };
+  return {
+    store, level: "info", message, timestamp: new Date()
+  };
 }
 
 describe("getRecentActivityEntries", () => {
@@ -27,7 +29,7 @@ describe("getRecentActivityEntries", () => {
 
     const result = getRecentActivityEntries(stores, entries);
 
-    expect(result.map(e => ({ store: e.store, message: e.message }))).toEqual([
+    expect(result.map(entry => ({ store: entry.store, message: entry.message }))).toEqual([
       { store: StoreName.Chrome, message: "Uploading zip" },
       { store: StoreName.Chrome, message: "Warning: Retrying in 60s" },
       { store: StoreName.Firefox, message: "Creating new version" },
@@ -58,11 +60,11 @@ describe("getRecentActivityEntries", () => {
 
     const result = getRecentActivityEntries(stores, entries);
 
-    const chromeEntries = result.filter(e => e.store === StoreName.Chrome);
-    const firefoxEntries = result.filter(e => e.store === StoreName.Firefox);
+    const chromeEntries = result.filter(entry => entry.store === StoreName.Chrome);
+    const firefoxEntries = result.filter(entry => entry.store === StoreName.Firefox);
     expect(chromeEntries).toHaveLength(1);
     expect(firefoxEntries).toHaveLength(2);
-    expect(firefoxEntries.map(e => e.message)).toEqual(["Second", "Third"]);
+    expect(firefoxEntries.map(entry => entry.message)).toEqual(["Second", "Third"]);
   });
 
   it("returns entries in store-registry order, not message order", () => {
