@@ -18,6 +18,7 @@ const RENDER_INTERVAL_MS = 80;
 
 enum LogLevel {
   Info = "info",
+  Success = "success",
   Warning = "warning",
   Error = "error"
 }
@@ -26,7 +27,7 @@ type LogSource = StoreName | "System";
 
 export type LogEntry = {
   store: LogSource;
-  level: "info" | "warning" | "error";
+  level: "info" | "success" | "warning" | "error";
   message: string;
   timestamp: Date;
 };
@@ -60,6 +61,7 @@ const dryRunStatusTexts = {
 
 const logLevelColors = {
   info: "white",
+  success: "green",
   warning: "yellow",
   error: "red"
 } as const;
@@ -496,6 +498,14 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
       addLogEntry({
         store,
         level: LogLevel.Info,
+        message,
+        timestamp: new Date()
+      });
+    },
+    success(store: LogSource, message: string) {
+      addLogEntry({
+        store,
+        level: LogLevel.Success,
         message,
         timestamp: new Date()
       });

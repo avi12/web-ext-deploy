@@ -3,7 +3,6 @@ import { createCookieRefreshCallback, getJsonStoresFromCli } from "./store-argum
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus, type StoreName } from "./types.js";
 import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
-import { green } from "./ui/logging.js";
 import { toError } from "./utils/retry.js";
 import type { Arguments } from "yargs";
 import { z } from "zod";
@@ -34,7 +33,7 @@ async function runStoreDeploy(
       setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
       setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath)
     });
-    inkLogger.logger.info(store, isDryRun ? "Validation passed" : green("Published!"));
+    inkLogger.logger.success(store, isDryRun ? "Validation passed" : "Published!");
     inkLogger.monitor.updateStore(store, StoreStatus.Success);
     return null;
   } catch (error) {

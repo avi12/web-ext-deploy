@@ -154,17 +154,23 @@ async function cancelLatestVersionIfNotSubmitted({
 async function submitChanges({
   zip,
   packageId,
+  availableAutoModeration,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
+  availableAutoModeration: boolean;
   onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
   const { version } = extJson;
 
   return requestWithRetry({
-    sendRequest: () => httpClient.post(`developer/package-versions/${packageId}-${version}/submit_for_moderation/`),
+    sendRequest: () => httpClient.post(
+      `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
+      JSON.stringify({ auto_moderation: availableAutoModeration }),
+      { headers: { "Content-Type": "application/json" } }
+    ),
     parseResponse(response) {
       const result = SubmitChangesSchema.safeParse(response.data);
       if (!result.success) {
@@ -432,6 +438,7 @@ export async function deployToOpera(
   await submitChanges({
     zip,
     packageId,
+    availableAutoModeration: versionsData.available_auto_moderation,
     onRateLimit
   });
 

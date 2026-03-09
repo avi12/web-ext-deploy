@@ -117,6 +117,11 @@ function extractApiMessage(data: unknown, statusText: string) {
     }
   }
 
+  const serialized = JSON.stringify(data);
+  if (serialized && serialized !== "{}") {
+    return `${statusText}: ${serialized}`;
+  }
+
   return statusText;
 }
 
