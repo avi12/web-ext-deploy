@@ -88,10 +88,6 @@ export function readCookiesFromEnv(storeName: StoreName, cookieFields: string[])
   return result;
 }
 
-export function getCookies(siteNames: StoreName[]) {
-  return getSignInCookie(siteNames);
-}
-
 async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void) {
   for (const store of storeRegistry) {
     const fields = store.cookieFields;
@@ -119,7 +115,7 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
 
     log?.(`${getStoreDisplayName(store.name)}: Fetching cookies...`);
     try {
-      await getCookies([store.name]);
+      await getSignInCookie([store.name]);
     } catch (error) {
       throw new Error(`Failed to fetch cookies: ${error}`, { cause: error });
     }
@@ -253,7 +249,7 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
 
 export function createCookieRefreshCallback(store: StoreName, cookieFields: string[]) {
   return async () => {
-    await getCookies([store]);
+    await getSignInCookie([store]);
     return readCookiesFromEnv(store, cookieFields);
   };
 }
