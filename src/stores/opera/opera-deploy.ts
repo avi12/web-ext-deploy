@@ -1,6 +1,7 @@
 import { createHttpClient } from "../../http/client.js";
+import { buildFormData } from "../../http/form-data.js";
 import { type DeployContext, StoreStatus } from "../../types.js";
-import { green, storeError } from "../../ui/logging.js";
+import { storeError } from "../../ui/logging.js";
 import {
   CookieAuthError,
   createRateLimitHandler,
@@ -85,12 +86,10 @@ function createOperaHttpClient(
 async function verifySourceCodeExistence({
   zip,
   packageId,
-  logger,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
@@ -109,7 +108,6 @@ async function verifySourceCodeExistence({
     },
     formatError: storeError,
     errorContext: "Source code verification failed",
-    logger,
     onRateLimit
   });
 
@@ -146,7 +144,6 @@ async function cancelLatestVersionIfNotSubmitted({
     },
     formatError: storeError,
     errorContext: "Cancel changes failed",
-    logger,
     onRateLimit
   });
 }
@@ -154,12 +151,10 @@ async function cancelLatestVersionIfNotSubmitted({
 async function submitChanges({
   zip,
   packageId,
-  logger,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
@@ -176,7 +171,6 @@ async function submitChanges({
     },
     formatError: storeError,
     errorContext: "Submit changes failed",
-    logger,
     onRateLimit
   });
 }
@@ -195,36 +189,22 @@ function getFileMetadata(zipPath: string) {
 
 async function uploadZip({
   zip,
-  logger,
   onRateLimit
 }: {
   zip: string;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   const { zipName, fileId } = getFileMetadata(zip);
 
-  const fileStream = fs.createReadStream(zip);
-  const fileBuffer = await new Promise<Uint8Array>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    fileStream.on("data", (chunk: Buffer) => chunks.push(chunk));
-    fileStream.on("end", () => resolve(Buffer.concat(chunks)));
-    fileStream.on("error", reject);
-  });
-
-  const boundary = `----WebKitFormBoundary${Date.now()}`;
-  const filePart = Buffer.from(
-    `--${boundary}\r\nContent-Disposition: form-data; name="flowChunkNumber"; filename="${zipName}"\r\nContent-Type: application/zip\r\n\r\n`
-  );
-  const identifierPart = Buffer.from(
-    `\r\n--${boundary}\r\nContent-Disposition: form-data; name="flowFilename"\r\n\r\n${zipName}\r\n--${boundary}\r\nContent-Disposition: form-data; name="flowIdentifier"\r\n\r\n${fileId}\r\n--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${zipName}"\r\nContent-Type: application/zip\r\n\r\n`
-  );
-  const closingPart = Buffer.from(`\r\n--${boundary}--\r\n`);
-
-  const body = Buffer.concat([filePart, fileBuffer, identifierPart, fileBuffer, closingPart]);
+  const formData = buildFormData([
+    { name: "flowChunkNumber", value: "1" },
+    { name: "flowFilename", value: zipName },
+    { name: "flowIdentifier", value: fileId },
+    { name: "file", value: fs.createReadStream(zip), filename: zipName }
+  ]);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.post("file-upload/", body, { headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` } }),
+    sendRequest: () => httpClient.post("file-upload/", formData.body, { headers: { "Content-Type": formData.headers["Content-Type"] } }),
     parseResponse(response) {
       const result = FileUploadResponseSchema.safeParse(response.data);
       if (!result.success) {
@@ -234,7 +214,6 @@ async function uploadZip({
     },
     formatError: storeError,
     errorContext: "Upload failed",
-    logger,
     onRateLimit
   });
 }
@@ -243,13 +222,11 @@ async function verifyUploadSuccessful({
   zipPath,
   packageId,
   lastVersion,
-  logger,
   onRateLimit
 }: {
   zipPath: string;
   packageId: number;
   lastVersion: string;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }): Promise<UploadResult> {
   const { zipName, fileId } = getFileMetadata(zipPath);
@@ -276,8 +253,9 @@ async function verifyUploadSuccessful({
     },
     formatError: storeError,
     errorContext: "Upload verification failed",
-    logger,
-    onRateLimit
+    onRateLimit,
+    maxRetries: 30,
+    maxBackoffMs: 30_000
   });
 
   if ("package_file" in data) {
@@ -290,13 +268,11 @@ async function updateChangelog({
   zip,
   packageId,
   changelog,
-  logger,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
   changelog: string;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   const { version, default_locale = "en" } = await getExtJson(zip);
@@ -316,7 +292,6 @@ async function updateChangelog({
     },
     formatError: storeError,
     errorContext: "Changelog update failed",
-    logger,
     onRateLimit
   });
 }
@@ -335,11 +310,9 @@ function verifyVersionNotSubmittedForModeration({ versionsListed, version }: {
 
 function getVersions({
   packageId,
-  logger,
   onRateLimit
 }: {
   packageId: number;
-  logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
@@ -353,7 +326,6 @@ function getVersions({
     },
     formatError: storeError,
     errorContext: "Get package versions failed",
-    logger,
     onRateLimit
   });
 }
@@ -383,7 +355,6 @@ export async function deployToOpera(
 
   const versionsData = await getVersions({
     packageId,
-    logger,
     onRateLimit
   });
 
@@ -409,7 +380,6 @@ export async function deployToOpera(
 
   await uploadZip({
     zip,
-    logger,
     onRateLimit
   });
 
@@ -422,7 +392,6 @@ export async function deployToOpera(
     zipPath: zip,
     packageId,
     lastVersion,
-    logger,
     onRateLimit
   });
 
@@ -433,7 +402,6 @@ export async function deployToOpera(
   await verifySourceCodeExistence({
     zip,
     packageId,
-    logger,
     onRateLimit
   });
 
@@ -445,7 +413,6 @@ export async function deployToOpera(
       zip,
       packageId,
       changelog,
-      logger,
       onRateLimit
     });
   }
@@ -457,11 +424,9 @@ export async function deployToOpera(
   await submitChanges({
     zip,
     packageId,
-    logger,
     onRateLimit
   });
 
-  logger?.info(green("Successfully published to Opera Add-ons!"));
   setStatus?.(StoreStatus.Success);
   return true;
 }
