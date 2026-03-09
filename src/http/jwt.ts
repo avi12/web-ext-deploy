@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 export function generateJwt({
   jwtIssuer,
@@ -22,11 +22,11 @@ export function generateJwt({
     typ: "JWT"
   };
 
-  const headerBase64 = Buffer.from(JSON.stringify(header)).toString("base64");
-  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64");
+  const headerBase64 = Buffer.from(JSON.stringify(header)).toString("base64url");
+  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
 
   const message = `${headerBase64}.${payloadBase64}`;
-  const signature = createHash("sha256").update(message).update(jwtSecret).digest("base64url");
+  const signature = createHmac("sha256", jwtSecret).update(message).digest("base64url");
 
   return `${message}.${signature}`;
 }

@@ -14,7 +14,7 @@ describe("generateJwt", () => {
 
   it("header decodes to HS256/JWT", () => {
     const jwt = generateJwt(baseArgs);
-    const header = JSON.parse(Buffer.from(jwt.split(".")[0], "base64").toString());
+    const header = JSON.parse(Buffer.from(jwt.split(".")[0], "base64url").toString());
     expect(header).toEqual({
       alg: "HS256",
       typ: "JWT"
@@ -23,7 +23,7 @@ describe("generateJwt", () => {
 
   it("payload contains required fields", () => {
     const jwt = generateJwt(baseArgs);
-    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64").toString());
+    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString());
     expect(payload).toHaveProperty("iss");
     expect(payload).toHaveProperty("jti");
     expect(payload).toHaveProperty("iat");
@@ -32,13 +32,13 @@ describe("generateJwt", () => {
 
   it("iss matches input jwtIssuer", () => {
     const jwt = generateJwt(baseArgs);
-    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64").toString());
+    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString());
     expect(payload.iss).toBe("test-issuer");
   });
 
   it("exp - iat equals default 180 seconds", () => {
     const jwt = generateJwt(baseArgs);
-    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64").toString());
+    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString());
     expect(payload.exp - payload.iat).toBe(180);
   });
 
@@ -56,7 +56,7 @@ describe("generateJwt", () => {
 
   it("jti is a 32-char hex string", () => {
     const jwt = generateJwt(baseArgs);
-    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64").toString());
+    const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString());
     expect(payload.jti).toMatch(/^[0-9a-f]{32}$/);
   });
 });
