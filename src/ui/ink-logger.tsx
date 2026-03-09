@@ -108,7 +108,7 @@ function HelpTable({ data }: { data: HelpTableData }) {
             {"  "}
             <Text color={field.isMissing ? "red" : undefined}>{field.name}</Text>
             {`${namePad}${field.type.padEnd(typeWidth)}`}
-            {field.isMissing ? <Text color="green">{"✔"}</Text> : null}
+            {field.isMissing ? <Text color="green">✔</Text> : null}
             {`${requiredPad}${field.defaultValue.padEnd(defaultWidth)}${field.description}`}
           </Text>
         );
@@ -143,7 +143,7 @@ export function buildHelpTableData(
   missingFields?: string[],
   dynamicFields?: string[],
   cliOverridableFields?: string[]
-): HelpTableData | null {
+) {
   if (!(schema instanceof z.ZodObject)) {
     return null;
   }
@@ -195,7 +195,7 @@ export function buildGlobalHelpTableData(
   schema: z.ZodType,
   missingArgs: string[],
   mode?: "cli" | "env"
-): HelpTableData | null {
+) {
   if (missingArgs.length === 0 || !(schema instanceof z.ZodObject)) {
     return null;
   }
@@ -277,7 +277,7 @@ export function createPreDeployUI() {
   };
 }
 
-export async function renderHelpTables(tables: HelpTableData[]): Promise<void> {
+export async function renderHelpTables(tables: HelpTableData[]) {
   if (tables.length === 0) {
     return;
   }
@@ -305,7 +305,7 @@ export async function renderHelpTables(tables: HelpTableData[]): Promise<void> {
   inkInstance.unmount();
 }
 
-export async function renderApplicationError(error: Error): Promise<void> {
+export async function renderApplicationError(error: Error) {
   let resolveRendered!: () => void;
   const rendered = new Promise<void>(resolve => {
     resolveRendered = resolve;
@@ -319,7 +319,7 @@ export async function renderApplicationError(error: Error): Promise<void> {
     if (error instanceof MissingArgsError || error instanceof NoStoresError) {
       return (
         <Box flexDirection="column">
-          <Text><Text color="red">✖</Text>{" "}{error.message}</Text>
+          <Text><Text color="red">✖</Text> {error.message}</Text>
           {error.tables.map((table, i) => (
             <HelpTable key={i} data={table} />
           ))}
@@ -329,7 +329,7 @@ export async function renderApplicationError(error: Error): Promise<void> {
 
     return (
       <Box>
-        <Text><Text color="red">✖</Text>{" "}{error.message}</Text>
+        <Text><Text color="red">✖</Text> {error.message}</Text>
       </Box>
     );
   }
@@ -339,7 +339,7 @@ export async function renderApplicationError(error: Error): Promise<void> {
   inkInstance.unmount();
 }
 
-export function getRecentActivityEntries(storeNames: StoreName[], entries: LogEntry[]): LogEntry[] {
+export function getRecentActivityEntries(storeNames: StoreName[], entries: LogEntry[]) {
   return storeNames.flatMap(store => entries.filter(entry => entry.store === store).slice(-2));
 }
 
@@ -396,16 +396,16 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
     type SummaryPart = { text: string; color: string };
     const summaryParts: SummaryPart[] = [];
     if (successCount > 0) {
-      summaryParts.push({ text: `✔ ${successCount} succeeded`, color: "green" });
+      summaryParts.push({ text: `✔ ${successCount} succeeded`, color: statusColors.success });
     }
     if (errorCount > 0) {
-      summaryParts.push({ text: `✖ ${errorCount} failed`, color: "red" });
+      summaryParts.push({ text: `✖ ${errorCount} failed`, color: statusColors.error });
     }
     if (runningCount > 0) {
-      summaryParts.push({ text: `${SPINNER_FRAMES[spinnerFrame]} ${runningCount} ${isDryRun ? "validating" : "deploying"}`, color: "cyan" });
+      summaryParts.push({ text: `${SPINNER_FRAMES[spinnerFrame]} ${runningCount} ${isDryRun ? "validating" : "deploying"}`, color: statusColors.running });
     }
     if (pendingCount > 0) {
-      summaryParts.push({ text: `○ ${pendingCount} waiting`, color: "blue" });
+      summaryParts.push({ text: `○ ${pendingCount} waiting`, color: statusColors.pending });
     }
 
     const allComplete = completedCount === totalCount;
@@ -562,7 +562,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
         }
       }
     } satisfies StoreLogger),
-    waitForRender(): Promise<void> {
+    waitForRender() {
       return new Promise<void>(resolve => {
         notifyAfterRender = resolve;
         triggerRender?.();
