@@ -78,7 +78,7 @@ export class MissingArgsError extends Error {
 }
 
 export class NoStoresError extends Error {
-  constructor(message: string, public readonly tables: HelpTableData[]) {
+  constructor(message: string, public readonly tables: HelpTableData[] = []) {
     super(message);
   }
 }
@@ -154,13 +154,16 @@ export function buildHelpTableData(
     if (mode === "cli" || (mode === "env" && isDynamic)) {
       return `--${kebabCase(storeName)}-${kebabCase(key)}`;
     }
+
     if (mode !== "env") {
       return key;
     }
+
     const envName = screamingSnakeCase(key);
     if (isOverridable) {
       return `${envName} / --${kebabCase(storeName)}-${kebabCase(key)}`;
     }
+
     return envName;
   }
 
@@ -171,9 +174,11 @@ export function buildHelpTableData(
     if (key === "verbose" && mode) {
       continue;
     }
+
     if (missingFields && !missingFields.includes(key)) {
       continue;
     }
+
     const zodValue = schema.shape[key];
     const isOptional = isZodOptional(zodValue);
     const { type, defaultValue, description } = unwrapZodType(zodValue);
@@ -204,9 +209,11 @@ export function buildGlobalHelpTableData(
     if (mode === "cli") {
       return `--${kebabCase(key)}`;
     }
+
     if (mode === "env") {
       return screamingSnakeCase(key);
     }
+
     return key;
   }
 
@@ -216,6 +223,7 @@ export function buildGlobalHelpTableData(
     if (!missingArgs.includes(key)) {
       continue;
     }
+
     const zodValue = (schema.shape)[key];
     const { type, defaultValue, description } = unwrapZodType(zodValue);
 
@@ -226,7 +234,6 @@ export function buildGlobalHelpTableData(
       description
     });
   }
-
   if (fields.length === 0) {
     return null;
   }
@@ -250,7 +257,6 @@ export function createPreDeployUI() {
       }, RENDER_INTERVAL_MS);
       return () => clearInterval(interval);
     }, []);
-
     if (messages.length === 0) {
       return null;
     }
@@ -315,7 +321,6 @@ export async function renderApplicationError(error: Error) {
     useEffect(() => {
       resolveRendered();
     }, []);
-
     if (error instanceof MissingArgsError || error instanceof NoStoresError) {
       return (
         <Box flexDirection="column">
@@ -398,12 +403,15 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
     if (successCount > 0) {
       summaryParts.push({ text: `✔ ${successCount} succeeded`, color: statusColors.success });
     }
+
     if (errorCount > 0) {
       summaryParts.push({ text: `✖ ${errorCount} failed`, color: statusColors.error });
     }
+
     if (runningCount > 0) {
       summaryParts.push({ text: `${SPINNER_FRAMES[spinnerFrame]} ${runningCount} ${isDryRun ? "validating" : "deploying"}`, color: statusColors.running });
     }
+
     if (pendingCount > 0) {
       summaryParts.push({ text: `○ ${pendingCount} waiting`, color: statusColors.pending });
     }
@@ -475,6 +483,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
         sharedStatuses[entry.store] = StoreStatus.Running;
       }
     }
+
     triggerRender?.();
   }
 
@@ -510,6 +519,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
       if (sharedStatuses[store] === status) {
         return;
       }
+
       sharedStatuses[store] = status;
       if (message) {
         sharedEntries.push({
@@ -519,6 +529,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
           timestamp: new Date()
         });
       }
+
       triggerRender?.();
     },
     setZipPath(store: StoreName, zipPath: string) {
@@ -553,6 +564,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
         if (sharedStatuses[store] === StoreStatus.Pending) {
           sharedStatuses[store] = StoreStatus.Running;
         }
+
         sharedEntries.push(entry);
         triggerRender?.();
         for (let remaining = seconds - 1; remaining >= 0; remaining--) {
