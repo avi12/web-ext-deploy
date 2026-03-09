@@ -33,24 +33,29 @@ export enum StoreName {
 
 export type StoreDefinition<
   Name extends StoreName = StoreName,
-  Schema extends z.ZodTypeAny = z.ZodTypeAny
+  Schema extends z.ZodTypeAny = z.ZodTypeAny,
+  CookieFields extends readonly string[] = readonly string[]
 > = {
   name: Name;
   schema: Schema;
   deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
-  cookieFields?: string[];
+  cookieFields?: CookieFields;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
 };
 
-export function defineStore<Schema extends z.ZodTypeAny, Name extends StoreName>(config: {
+export function defineStore<
+  Schema extends z.ZodTypeAny,
+  Name extends StoreName,
+  CookieFields extends readonly string[] = readonly string[]
+>(config: {
   name: Name;
   schema: Schema;
   deploy: (options: z.infer<Schema>, context?: DeployContext) => Promise<boolean>;
-  cookieFields?: string[];
+  cookieFields?: CookieFields;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
-}): StoreDefinition<Name, Schema> {
+}): StoreDefinition<Name, Schema, CookieFields> {
   return {
     name: config.name,
     schema: config.schema,

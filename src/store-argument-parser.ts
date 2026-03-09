@@ -11,7 +11,7 @@ import { buildGlobalHelpTableData, buildHelpTableData, MissingArgsError, NoStore
 import { camelCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
-import { isZodOptional } from "./utils/zod.js";
+import { isZodOptional, zodObjectEntries } from "./utils/zod.js";
 import type { Arguments } from "yargs";
 import { z } from "zod";
 
@@ -73,7 +73,7 @@ function getJsons(command: string, argv: Arguments) {
   return result;
 }
 
-export function readCookiesFromEnv(storeName: StoreName, cookieFields: string[]) {
+export function readCookiesFromEnv(storeName: StoreName, cookieFields: readonly string[]) {
   const { parsed: rawParsed = {} } = config({ path: `${storeName}.env` });
   const parsed = Object.fromEntries(
     Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
@@ -142,26 +142,21 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
       continue;
     }
 
-    const requiredFields: string[] = [];
-    const optionalFields: string[] = [];
-    for (const [key, value] of Object.entries(store.schema.shape)) {
-      if (isZodOptional(value)) {
-        optionalFields.push(key);
-      } else {
-        requiredFields.push(key);
-      }
-    }
+    const allFields = zodObjectEntries(store.schema);
+    const requiredFields = allFields.filter(([, value]) => !isZodOptional(value)).map(([key]) => key);
+    const optionalFields = allFields.filter(([, value]) => isZodOptional(value)).map(([key]) => key);
 
-    const missingRequired = requiredFields.filter(field => !storeConfig[field]);
-
-    const cookieFields = store.cookieFields || [];
+    const cookieFields = store.cookieFields ?? [];
     const missingCookieFields = cookieFields.filter(field => !storeConfig[field]);
     if (isAutoFetchCookies && cookieFields.length > 0 && missingCookieFields.length === cookieFields.length) {
       continue;
     }
-    if (!isAutoFetchCookies || cookieFields.length === 0) {
-      missingRequired.push(...missingCookieFields);
-    }
+
+    const extraCookieFields = !isAutoFetchCookies || cookieFields.length === 0 ? missingCookieFields : [];
+    const missingRequired = [
+      ...requiredFields.filter(field => !storeConfig[field]),
+      ...extraCookieFields
+    ];
 
     if (missingRequired.length === 0) {
       continue;
@@ -178,16 +173,9 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
 }
 
 function collectMissingGlobalArgs(argv: Arguments) {
-  const globalSchema = BaseOptionsSchema.shape;
-  const missingGlobal: string[] = [];
-
-  for (const key in globalSchema) {
-    if (argv[key] === undefined) {
-      missingGlobal.push(key);
-    }
-  }
-
-  return missingGlobal;
+  return zodObjectEntries(BaseOptionsSchema)
+    .filter(([key]) => argv[key] === undefined)
+    .map(([key]) => key);
 }
 
 export async function getJsonStoresFromCli(argv: Arguments, log?: (message: string) => void) {
@@ -197,7 +185,9 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   if (isObjectEmpty(jsonStoresRaw)) {
     if (command === "env") {
       const hasCookieStores = storeRegistry.some(store => store.cookieFields && store.cookieFields.length > 0);
-      const allGlobalKeys = ["publishOnly", ...(hasCookieStores ? ["autoFetchCookies"] : []), "dryRun", "verbose"];
+      const allGlobalKeys = zodObjectEntries(EnvOptionsSchema)
+        .map(([key]) => key)
+        .filter(key => hasCookieStores || key !== "autoFetchCookies");
       const tables = [
         ...storeRegistry
           .map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields))
@@ -247,7 +237,7 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   throw new MissingArgsError(tables);
 }
 
-export function createCookieRefreshCallback(store: StoreName, cookieFields: string[]) {
+export function createCookieRefreshCallback(store: StoreName, cookieFields: readonly string[]) {
   return async () => {
     await getSignInCookie([store]);
     return readCookiesFromEnv(store, cookieFields);
