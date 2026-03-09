@@ -7,7 +7,13 @@ import { type StoreDefinition, StoreName } from "./types.js";
 import { buildHelpTableData, renderApplicationError, renderHelpTables } from "./ui/ink-logger.js";
 import { type CamelToKebab, kebabCase } from "./utils/case-conversion.js";
 import { toError } from "./utils/retry.js";
-import { getZodBaseType, getZodDescription, isZodOptional, unwrapZod } from "./utils/zod.js";
+import {
+  getZodBaseType,
+  getZodDescription,
+  isZodOptional,
+  unwrapZod,
+  zodObjectEntries
+} from "./utils/zod.js";
 import yargs, { type Arguments, type Options } from "yargs";
 import { z } from "zod";
 
@@ -21,7 +27,7 @@ type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
 function schemaToOptions<Key extends string>(store: StoreName | "base", schema: z.ZodObject<Record<Key, z.ZodTypeAny>>, demandRequired = false) {
   const options: Record<string, Options> = {};
 
-  for (const [key, value] of Object.entries(schema.shape)) {
+  for (const [key, value] of zodObjectEntries(schema)) {
     if (key === "verbose" && store !== "base") {
       continue;
     }
@@ -51,19 +57,21 @@ function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<s
 }
 
 let allStoreOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
-const storeOptionGroups: Partial<Record<StoreName, string[]>> = {};
+const storeOptionGroups: Partial<Record<StoreName, AllCliOptionKeys[]>> = {};
 let envModeCliOnlyOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
 
 for (const store of storeRegistry) {
   const storeOptions = schemaToOptions<string>(store.name, store.schema);
   allStoreOptions = { ...allStoreOptions, ...storeOptions };
-  storeOptionGroups[store.name] = Object.keys(storeOptions);
+  storeOptionGroups[store.name] = Object.keys(storeOptions).filter(
+    (key): key is AllCliOptionKeys => storeRegistry.some(({ name }) => key.startsWith(`${name}-`))
+  );
   envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, storeOptions) };
 }
 
 const baseOptions = schemaToOptions("base", BaseOptionsSchema);
 
-function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, string[]>> = storeOptionGroups) {
+function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, AllCliOptionKeys[]>> = storeOptionGroups) {
   for (const { name } of storeRegistry) {
     const keys = groups[name];
     if (!keys) {
