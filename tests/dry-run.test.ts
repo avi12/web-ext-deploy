@@ -8,6 +8,8 @@ const validInputs: Record<string, Record<string, unknown>> = {
   chrome: {
     extId: "abc123",
     publisherId: "publisher-456",
+    clientId: "client-id",
+    clientSecret: "client-secret",
     refreshToken: "refresh-token",
     zip: FIXTURE_ZIP
   },

@@ -7,6 +7,8 @@ const FIXTURE_ZIP = path.resolve(__dirname, "../fixtures/test.zip");
 const validInput = {
   extId: "abc123",
   publisherId: "publisher-456",
+  clientId: "client-id",
+  clientSecret: "client-secret",
   refreshToken: "refresh-token",
   zip: FIXTURE_ZIP
 };

@@ -34,7 +34,7 @@ describe("Env mode - .env parsing + validation", () => {
 
   describe("chrome", () => {
     it("valid chrome.env passes schema", () => {
-      const parsed = writeEnv(`extId=abc123\npublisherId=pub-456\nrefreshToken=token-xyz\nzip=${FIXTURE_ZIP}`);
+      const parsed = writeEnv(`extId=abc123\npublisherId=pub-456\nclientId=client-id\nclientSecret=client-secret\nrefreshToken=token-xyz\nzip=${FIXTURE_ZIP}`);
       expect(() => ChromeOptionsSchema.parse(parsed)).not.toThrow();
     });
 

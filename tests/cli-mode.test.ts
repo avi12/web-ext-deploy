@@ -27,6 +27,8 @@ describe("CLI mode - arg mapping + validation", () => {
       const rawArgs = {
         "chrome-ext-id": "abc123",
         "chrome-publisher-id": "pub-456",
+        "chrome-client-id": "client-id",
+        "chrome-client-secret": "client-secret",
         "chrome-refresh-token": "token-xyz",
         "chrome-zip": FIXTURE_ZIP
       };
