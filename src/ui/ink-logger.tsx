@@ -234,6 +234,7 @@ export function buildGlobalHelpTableData(
       description
     });
   }
+
   if (fields.length === 0) {
     return null;
   }
@@ -257,6 +258,7 @@ export function createPreDeployUI() {
       }, RENDER_INTERVAL_MS);
       return () => clearInterval(interval);
     }, []);
+
     if (messages.length === 0) {
       return null;
     }
@@ -321,6 +323,7 @@ export async function renderApplicationError(error: Error) {
     useEffect(() => {
       resolveRendered();
     }, []);
+
     if (error instanceof MissingArgsError || error instanceof NoStoresError) {
       return (
         <Box flexDirection="column">
@@ -476,6 +479,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
 
   function addLogEntry(entry: LogEntry, overrideStatus?: StoreStatus) {
     sharedEntries.push(entry);
+
     if (entry.store !== "System") {
       if (overrideStatus !== undefined) {
         sharedStatuses[entry.store] = overrideStatus;
@@ -521,6 +525,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
       }
 
       sharedStatuses[store] = status;
+
       if (message) {
         sharedEntries.push({
           store,

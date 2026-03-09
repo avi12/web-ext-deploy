@@ -380,6 +380,7 @@ export async function deployToOpera(
     logger,
     onRateLimit
   });
+
   if (isVerbose) {
     logger?.info("Uploading zip");
   }
@@ -388,6 +389,7 @@ export async function deployToOpera(
     zip,
     onRateLimit
   });
+
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
@@ -399,6 +401,7 @@ export async function deployToOpera(
     lastVersion,
     onRateLimit
   });
+
   if (isVerbose) {
     logger?.info("Verifying source code existence");
   }
@@ -408,6 +411,7 @@ export async function deployToOpera(
     packageId,
     onRateLimit
   });
+
   if (changelog) {
     if (isVerbose) {
       logger?.info("Updating changelog");

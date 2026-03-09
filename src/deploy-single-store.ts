@@ -9,6 +9,7 @@ export class StoreValidationError extends Error {
     super(message);
     this.name = "StoreValidationError";
     this.helpTables = helpTables;
+
     if (cause) {
       this.cause = cause;
     }

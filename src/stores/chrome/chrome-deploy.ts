@@ -139,12 +139,14 @@ async function waitForUpload({
       onRateLimit
     });
     lastAsyncUploadState = data.lastAsyncUploadState;
+
     if (lastAsyncUploadState !== UploadState.IN_PROGRESS) {
       break;
     }
 
     await setTimeout(pollIntervalMs);
   }
+
   if (lastAsyncUploadState !== UploadState.SUCCEEDED) {
     throw new Error(storeError(`Upload failed with state: ${lastAsyncUploadState}`));
   }
@@ -286,6 +288,7 @@ export async function deployToChrome(
   await cancelSubmissionIfPending({
     extId, publisherId, logger, isVerbose, onRateLimit
   });
+
   if (isVerbose) {
     logger?.info(`Uploading zip with extension ID ${extId}`);
   }
@@ -296,6 +299,7 @@ export async function deployToChrome(
     publisherId,
     onRateLimit
   });
+
   if (isVerbose) {
     logger?.info("Publishing extension");
   }
@@ -303,6 +307,7 @@ export async function deployToChrome(
   await publishExtension({
     extId, publisherId, skipReview, deployPercentage, onRateLimit
   });
+
   if (isVerbose) {
     logger?.info("Verifying submission");
   }

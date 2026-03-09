@@ -38,6 +38,7 @@ async function saveOperaHeaders(page: Page) {
       } catch {
         return;
       }
+
       if (!cookie) {
         return;
       }

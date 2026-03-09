@@ -143,6 +143,7 @@ async function validateUpload({
       errorContext: "Upload verification failed",
       onRateLimit
     });
+
     if (data.processed) {
       break;
     }
@@ -243,6 +244,7 @@ export async function deployToFirefox(
   await validateUpload({
     uuid, jwtIssuer, jwtSecret, onRateLimit
   });
+
   if (isVerbose) {
     logger?.info(`Creating a new version: ${version}`);
   }
@@ -259,6 +261,7 @@ export async function deployToFirefox(
     logger,
     onRateLimit
   });
+
   if (zipSource) {
     if (isVerbose) {
       logger?.info(`Uploading source ZIP: ${zipSource}`);

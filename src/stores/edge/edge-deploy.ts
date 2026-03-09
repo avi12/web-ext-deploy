@@ -51,12 +51,14 @@ async function checkStatusOfPackageUpload({
       errorContext: "Upload verification failed",
       onRateLimit
     });
+
     if (data.status !== OperationStatus.InProgress) {
       break;
     }
 
     await setTimeout(pollIntervalMs);
   }
+
   if (data.status === OperationStatus.Failed) {
     const errors = (data.errors || []).join("\n");
     throw new Error(storeError(errors));
@@ -199,6 +201,7 @@ export async function deployToEdgePublishApi(
     operationId: uploadOperationId,
     onRateLimit
   });
+
   if (isVerbose) {
     logger?.info("Publishing submission");
   }

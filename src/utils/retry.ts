@@ -152,6 +152,7 @@ export async function requestWithRetry<T>({
         throw error;
       }
     }
+
     if (!response) {
       await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
       return attempt(count + 1);

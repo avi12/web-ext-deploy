@@ -69,6 +69,7 @@ export async function runDeploy(argv: Arguments) {
       storeEntries.push([store, json]);
     }
   }
+
   if (storeEntries.length === 0) {
     throw new Error("No stores to deploy to");
   }
@@ -102,6 +103,7 @@ export async function runDeploy(argv: Arguments) {
   inkLogger.monitor.setHelpTables(helpTables);
   await inkLogger.waitForRender();
   inkLogger.unmount();
+
   if (failures.length > 0) {
     const isPlural = failures.length > 1;
     throw new Error(`${failures.length} deployment${isPlural ? "s" : ""} failed`);

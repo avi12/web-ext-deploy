@@ -174,6 +174,7 @@ function App({
       setStep(Step.Exchanging);
       const data = await exchangeCodeForToken(code, clientId, clientSecret);
       response.writeHead(HTTP_OK, { "Content-Type": "text/html" });
+
       if ("error" in data) {
         response.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
         const message = `Token exchange failed: ${JSON.stringify(data.error, null, 2)}`;
@@ -272,6 +273,7 @@ async function getChromeRefreshToken(clientId: string, clientSecret: string): Pr
   );
 
   await instance.waitUntilExit();
+
   if (errorResult) {
     throw errorResult;
   }
