@@ -56,9 +56,11 @@ function getOpenCommand(url: string) {
   if (process.platform === "win32") {
     return `start "" "${url}"`;
   }
+
   if (process.platform === "darwin") {
     return `open "${url}"`;
   }
+
   // linux
   return `xdg-open "${url}"`;
 }
@@ -83,6 +85,7 @@ async function exchangeCodeForToken(code: string, clientId: string, clientSecret
   if (!result.success) {
     return { error: result.error };
   }
+
   return result.data;
 }
 
@@ -97,9 +100,11 @@ function getSymbol(step: Step) {
   if (step === Step.Success) {
     return <Text color="green">✔</Text>;
   }
+
   if (step === Step.Error) {
     return <Text color="red">✖</Text>;
   }
+
   return <Text color="cyan">●</Text>;
 }
 
@@ -107,9 +112,11 @@ function getTokenStepLabel(step: Step) {
   if (step === Step.Exchanging) {
     return "Exchanging code for token...";
   }
+
   if (step === Step.Success) {
     return "Token received";
   }
+
   return "Token exchange failed";
 }
 
@@ -147,7 +154,6 @@ function App({
       const url = new URL(request.url ?? "/", REDIRECT_URI);
       const code = url.searchParams.get("code");
       const authError = url.searchParams.get("error");
-
       if (authError) {
         response.writeHead(HTTP_OK, { "Content-Type": "text/html" });
         response.end("<h1>Authorization failed</h1><p>Check the terminal for details</p>");
@@ -168,7 +174,6 @@ function App({
       setStep(Step.Exchanging);
       const data = await exchangeCodeForToken(code, clientId, clientSecret);
       response.writeHead(HTTP_OK, { "Content-Type": "text/html" });
-
       if ("error" in data) {
         response.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
         const message = `Token exchange failed: ${JSON.stringify(data.error, null, 2)}`;
@@ -241,6 +246,7 @@ export async function runChromeToken(clientId: string, clientSecret: string, pri
     console.log(`\n${refreshToken}`);
     return;
   }
+
   const envFile = "chrome.env";
   const { parsed: envCurrent = {} } = config({ path: envFile });
   fs.writeFileSync(envFile, headersToEnv({ ...envCurrent, REFRESH_TOKEN: refreshToken }));
@@ -266,9 +272,9 @@ async function getChromeRefreshToken(clientId: string, clientSecret: string): Pr
   );
 
   await instance.waitUntilExit();
-
   if (errorResult) {
     throw errorResult;
   }
+
   return tokenResult;
 }

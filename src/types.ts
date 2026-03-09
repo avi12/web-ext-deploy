@@ -64,6 +64,7 @@ export function defineStore<
       if (!result.success) {
         throw result.error;
       }
+
       return config.deploy(result.data, context);
     },
     cookieFields: config.cookieFields,

@@ -24,6 +24,7 @@ export function deployStore(
   if (!store) {
     throw new Error(red(`Unknown store: ${storeName}`));
   }
+
   const parseResult = store.schema.safeParse(options);
   if (!parseResult.success) {
     const { error } = parseResult;
@@ -39,13 +40,16 @@ export function deployStore(
       const helpTableData = buildHelpTableData(store.name, store.schema, context?.mode, missingFields, store.dynamicFields, store.cliOverridableFields);
       throw new StoreValidationError(messages.join("\n"), helpTableData ? [helpTableData] : [], error);
     }
+
     throw new Error(messages.join("\n"), { cause: error });
   }
+
   const prepared = parseResult.data;
   if (context?.isDryRun) {
     context.logger?.info("Dry run: validation passed");
     context.setStatus?.(StoreStatus.Success);
     return Promise.resolve(true);
   }
+
   return store.deploy(prepared, context);
 }

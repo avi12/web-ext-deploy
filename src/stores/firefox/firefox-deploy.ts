@@ -46,6 +46,7 @@ function uploadZip({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -80,7 +81,6 @@ async function createNewVersion({
 }) {
   const { default_locale } = await getExtJson(zip);
   const locale = default_locale ?? changelogLang;
-
   if (changelog) {
     logger?.info(`Adding changelog: ${changelog}`);
   }
@@ -104,6 +104,7 @@ async function createNewVersion({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -135,6 +136,7 @@ async function validateUpload({
         if (!result.success) {
           throw result.error;
         }
+
         return result.data;
       },
       formatError: storeError,
@@ -144,6 +146,7 @@ async function validateUpload({
     if (data.processed) {
       break;
     }
+
     await setTimeout(pollIntervalMs);
   }
 
@@ -153,6 +156,7 @@ async function validateUpload({
   if (errors.length > 0) {
     throw new Error(storeError(errors.join("\n")));
   }
+
   return data;
 }
 
@@ -183,6 +187,7 @@ function uploadSourceCodeIfNeeded({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -220,7 +225,6 @@ export async function deployToFirefox(
 
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
-
   if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
   }
@@ -232,7 +236,6 @@ export async function deployToFirefox(
     onRateLimit
   });
   const { uuid, version } = uploadData;
-
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
@@ -240,7 +243,6 @@ export async function deployToFirefox(
   await validateUpload({
     uuid, jwtIssuer, jwtSecret, onRateLimit
   });
-
   if (isVerbose) {
     logger?.info(`Creating a new version: ${version}`);
   }
@@ -257,11 +259,11 @@ export async function deployToFirefox(
     logger,
     onRateLimit
   });
-
   if (zipSource) {
     if (isVerbose) {
       logger?.info(`Uploading source ZIP: ${zipSource}`);
     }
+
     await uploadSourceCodeIfNeeded({
       slug: extId,
       zipSource,

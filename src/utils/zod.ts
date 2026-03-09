@@ -4,12 +4,15 @@ export function getZodBaseType(value: unknown) {
   if (value instanceof z.ZodBoolean) {
     return "boolean";
   }
+
   if (value instanceof z.ZodNumber) {
     return "number";
   }
+
   if (value instanceof z.ZodArray) {
     return "array";
   }
+
   return "string";
 }
 
@@ -27,14 +30,17 @@ export function getZodDefaultValue(value: unknown) {
     if (current instanceof z.ZodDefault) {
       return current.def.defaultValue;
     }
+
     if (current instanceof z.ZodOptional || current instanceof z.ZodNullable) {
       current = current.unwrap();
       continue;
     }
+
     if (current instanceof z.ZodPipe) {
       current = current.in;
       continue;
     }
+
     return undefined;
   }
 }
@@ -46,16 +52,20 @@ export function getZodDescription(value: unknown) {
       current = current.in;
       continue;
     }
+
     if (current instanceof z.ZodOptional || current instanceof z.ZodNullable || current instanceof z.ZodDefault) {
       if (current.description) {
         return current.description;
       }
+
       current = current.unwrap();
       continue;
     }
+
     if (current instanceof z.ZodType) {
       return current.description ?? "";
     }
+
     return "";
   }
 }
@@ -73,8 +83,10 @@ export function isZodOptional(value: unknown) {
   if (value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault) {
     return true;
   }
+
   if (value instanceof z.ZodPipe) {
     return isZodOptional(value.in);
   }
+
   return false;
 }

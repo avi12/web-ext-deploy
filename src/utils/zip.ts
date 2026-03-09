@@ -43,5 +43,6 @@ export async function getExtJson(zip: string) {
   if (!manifest.success) {
     throw new Error(`Invalid manifest.json: ${manifest.error.message}`);
   }
+
   return manifest.data;
 }

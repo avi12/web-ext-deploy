@@ -31,6 +31,7 @@ async function saveOperaHeaders(page: Page) {
       if (done) {
         return;
       }
+
       let cookie: string | undefined;
       try {
         ({ cookie } = await request.allHeaders());
@@ -40,6 +41,7 @@ async function saveOperaHeaders(page: Page) {
       if (!cookie) {
         return;
       }
+
       const isRequiredCookiesExist = cookiesToLogin.every(cookieName => cookie!.includes(` ${cookieName}=`));
       if (isRequiredCookiesExist && request.url() === url) {
         done = true;
@@ -82,6 +84,7 @@ export async function getSignInCookie(siteNames: StoreName[]) {
     if (!message.includes("npx playwright install")) {
       throw error;
     }
+
     execSync("npx playwright install", { stdio: "inherit" });
     return chromium.launch(launchOptions);
   });
@@ -93,6 +96,7 @@ export async function getSignInCookie(siteNames: StoreName[]) {
     if (pagesCurrent.length > 1) {
       await pagesCurrent[0].close();
     }
+
     const headersTotal = await siteFuncs[siteName](page);
     appendToEnv(getFilename(siteName), headersTotal);
   }

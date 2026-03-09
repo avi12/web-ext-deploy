@@ -42,6 +42,7 @@ async function exchangeRefreshTokenForAccessToken(clientId: string, clientSecret
   if (!result.success) {
     throw new Error(storeError("Failed to exchange refresh token for access token"));
   }
+
   return result.data.access_token;
 }
 
@@ -66,6 +67,7 @@ function fetchStatus({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -129,6 +131,7 @@ async function waitForUpload({
         if (!result.success) {
           throw result.error;
         }
+
         return result.data;
       },
       formatError: storeError,
@@ -139,9 +142,9 @@ async function waitForUpload({
     if (lastAsyncUploadState !== UploadState.IN_PROGRESS) {
       break;
     }
+
     await setTimeout(pollIntervalMs);
   }
-
   if (lastAsyncUploadState !== UploadState.SUCCEEDED) {
     throw new Error(storeError(`Upload failed with state: ${lastAsyncUploadState}`));
   }
@@ -170,19 +173,21 @@ async function uploadZip({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
     errorContext: "Upload failed",
     onRateLimit
   });
-
   if (data.uploadState === UploadState.SUCCEEDED) {
     return;
   }
+
   if (data.uploadState === UploadState.IN_PROGRESS) {
     return waitForUpload({ extId, publisherId, onRateLimit });
   }
+
   throw new Error(storeError(`Upload failed with state: ${data.uploadState}`));
 }
 
@@ -218,6 +223,7 @@ async function publishExtension({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -247,10 +253,10 @@ async function verifySubmission({
   });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const publishedState = status.publishedItemRevisionStatus?.state;
-
   if (publishedState === ItemState.PUBLISHED || publishedState === ItemState.PUBLISHED_TO_TESTERS) {
     return;
   }
+
   if (submittedState && PUBLISH_SUCCESS_STATES.includes(submittedState)) {
     return;
   }
@@ -280,7 +286,6 @@ export async function deployToChrome(
   await cancelSubmissionIfPending({
     extId, publisherId, logger, isVerbose, onRateLimit
   });
-
   if (isVerbose) {
     logger?.info(`Uploading zip with extension ID ${extId}`);
   }
@@ -291,7 +296,6 @@ export async function deployToChrome(
     publisherId,
     onRateLimit
   });
-
   if (isVerbose) {
     logger?.info("Publishing extension");
   }
@@ -299,7 +303,6 @@ export async function deployToChrome(
   await publishExtension({
     extId, publisherId, skipReview, deployPercentage, onRateLimit
   });
-
   if (isVerbose) {
     logger?.info("Verifying submission");
   }

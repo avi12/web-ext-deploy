@@ -64,6 +64,7 @@ describe("dry-run mode", () => {
       );
       for (const result of results) {
         expect(result.status).toBe("fulfilled");
+
         if (result.status === "fulfilled") {
           expect(result.value).toBe(true);
         }

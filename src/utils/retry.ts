@@ -44,6 +44,7 @@ export function createRateLimitHandler({
     if (secondsToWait > maxWaitSeconds) {
       throw new Error(formatError(`Too many API requests. Deploy manually at ${manualDeployUrl}`));
     }
+
     if (logger?.countdown) {
       await logger.countdown(secondsToWait, remaining =>
         `Too many requests. Retrying in ${remaining}s\nOr, you can deploy manually: ${manualDeployUrl}`
@@ -109,6 +110,7 @@ function extractApiMessage(data: unknown, statusText: string) {
     if (messages.length > 0) {
       return messages.join(", ");
     }
+
     const rawJson = JSON.stringify(record);
     if (rawJson !== "{}") {
       return rawJson;
@@ -150,7 +152,6 @@ export async function requestWithRetry<T>({
         throw error;
       }
     }
-
     if (!response) {
       await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
       return attempt(count + 1);
@@ -179,6 +180,7 @@ export async function requestWithRetry<T>({
       if (!(error instanceof ZodError)) {
         throw error;
       }
+
       const details = error.issues.map(issue => `${issue.path.join(".") || "response"}: ${issue.message}`).join(", ");
       throw new Error(formatError(`${errorContext}: Unexpected API response (${details})`), { cause: error });
     }

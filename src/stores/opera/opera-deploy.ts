@@ -65,6 +65,7 @@ function createOperaHttpClient(
     if (retryResponse.status === 401 || retryResponse.status === 403) {
       throw new CookieAuthError("Opera");
     }
+
     return retryResponse;
   }
 
@@ -104,13 +105,13 @@ async function verifySourceCodeExistence({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
     errorContext: "Source code verification failed",
     onRateLimit
   });
-
   if (!data.source_url && !data.source_for_moderators_url) {
     throw new Error(storeError(`No source code provided. Provide a URL in ${url} and submit the changes`));
   }
@@ -130,6 +131,7 @@ async function cancelLatestVersionIfNotSubmitted({
   if (versionsListed.length === 0 || versionsListed[0].submitted_for_moderation) {
     return;
   }
+
   const { version } = versionsListed[0];
   logger?.info(`Canceling unsubmitted version ${version}`);
 
@@ -140,6 +142,7 @@ async function cancelLatestVersionIfNotSubmitted({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -167,6 +170,7 @@ async function submitChanges({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -181,6 +185,7 @@ function getFileMetadata(zipPath: string) {
   if (!zipNameResult.success) {
     throw new Error(`Invalid zip path: ${zipPath}`);
   }
+
   const zipName = zipNameResult.data;
   const zipNameWithoutForbiddenCharacters = zipName.replace(/[.]/g, "");
   const fileId = `${sizeInBytes}-${zipNameWithoutForbiddenCharacters}`;
@@ -210,6 +215,7 @@ async function uploadZip({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -249,6 +255,7 @@ async function verifyUploadSuccessful({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -257,10 +264,10 @@ async function verifyUploadSuccessful({
     maxRetries: 30,
     maxBackoffMs: 30_000
   });
-
   if ("package_file" in data) {
     throw new Error(storeError(data.package_file));
   }
+
   return data;
 }
 
@@ -288,6 +295,7 @@ async function updateChangelog({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -322,6 +330,7 @@ function getVersions({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
@@ -348,7 +357,6 @@ export async function deployToOpera(
 
   setZipPath?.(zip);
   const { name, version } = await getExtJson(zip);
-
   if (isVerbose) {
     logger?.info(`Retrieving listed versions of ${name} with package ID ${packageId}`);
   }
@@ -357,7 +365,6 @@ export async function deployToOpera(
     packageId,
     onRateLimit
   });
-
   if (isVerbose) {
     logger?.info(`Verifying version ${version}`);
   }
@@ -373,7 +380,6 @@ export async function deployToOpera(
     logger,
     onRateLimit
   });
-
   if (isVerbose) {
     logger?.info("Uploading zip");
   }
@@ -382,7 +388,6 @@ export async function deployToOpera(
     zip,
     onRateLimit
   });
-
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
@@ -394,7 +399,6 @@ export async function deployToOpera(
     lastVersion,
     onRateLimit
   });
-
   if (isVerbose) {
     logger?.info("Verifying source code existence");
   }
@@ -404,11 +408,11 @@ export async function deployToOpera(
     packageId,
     onRateLimit
   });
-
   if (changelog) {
     if (isVerbose) {
       logger?.info("Updating changelog");
     }
+
     await updateChangelog({
       zip,
       packageId,

@@ -102,7 +102,9 @@ export default [
       "@stylistic/padding-line-between-statements": [
         "error",
         { blankLine: "always", prev: "import", next: ["const", "let", "function", "export", "type"] },
-        { blankLine: "any", prev: "import", next: "import" }
+        { blankLine: "any", prev: "import", next: "import" },
+        { blankLine: "never", prev: "*", next: "if" },
+        { blankLine: "always", prev: "if", next: "*" }
       ],
       "no-control-regex": "off",
       "object-shorthand": ["error", "always", { avoidExplicitReturnArrows: true }],

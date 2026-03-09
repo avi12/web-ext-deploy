@@ -44,6 +44,7 @@ async function checkStatusOfPackageUpload({
         if (!result.success) {
           throw result.error;
         }
+
         return result.data;
       },
       formatError: storeError,
@@ -53,13 +54,14 @@ async function checkStatusOfPackageUpload({
     if (data.status !== OperationStatus.InProgress) {
       break;
     }
+
     await setTimeout(pollIntervalMs);
   }
-
   if (data.status === OperationStatus.Failed) {
     const errors = (data.errors || []).join("\n");
     throw new Error(storeError(errors));
   }
+
   return data;
 }
 
@@ -68,6 +70,7 @@ function parseLocation(response: HttpLikeResponse) {
   if (!result.success) {
     throw new Error("Missing or invalid location header");
   }
+
   return result.data;
 }
 
@@ -126,26 +129,30 @@ async function checkPublishStatus({
       if (!result.success) {
         throw result.error;
       }
+
       return result.data;
     },
     formatError: storeError,
     errorContext: "Submission status check failed",
     onRateLimit
   });
-
   if (!("status" in data)) {
     throw new Error(storeError(data.message));
   }
+
   if (data.status === OperationStatus.Failed) {
     if (data.errorCode === "InProgressSubmission") {
       throw new InProgressSubmissionError();
     }
+
     const errors = (data.errors || []).map(error => error.message);
     if (errors.length === 0) {
       errors.push(data.message);
     }
+
     throw new Error(storeError(errors.join("\n")));
   }
+
   return data;
 }
 
@@ -174,7 +181,6 @@ export async function deployToEdgePublishApi(
 
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
-
   if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
   }
@@ -184,7 +190,6 @@ export async function deployToEdgePublishApi(
     productId,
     onRateLimit
   });
-
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
@@ -194,7 +199,6 @@ export async function deployToEdgePublishApi(
     operationId: uploadOperationId,
     onRateLimit
   });
-
   if (isVerbose) {
     logger?.info("Publishing submission");
   }
@@ -205,7 +209,6 @@ export async function deployToEdgePublishApi(
       devChangelog,
       onRateLimit
     });
-
     if (isVerbose) {
       logger?.info("Checking the submission status");
     }
@@ -224,6 +227,7 @@ export async function deployToEdgePublishApi(
     if (!(error instanceof InProgressSubmissionError)) {
       throw error;
     }
+
     await (logger?.countdown?.(inProgressRetryIntervalMs / 1000, remaining =>
       `A submission is already in progress. Retrying in ${remaining}s`
     ) ?? setTimeout(inProgressRetryIntervalMs));

@@ -1,0 +1,18 @@
+import { storeError } from "../../ui/logging.js";
+import { getCorrectZip, getFullPath, getIsFileExists } from "../../utils/zip.js";
+import { z } from "zod";
+export const OperaOptionsSchema = z.object({
+    packageId: z.coerce.number().describe("Get it from https://addons.opera.com/developer/package/PACKAGE_ID"),
+    sessionid: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
+    csrftoken: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
+    zip: z.string().nonempty()
+        .describe(`Path to the ZIP file. Supports "{version}" which is retrieved from package.json `)
+        .transform(getCorrectZip)
+        .check(ctx => {
+        if (!getIsFileExists(ctx.value)) {
+            ctx.issues.push({ code: "custom", input: ctx.value, message: storeError(`Zip doesn't exist: ${getFullPath(ctx.value)}`) });
+        }
+    }),
+    changelog: z.string().optional().describe("Changelog for this version. Supports \\n")
+        .transform(changelog => changelog?.trim().replaceAll("\\n", "\n"))
+});

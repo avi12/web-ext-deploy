@@ -1,0 +1,1 @@
+{"version":3,"file":"form-data.d.ts","sourceRoot":"","sources":["../../src/http/form-data.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,SAAS,CAAC;AAEzB,KAAK,aAAa,GAAG,MAAM,GAAG,MAAM,GAAG,EAAE,CAAC,UAAU,CAAC;AAErD,UAAU,aAAa;IACrB,IAAI,EAAE,MAAM,CAAC;IACb,KAAK,EAAE,aAAa,CAAC;IACrB,QAAQ,CAAC,EAAE,MAAM,CAAC;CACnB;AAkBD,wBAAgB,aAAa,CAAC,OAAO,EAAE,aAAa,EAAE;;;;;EAoBrD"}

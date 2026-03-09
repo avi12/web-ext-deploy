@@ -12,12 +12,15 @@ function readValue(value: FormDataValue) {
   if (Buffer.isBuffer(value)) {
     return value;
   }
+
   if (value instanceof fs.ReadStream) {
     return fs.readFileSync(value.path);
   }
+
   if (fs.existsSync(value)) {
     return fs.readFileSync(value);
   }
+
   return Buffer.from(value);
 }
 
