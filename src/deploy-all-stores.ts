@@ -19,8 +19,9 @@ async function runStoreDeploy(
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
+  const saveToEnv = mode === "env";
   const onCookieExpired = isAutoFetchCookies && storeDef?.cookieFields
-    ? createCookieRefreshCallback(store, storeDef.cookieFields)
+    ? createCookieRefreshCallback(store, storeDef.cookieFields, saveToEnv)
     : undefined;
 
   try {

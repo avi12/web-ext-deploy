@@ -90,7 +90,7 @@ export function readCookiesFromEnv(storeName: StoreName, cookieFields: readonly 
   return result;
 }
 
-async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void) {
+async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void, saveToEnv = true) {
   for (const store of storeRegistry) {
     const fields = store.cookieFields;
     if (!fields || fields.length === 0) {
@@ -102,13 +102,15 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
       continue;
     }
 
-    const envCookies = readCookiesFromEnv(store.name, fields);
-    for (const field of fields) {
-      if (storeConfig[field] || !envCookies[field]) {
-        continue;
-      }
+    if (saveToEnv) {
+      const envCookies = readCookiesFromEnv(store.name, fields);
+      for (const field of fields) {
+        if (storeConfig[field] || !envCookies[field]) {
+          continue;
+        }
 
-      storeConfig[field] = envCookies[field];
+        storeConfig[field] = envCookies[field];
+      }
     }
 
     const missingFields = fields.filter(field => !storeConfig[field]);
@@ -117,19 +119,18 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
     }
 
     log?.(`${getStoreDisplayName(store.name)}: Fetching cookies...`);
+    let fetchedCookies: Partial<Record<StoreName, Record<string, string>>>;
     try {
-      await getSignInCookie([store.name]);
+      fetchedCookies = await getSignInCookie([store.name], { saveToEnv });
     } catch (error) {
       throw new Error(`Failed to fetch cookies: ${error}`, { cause: error });
     }
 
-    const freshCookies = readCookiesFromEnv(store.name, fields);
+    const storeCookies = fetchedCookies[store.name] ?? {};
     for (const field of fields) {
-      if (storeConfig[field] || !freshCookies[field]) {
-        continue;
+      if (!storeConfig[field] && storeCookies[field]) {
+        storeConfig[field] = storeCookies[field];
       }
-
-      storeConfig[field] = freshCookies[field];
     }
   }
 }
@@ -205,8 +206,9 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   }
 
   const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
+  const saveToEnv = command === "env";
   if (isAutoFetchCookies) {
-    await fetchMissingCookies(jsonStoresRaw, log);
+    await fetchMissingCookies(jsonStoresRaw, log, saveToEnv);
   }
 
   const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCookies);
@@ -234,9 +236,10 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   throw new MissingArgsError(tables);
 }
 
-export function createCookieRefreshCallback(store: StoreName, cookieFields: readonly string[]) {
+export function createCookieRefreshCallback(store: StoreName, cookieFields: readonly string[], saveToEnv = true) {
   return async () => {
-    await getSignInCookie([store]);
-    return readCookiesFromEnv(store, cookieFields);
+    const fetchedCookies = await getSignInCookie([store], { saveToEnv });
+    const storeCookies = fetchedCookies[store] ?? {};
+    return Object.fromEntries(cookieFields.map(field => [field, storeCookies[field] ?? ""]));
   };
 }

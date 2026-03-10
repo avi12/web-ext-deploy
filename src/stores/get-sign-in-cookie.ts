@@ -76,7 +76,10 @@ function appendToEnv(filename: string, headers: string) {
   fs.writeFileSync(filename, headersToEnv(envNew));
 }
 
-export async function getSignInCookie(siteNames: StoreName[]) {
+export async function getSignInCookie(
+  siteNames: StoreName[],
+  { saveToEnv = true }: { saveToEnv?: boolean } = {}
+): Promise<Partial<Record<StoreName, Record<string, string>>>> {
   const width = 1280;
   const height = 720;
   const launchOptions = { headless: false, args: [`--window-size=${width},${height}`] };
@@ -90,6 +93,7 @@ export async function getSignInCookie(siteNames: StoreName[]) {
     return chromium.launch(launchOptions);
   });
   const context = await browser.newContext({ viewport: { width, height } });
+  const result: Partial<Record<StoreName, Record<string, string>>> = {};
 
   for (const siteName of siteNames) {
     const page = await context.newPage();
@@ -99,9 +103,18 @@ export async function getSignInCookie(siteNames: StoreName[]) {
     }
 
     const headersTotal = await siteFuncs[siteName](page);
-    appendToEnv(getFilename(siteName), headersTotal);
+    result[siteName] = parse(headersTotal);
+
+    if (saveToEnv) {
+      appendToEnv(getFilename(siteName), headersTotal);
+    }
   }
 
   await browser.close();
-  createGitIgnoreIfNeeded(siteNames);
+
+  if (saveToEnv) {
+    createGitIgnoreIfNeeded(siteNames);
+  }
+
+  return result;
 }

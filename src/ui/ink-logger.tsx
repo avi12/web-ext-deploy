@@ -436,7 +436,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
           return (
             <Text key={store}>
               <Text color={statusColors[status]}>{icon}</Text>
-              {" "}{getStoreDisplayName(store)}: {statusText}
+              {" "}{getStoreDisplayName(store)}: <Text color={statusColors[status]}>{statusText}</Text>
             </Text>
           );
         })}
