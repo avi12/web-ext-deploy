@@ -59,12 +59,6 @@ const dryRunStatusTexts = {
   error: "Invalid"
 } as const;
 
-const logLevelColors = {
-  info: "white",
-  success: "green",
-  warning: "yellow",
-  error: "red"
-} as const;
 
 function stripAnsi(str: string) {
   return str.replace(/\u001b\[[0-9;]*m/g, "");
@@ -349,11 +343,7 @@ export async function renderApplicationError(error: Error) {
   inkInstance.unmount();
 }
 
-export function getRecentActivityEntries(storeNames: StoreName[], entries: LogEntry[]) {
-  return storeNames.flatMap(store => entries.filter(entry => entry.store === store).slice(-2));
-}
-
-export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isVerbose?: boolean) {
+export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
   const sharedStatuses: Partial<Record<StoreName, StoreStatus>> = {};
   for (const store of storeNames) {
     sharedStatuses[store] = StoreStatus.Pending;
@@ -396,8 +386,6 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
     const completedCount = successCount + errorCount;
     const totalCount = storeNames.length;
 
-    const activityEntries = isVerbose ? sharedEntries : sharedEntries.filter(entry => entry.level === LogLevel.Error);
-
     const label = `${completedCount}/${totalCount}`;
     const barWidth = Math.max(10, (process.stdout.columns ?? 80) - label.length - 3);
     const successFilled = Math.round((successCount / totalCount) * barWidth);
@@ -432,7 +420,15 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
           const icon = status === StoreStatus.Running
             ? SPINNER_FRAMES[spinnerFrame]
             : (statusIcons[status] ?? "?");
-          const statusText = isDryRun ? dryRunStatusTexts[status] : deployStatusTexts[status];
+          const storeEntries = sharedEntries.filter(entry => entry.store === store);
+          const latestEntry = storeEntries[storeEntries.length - 1];
+          const firstErrorEntry = storeEntries.find(entry => entry.level === LogLevel.Error);
+          const defaultStatusText = isDryRun ? dryRunStatusTexts[status] : deployStatusTexts[status];
+          const statusText = status === StoreStatus.Running && latestEntry
+            ? stripAnsi(latestEntry.message).split("\n")[0]
+            : status === StoreStatus.Error && firstErrorEntry
+              ? stripAnsi(firstErrorEntry.message).split("\n")[0]
+              : defaultStatusText;
           return (
             <Text key={store}>
               <Text color={statusColors[status]}>{icon}</Text>
@@ -456,16 +452,6 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
             </React.Fragment>
           ))}
         </Box>
-        {activityEntries.length > 0 && (
-          <Box flexDirection="column" marginTop={1}>
-            <Text bold color="gray">Recent Activity:</Text>
-            {getRecentActivityEntries(storeNames, activityEntries).map((entry, i) => (
-              <Text key={i} color={logLevelColors[entry.level]}>
-                [{entry.timestamp.toLocaleTimeString()}] {entry.store === "System" ? "System" : getStoreDisplayName(entry.store)}: {stripAnsi(entry.message)}
-              </Text>
-            ))}
-          </Box>
-        )}
         {allComplete && sharedHelpTables.length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             {sharedHelpTables.map((tableData, i) => (
@@ -514,7 +500,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
       addLogEntry({
         store,
         level: LogLevel.Warning,
-        message: `Warning: ${message}`,
+        message,
         timestamp: new Date()
       });
     },
@@ -573,7 +559,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
         const entry: LogEntry = {
           store,
           level: LogLevel.Warning,
-          message: `Warning: ${getMessage(seconds)}`,
+          message: getMessage(seconds),
           timestamp: new Date()
         };
         if (sharedStatuses[store] === StoreStatus.Pending) {
@@ -582,9 +568,9 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean, isV
 
         sharedEntries.push(entry);
         triggerRender?.();
-        for (let remaining = seconds - 1; remaining >= 0; remaining--) {
+        for (let remaining = seconds - 1; remaining > 0; remaining--) {
           await setTimeoutPromise(1000);
-          entry.message = `Warning: ${getMessage(remaining)}`;
+          entry.message = getMessage(remaining);
           triggerRender?.();
         }
       }

@@ -78,7 +78,7 @@ export async function runDeploy(argv: Arguments) {
   const mode = command === "cli" || command === "env" ? command : undefined;
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
   const isVerbose = z.boolean().safeParse(argv.verbose).data;
-  const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun, isVerbose);
+  const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun);
   await inkLogger.ready;
   for (const message of preDeployLogs) {
     inkLogger.logger.info("System", message);
