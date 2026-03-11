@@ -30,32 +30,27 @@
 4. Under **Authorized redirect URIs**, add `http://localhost:8818`
 5. Click **Create** and save the **Client ID** and **Client Secret**
 
-### 4. Get the refresh token
+### 4. Set up chrome.env
 
-Run the built-in command:
-
-```shell
-web-ext-deploy chrome-token --client-id CLIENT_ID --client-secret CLIENT_SECRET
-```
-
-This opens your browser for Google sign-in, captures the authorization code, and saves the refresh token to `chrome.env`
-
-Use `--print-only` to print the token to the terminal instead of saving it:
-
-```shell
-web-ext-deploy chrome-token --client-id CLIENT_ID --client-secret CLIENT_SECRET --print-only
-```
-
-### 5. Set up chrome.env
-
-Add all credentials to `chrome.env`:
+Add your credentials to `chrome.env`:
 
 ```ini
 EXT_ID=your-extension-id
 PUBLISHER_ID=your-publisher-id
 CLIENT_ID=your-client-id
 CLIENT_SECRET=your-client-secret
-REFRESH_TOKEN=your-refresh-token
 ```
 
-`REFRESH_TOKEN` is saved automatically by the `chrome-token` command. `CLIENT_ID` and `CLIENT_SECRET` must be added manually.
+### 5. Get the refresh token
+
+Pass `--auto-fetch-credentials` when deploying. It will open your browser for Google sign-in, capture the authorization code, and either save the refresh token to `chrome.env` (in `env` mode) or keep it in memory for the current run (in `cli` mode):
+
+```shell
+# env mode - fetches and saves REFRESH_TOKEN to chrome.env
+web-ext-deploy env --auto-fetch-credentials
+
+# cli mode - fetches and uses in-memory only
+web-ext-deploy cli --chrome-ext-id EXT_ID ... --auto-fetch-credentials
+```
+
+On subsequent `env` runs, the saved `REFRESH_TOKEN` in `chrome.env` is used directly - no browser prompt needed.
