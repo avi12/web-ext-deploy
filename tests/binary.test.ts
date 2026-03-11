@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, it, expect, beforeAll } from "vitest";
 
 const ROOT = path.resolve(__dirname, "..");
-const BINARY = path.join(ROOT, "dist-esm/cli.js");
+const BINARY = path.join(ROOT, "dist/cli.js");
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
 const EMPTY_DIR = mkdtempSync(path.join(os.tmpdir(), "web-ext-deploy-test-"));
 
@@ -30,10 +30,17 @@ describe("binary", () => {
     expect(stdout + stderr).toContain("You need at least one command");
   });
 
-  it("--help exits 0 and prints usage", () => {
+  it("--help exits 0 and shows env and cli commands", () => {
     const { status, stdout } = runCli(["--help"]);
     expect(status).toBe(0);
-    expect(stdout).toContain("web-ext-deploy");
+    expect(stdout).toContain("env");
+    expect(stdout).toContain("cli");
+    expect(stdout).not.toContain("chrome-token");
+  });
+
+  it("chrome-token is not a valid command", () => {
+    const { status } = runCli(["chrome-token"]);
+    expect(status).not.toBe(0);
   });
 
   it("cli with no store args exits non-zero", () => {
@@ -55,6 +62,13 @@ describe("binary", () => {
     expect(stdout).toContain("firefox.env");
     expect(stdout).toContain("edge.env");
     expect(stdout).toContain("opera.env");
+  });
+
+  it("cli --help shows --auto-fetch-credentials flag", () => {
+    const { status, stdout } = runCli(["cli", "--help"]);
+    expect(status).toBe(0);
+    expect(stdout).toContain("--auto-fetch-credentials");
+    expect(stdout).not.toContain("--auto-fetch-cookies");
   });
 
   it("cli --dry-run with valid chrome args exits 0", () => {
