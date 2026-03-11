@@ -2,7 +2,7 @@ import type { StoreLogger } from "../types.js";
 import { setTimeout } from "node:timers/promises";
 import { z, ZodError } from "zod";
 
-function getBackoffDelayMs(attempt: number, maxMs = 5_000) {
+export function getBackoffDelayMs(attempt: number, maxMs = 5_000) {
   return Math.min(2 ** attempt * 1000, maxMs);
 }
 

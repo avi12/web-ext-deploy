@@ -57,7 +57,7 @@ function getJsons(command: string, argv: Arguments) {
         : parsed;
       const cliOverrides = getJsonsFromArgs(store, argv);
       const allowedOverrides = Object.fromEntries(
-        Object.entries(cliOverrides).filter(([key]) => cliOverridableFields.has(key))
+        Object.entries(cliOverrides).filter(([key, value]) => cliOverridableFields.has(key) && value !== undefined)
       );
       result[store] = { ...envValues, ...allowedOverrides };
     }

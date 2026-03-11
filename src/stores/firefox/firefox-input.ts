@@ -25,7 +25,7 @@ export const FirefoxOptionsSubmissionApiSchema = z.object({
     }),
   changelog: z.string().optional().describe("Changelog for this version. Supports \\n")
     .transform(changelog => changelog?.trim().replaceAll("\\n", "\n")),
-  changelogLang: z.string().default("en-US").describe(`Changelog language code (default: manifest.json's "default_locale" or "en-US"). Full list: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3`),
+  changelogLang: z.string().optional().describe(`Changelog language code (default: "en-US"). Full list: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3`),
   devChangelog: z.string().optional().describe("Changelog for reviewers only")
     .transform(changelog => changelog?.trim().replaceAll("\\n", "\n"))
 });

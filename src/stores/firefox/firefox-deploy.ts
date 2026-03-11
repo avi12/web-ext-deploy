@@ -62,7 +62,6 @@ async function createNewVersion({
   changelog,
   changelogLang,
   devChangelog,
-  zip,
   jwtIssuer,
   jwtSecret,
   logger,
@@ -73,14 +72,12 @@ async function createNewVersion({
   changelog: string;
   changelogLang: string;
   devChangelog: string;
-  zip: string;
   jwtIssuer: string;
   jwtSecret: string;
   logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
-  const { default_locale } = await getExtJson(zip);
-  const locale = default_locale ?? changelogLang;
+  const locale = changelogLang ?? "en-US";
   if (changelog) {
     logger?.info(`Adding changelog: ${changelog}`);
   }
@@ -255,7 +252,6 @@ export async function deployToFirefox(
     changelog,
     changelogLang,
     devChangelog,
-    zip,
     jwtIssuer,
     jwtSecret,
     logger,

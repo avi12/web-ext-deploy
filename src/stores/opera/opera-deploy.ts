@@ -165,24 +165,46 @@ async function submitChanges({
   const extJson = await getExtJson(zip);
   const { version } = extJson;
 
-  return requestWithRetry({
-    sendRequest: () => httpClient.post(
-      `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
-      JSON.stringify({ auto_moderation: availableAutoModeration }),
-      { headers: { "Content-Type": "application/json" } }
-    ),
-    parseResponse(response) {
-      const result = SubmitChangesSchema.safeParse(response.data);
-      if (!result.success) {
-        throw result.error;
-      }
+  try {
+    await requestWithRetry({
+      sendRequest: () => httpClient.post(
+        `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
+        JSON.stringify({ auto_moderation: availableAutoModeration }),
+        { headers: { "Content-Type": "application/json" } }
+      ),
+      parseResponse(response) {
+        const result = SubmitChangesSchema.safeParse(response.data);
+        if (!result.success) {
+          throw result.error;
+        }
 
-      return result.data;
-    },
-    formatError: storeError,
-    errorContext: "Submit changes failed",
-    onRateLimit
-  });
+        return result.data;
+      },
+      formatError: storeError,
+      errorContext: "Submit changes failed",
+      onRateLimit
+    });
+  } catch (error) {
+    // The submit request may have succeeded on the server but returned an error response.
+    // Verify the actual submission state before propagating the error.
+    const versionDetail = await requestWithRetry({
+      sendRequest: () => httpClient.get(`developer/package-versions/${packageId}-${version}/`),
+      parseResponse(response) {
+        const result = ListingDetailSchema.safeParse(response.data);
+        if (!result.success) {
+          throw result.error;
+        }
+
+        return result.data;
+      },
+      formatError: storeError,
+      errorContext: "Version state verification failed",
+      onRateLimit
+    });
+    if (!versionDetail.submitted_for_moderation) {
+      throw error;
+    }
+  }
 }
 
 function getFileMetadata(zipPath: string) {

@@ -1,11 +1,12 @@
 import { createHttpClient } from "../../http/client.js";
-import { StoreStatus, type DeployContext } from "../../types.js";
+import { type DeployContext, StoreStatus } from "../../types.js";
 import { storeError } from "../../ui/logging.js";
 import {
   createRateLimitHandler,
-  requestWithRetry,
+  getBackoffDelayMs,
   type HttpLikeResponse,
-  type RateLimitHandler
+  type RateLimitHandler,
+  requestWithRetry
 } from "../../utils/retry.js";
 import { getExtJson } from "../../utils/zip.js";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
@@ -13,13 +14,6 @@ import { OperationStatus, PublishOperationStatusSchema, StatusPackageUploadSchem
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
-
-class InProgressSubmissionError extends Error {
-  constructor() {
-    super("A submission is already in progress");
-    this.name = "InProgressSubmissionError";
-  }
-}
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
@@ -115,7 +109,7 @@ function publishSubmission({
 }
 
 /** @see https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-publishing-status */
-async function checkPublishStatus({
+function fetchPublishStatus({
   productId,
   operationId,
   onRateLimit
@@ -124,7 +118,7 @@ async function checkPublishStatus({
   operationId: string;
   onRateLimit?: RateLimitHandler;
 }) {
-  const data = await requestWithRetry({
+  return requestWithRetry({
     sendRequest: () => httpClient.get(`products/${productId}/submissions/operations/${operationId}`),
     parseResponse(response) {
       const result = PublishOperationStatusSchema.safeParse(response.data);
@@ -138,15 +132,23 @@ async function checkPublishStatus({
     errorContext: "Submission status check failed",
     onRateLimit
   });
+}
+
+async function checkPublishStatus({
+  productId,
+  operationId,
+  onRateLimit
+}: {
+  productId: string;
+  operationId: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const data = await fetchPublishStatus({ productId, operationId, onRateLimit });
   if (!("status" in data)) {
     throw new Error(storeError(data.message));
   }
 
   if (data.status === OperationStatus.Failed) {
-    if (data.errorCode === "InProgressSubmission") {
-      throw new InProgressSubmissionError();
-    }
-
     const errors = (data.errors || []).map(error => error.message);
     if (errors.length === 0) {
       errors.push(data.message);
@@ -156,6 +158,54 @@ async function checkPublishStatus({
   }
 
   return data;
+}
+
+async function pollPublishStatus({
+  productId,
+  operationId,
+  onRateLimit
+}: {
+  productId: string;
+  operationId: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  let attempt = 0;
+
+  while (true) {
+    const data = await checkPublishStatus({ productId, operationId, onRateLimit });
+    if (data.status === OperationStatus.Succeeded) {
+      return;
+    }
+
+    await setTimeout(getBackoffDelayMs(attempt++, 5_000));
+  }
+}
+
+async function detectInProgressSubmission({
+  productId,
+  devChangelog,
+  onRateLimit
+}: {
+  productId: string;
+  devChangelog: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const operationId = await publishSubmission({ productId, devChangelog, onRateLimit });
+  let attempt = 0;
+
+  while (true) {
+    const data = await fetchPublishStatus({ productId, operationId, onRateLimit });
+    if (!("status" in data)) {
+      return false;
+    }
+
+    if (data.status === OperationStatus.InProgress) {
+      await setTimeout(getBackoffDelayMs(attempt++, 5_000));
+      continue;
+    }
+
+    return data.status === OperationStatus.Failed && data.errorCode === "InProgressSubmission";
+  }
 }
 
 export async function deployToEdgePublishApi(
@@ -184,58 +234,34 @@ export async function deployToEdgePublishApi(
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
   if (isVerbose) {
-    logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
+    logger?.info("Checking for in-progress submission");
   }
 
-  const uploadOperationId = await uploadZip({
-    zip,
-    productId,
-    onRateLimit
-  });
+  const inProgress = await detectInProgressSubmission({ productId, devChangelog, onRateLimit });
+  if (isVerbose) {
+    logger?.info(inProgress
+      ? `Submission in progress. Replacing draft of ${name}`
+      : `Uploading zip of ${name} with product ID ${productId}`
+    );
+  }
+
+  const uploadOperationId = await uploadZip({ zip, productId, onRateLimit });
   if (isVerbose) {
     logger?.info("Verifying upload");
   }
 
-  await checkStatusOfPackageUpload({
-    productId,
-    operationId: uploadOperationId,
-    onRateLimit
-  });
+  await checkStatusOfPackageUpload({ productId, operationId: uploadOperationId, onRateLimit });
 
   if (isVerbose) {
     logger?.info("Publishing submission");
   }
 
-  async function publishAndVerify() {
-    const publishOperationId = await publishSubmission({
-      productId,
-      devChangelog,
-      onRateLimit
-    });
-    if (isVerbose) {
-      logger?.info("Checking the submission status");
-    }
-
-    await checkPublishStatus({
-      productId,
-      operationId: publishOperationId,
-      onRateLimit
-    });
+  const publishOperationId = await publishSubmission({ productId, devChangelog, onRateLimit });
+  if (isVerbose) {
+    logger?.info("Checking submission status");
   }
 
-  const inProgressRetryIntervalMs = 60_000;
-  try {
-    await publishAndVerify();
-  } catch (error) {
-    if (!(error instanceof InProgressSubmissionError)) {
-      throw error;
-    }
-
-    await (logger?.countdown?.(inProgressRetryIntervalMs / 1000, remaining =>
-      `A submission is already in progress. Retrying in ${remaining}s`
-    ) ?? setTimeout(inProgressRetryIntervalMs));
-    await publishAndVerify();
-  }
+  await pollPublishStatus({ productId, operationId: publishOperationId, onRateLimit });
 
   setStatus?.(StoreStatus.Success);
   return true;
