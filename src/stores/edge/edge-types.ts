@@ -24,7 +24,7 @@ const PublishErrorCode = z.enum([
 ]);
 
 const BaseOperationResponse = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   message: z.string()
 });
 

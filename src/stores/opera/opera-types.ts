@@ -36,7 +36,7 @@ export const ListVersionsSchema = z.looseObject({
   dev_promotional_image: z.object({
     id: z.number(),
     url: z.string()
-  }),
+  }).nullable(),
   is_extension: z.boolean(),
   retirejs_warnings: z.array(z.unknown())
 });
