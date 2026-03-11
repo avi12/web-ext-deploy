@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { runDeploy } from "./deploy-all-stores.js";
 import { BaseOptionsSchema, publishOnlyDescription } from "./store-argument-parser.js";
-import { ChromeTokenOptionsSchema, runChromeToken } from "./stores/chrome/chrome-token.js";
 import { getStoreDisplayName, storeRegistry } from "./stores/registry.js";
 import { type StoreDefinition, StoreName } from "./types.js";
 import { buildHelpTableData, renderApplicationError, renderHelpTables } from "./ui/ink-logger.js";
@@ -128,12 +127,6 @@ export const parser = yargs(process.argv.slice(2))
     },
     handleDeploy
   )
-  .command(
-    "chrome-token",
-    "Get a Chrome Web Store refresh token",
-    builder => builder.version(false).options(schemaToOptions("base", ChromeTokenOptionsSchema, true)),
-    handleChromeToken
-  )
   .demandCommand(1, "You need at least one command before moving on")
   .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options`)
   .strict()
@@ -154,13 +147,6 @@ async function handleCommand(run: () => Promise<void>) {
     await renderApplicationError(toError(error));
     process.exit(1);
   }
-}
-
-function handleChromeToken(argv: Arguments) {
-  return handleCommand(() => {
-    const { clientId, clientSecret, printOnly } = ChromeTokenOptionsSchema.parse(argv);
-    return runChromeToken(clientId, clientSecret, printOnly);
-  });
 }
 
 function handleDeploy(argv: Arguments) {
