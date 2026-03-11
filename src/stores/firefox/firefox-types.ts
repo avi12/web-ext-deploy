@@ -57,7 +57,7 @@ export const FirefoxCreateNewVersionSchema = z
       text: z.record(z.string(), z.string()),
       url: z.string()
     }),
-    release_notes: z.record(z.string(), z.string()),
+    release_notes: z.record(z.string(), z.string()).nullable(),
     reviewed: z.string().nullable(),
     source: z.string().nullable(),
     version: z.string()

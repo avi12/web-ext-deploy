@@ -332,18 +332,6 @@ async function updateChangelog({
   });
 }
 
-function verifyVersionNotSubmittedForModeration({ versionsListed, version }: {
-  versionsListed: ListVersions["versions"];
-  version: string;
-}) {
-  const isVersionAlreadySubmitted = versionsListed.some(
-    entry => entry.version === version && entry.submitted_for_moderation
-  );
-  if (isVersionAlreadySubmitted) {
-    throw new Error(storeError(`Version ${version} has already been deployed`));
-  }
-}
-
 function getVersions({
   packageId,
   onRateLimit
@@ -393,14 +381,9 @@ export async function deployToOpera(
     packageId,
     onRateLimit
   });
-  if (isVerbose) {
-    logger?.info(`Verifying version ${version}`);
+  if (versionsData.versions.some(entry => entry.version === version && entry.submitted_for_moderation)) {
+    throw new Error(storeError(`Version ${version} has already been deployed`));
   }
-
-  verifyVersionNotSubmittedForModeration({
-    versionsListed: versionsData.versions,
-    version
-  });
 
   await cancelLatestVersionIfNotSubmitted({
     packageId,

@@ -55,7 +55,7 @@ async function checkStatusOfPackageUpload({
 
   if (data.status === OperationStatus.Failed) {
     const errors = (data.errors || []).join("\n");
-    throw new Error(storeError(errors));
+    throw new Error(storeError(errors || data.message || "Upload failed"));
   }
 
   return data;
