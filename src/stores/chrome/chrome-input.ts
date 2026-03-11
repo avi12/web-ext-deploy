@@ -8,7 +8,7 @@ export const ChromeOptionsSchema = z.object({
   publisherId: z.string().nonempty().describe("Get it from https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md"),
   clientId: z.string().nonempty().describe("Get it from https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md"),
   clientSecret: z.string().nonempty().describe("Get it from https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md"),
-  refreshToken: z.string().nonempty().describe("Follow https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md"),
+  refreshToken: z.string().nonempty().describe("Get it by running --auto-fetch-credentials"),
   zip: z.string().nonempty()
     .describe(`Path to the ZIP file. Supports "{version}" which is retrieved from package.json`)
     .transform(getCorrectZip)

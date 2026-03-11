@@ -4,8 +4,8 @@ import { z } from "zod";
 
 export const OperaOptionsSchema = z.object({
   packageId: z.coerce.number().describe("Get it from https://addons.opera.com/developer/package/PACKAGE_ID"),
-  sessionid: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
-  csrftoken: z.string().nonempty().describe("Get it by running --auto-fetch-cookies"),
+  sessionid: z.string().nonempty().describe("Get it by running --auto-fetch-credentials"),
+  csrftoken: z.string().nonempty().describe("Get it by running --auto-fetch-credentials"),
   zip: z.string().nonempty()
     .describe(`Path to the ZIP file. Supports "{version}" which is retrieved from package.json `)
     .transform(getCorrectZip)

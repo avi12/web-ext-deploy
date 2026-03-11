@@ -29,7 +29,7 @@ let httpClient: ReturnType<typeof createOperaHttpClient>;
 function createOperaHttpClient(
   cookies: { sessionid: string; csrftoken: string },
   logger?: DeployContext["logger"],
-  onCookieExpired?: DeployContext["onCookieExpired"]
+  onCredentialsExpired?: DeployContext["onCredentialsExpired"]
 ) {
   const client = createHttpClient("https://addons.opera.com/api/", {
     Accept: "application/json; version=1.0",
@@ -52,12 +52,12 @@ function createOperaHttpClient(
       return response;
     }
 
-    if (!onCookieExpired) {
+    if (!onCredentialsExpired) {
       throw new CookieAuthError("Opera");
     }
 
     logger?.warning("Cookies expired, refreshing...");
-    const freshCookies = await onCookieExpired();
+    const freshCookies = await onCredentialsExpired();
     csrftoken = freshCookies.csrftoken || "";
     sessionid = freshCookies.sessionid || "";
 
@@ -372,10 +372,10 @@ export async function deployToOpera(
     sessionid, csrftoken, packageId, zip, changelog = ""
   }: OperaOptions,
   {
-    logger, onCookieExpired, isVerbose, setStatus, setZipPath
+    logger, onCredentialsExpired, isVerbose, setStatus, setZipPath
   }: DeployContext = {}
 ) {
-  httpClient = createOperaHttpClient({ sessionid, csrftoken }, logger, onCookieExpired);
+  httpClient = createOperaHttpClient({ sessionid, csrftoken }, logger, onCredentialsExpired);
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://addons.opera.com/developer/package/${packageId}/`,

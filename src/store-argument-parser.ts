@@ -1,4 +1,3 @@
-import { getSignInCookie } from "./stores/get-sign-in-cookie.js";
 import {
   getStore,
   getStoreDisplayName,
@@ -16,7 +15,7 @@ import type { Arguments } from "yargs";
 import { z } from "zod";
 
 export const BaseOptionsSchema = z.object({
-  autoFetchCookies: z.boolean().optional().default(false).describe("Automatically fetch cookies as needed for stores that require them"),
+  autoFetchCredentials: z.boolean().optional().default(false).describe("Automatically fetch credentials as needed (cookies, tokens) for stores that require them"),
   dryRun: z.boolean().optional().default(false).describe("Validate inputs without deploying"),
   verbose: z.boolean().optional().default(false).describe("Log each deployment step")
 });
@@ -74,13 +73,13 @@ function getJsons(command: string, argv: Arguments) {
   return result;
 }
 
-export function readCookiesFromEnv(storeName: StoreName, cookieFields: readonly string[]) {
+export function readCredentialsFromEnv(storeName: StoreName, credentialFields: readonly string[]) {
   const { parsed: rawParsed = {} } = config({ path: `${storeName}.env` });
   const parsed = Object.fromEntries(
     Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
   );
   const result: Record<string, string> = {};
-  for (const field of cookieFields) {
+  for (const field of credentialFields) {
     if (!parsed[field]) {
       continue;
     }
@@ -90,9 +89,9 @@ export function readCookiesFromEnv(storeName: StoreName, cookieFields: readonly 
   return result;
 }
 
-async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void, saveToEnv = true) {
+async function fetchMissingCredentials(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void, saveToEnv = true) {
   for (const store of storeRegistry) {
-    const fields = store.cookieFields;
+    const fields = store.credentialFields;
     if (!fields || fields.length === 0) {
       continue;
     }
@@ -103,39 +102,38 @@ async function fetchMissingCookies(jsonStoresRaw: StoreConfigMap, log?: (message
     }
 
     if (saveToEnv) {
-      const envCookies = readCookiesFromEnv(store.name, fields);
+      const envCredentials = readCredentialsFromEnv(store.name, fields);
       for (const field of fields) {
-        if (storeConfig[field] || !envCookies[field]) {
+        if (storeConfig[field] || !envCredentials[field]) {
           continue;
         }
 
-        storeConfig[field] = envCookies[field];
+        storeConfig[field] = envCredentials[field];
       }
     }
 
     const missingFields = fields.filter(field => !storeConfig[field]);
-    if (missingFields.length === 0) {
+    if (missingFields.length === 0 || !store.fetchCredentials) {
       continue;
     }
 
-    log?.(`${getStoreDisplayName(store.name)}: Fetching cookies...`);
-    let fetchedCookies: Partial<Record<StoreName, Record<string, string>>>;
+    log?.(`${getStoreDisplayName(store.name)}: Fetching credentials...`);
+    let fetchedCredentials: Record<string, string>;
     try {
-      fetchedCookies = await getSignInCookie([store.name], { saveToEnv });
+      fetchedCredentials = await store.fetchCredentials(storeConfig, saveToEnv);
     } catch (error) {
-      throw new Error(`Failed to fetch cookies: ${error}`, { cause: error });
+      throw new Error(`Failed to fetch credentials: ${error}`, { cause: error });
     }
 
-    const storeCookies = fetchedCookies[store.name] ?? {};
     for (const field of fields) {
-      if (!storeConfig[field] && storeCookies[field]) {
-        storeConfig[field] = storeCookies[field];
+      if (!storeConfig[field] && fetchedCredentials[field]) {
+        storeConfig[field] = fetchedCredentials[field];
       }
     }
   }
 }
 
-function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: boolean) {
+function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCredentials?: boolean) {
   const missingArgs: Partial<Record<StoreName, { required: string[]; optional?: string[] }>> = {};
 
   for (const store of storeRegistry) {
@@ -152,16 +150,16 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
     const requiredFields = allFields.filter(([, value]) => !isZodOptional(value)).map(([key]) => key);
     const optionalFields = allFields.filter(([, value]) => isZodOptional(value)).map(([key]) => key);
 
-    const cookieFields = store.cookieFields ?? [];
-    const missingCookieFields = cookieFields.filter(field => !storeConfig[field]);
-    if (isAutoFetchCookies && cookieFields.length > 0 && missingCookieFields.length === cookieFields.length) {
+    const credentialFields = store.credentialFields ?? [];
+    const missingCredentialFields = credentialFields.filter(field => !storeConfig[field]);
+    if (isAutoFetchCredentials && credentialFields.length > 0 && missingCredentialFields.length === credentialFields.length) {
       continue;
     }
 
-    const missingManualCookieFields = !isAutoFetchCookies || cookieFields.length === 0 ? missingCookieFields : [];
+    const missingManualCredentialFields = !isAutoFetchCredentials || credentialFields.length === 0 ? missingCredentialFields : [];
     const missingRequired = [
       ...requiredFields.filter(field => !storeConfig[field]),
-      ...missingManualCookieFields
+      ...missingManualCredentialFields
     ];
     if (missingRequired.length === 0) {
       continue;
@@ -178,10 +176,10 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCookies?: 
 }
 
 function buildEnvHelpTables() {
-  const hasCookieStores = storeRegistry.some(store => store.cookieFields && store.cookieFields.length > 0);
+  const hasCookieStores = storeRegistry.some(store => store.credentialFields && store.credentialFields.length > 0);
   const globalKeys = zodObjectEntries(EnvOptionsSchema)
     .map(([key]) => key)
-    .filter(key => hasCookieStores || key !== "autoFetchCookies");
+    .filter(key => hasCookieStores || key !== "autoFetchCredentials");
   return [
     ...storeRegistry.map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields)),
     buildGlobalHelpTableData(EnvOptionsSchema, globalKeys, "cli")
@@ -205,21 +203,21 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
     throw new NoStoresError("Supply arguments for at least one store", []);
   }
 
-  const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
+  const isAutoFetchCredentials = z.boolean().safeParse(argv.autoFetchCredentials).data;
   const saveToEnv = command === "env";
-  if (isAutoFetchCookies) {
-    await fetchMissingCookies(jsonStoresRaw, log, saveToEnv);
+  if (isAutoFetchCredentials) {
+    await fetchMissingCredentials(jsonStoresRaw, log, saveToEnv);
   }
 
-  const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCookies);
+  const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCredentials);
   if (isObjectEmpty(missingArgs)) {
     return jsonStoresRaw;
   }
 
   const isCliMode = command === "cli";
   const mode = isCliMode ? "cli" : "env";
-  const hasCookieStores = storeRegistry.some(store => missingArgs[store.name] && store.cookieFields && store.cookieFields.length > 0);
-  const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCookies");
+  const hasCookieStores = storeRegistry.some(store => missingArgs[store.name] && store.credentialFields && store.credentialFields.length > 0);
+  const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCredentials");
   const globalSchema = isCliMode ? BaseOptionsSchema : EnvOptionsSchema;
   const storeTables = storeRegistry.flatMap(store => {
     const missingEntry = missingArgs[store.name];
@@ -236,10 +234,6 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   throw new MissingArgsError(tables);
 }
 
-export function createCookieRefreshCallback(store: StoreName, cookieFields: readonly string[], saveToEnv = true) {
-  return async () => {
-    const fetchedCookies = await getSignInCookie([store], { saveToEnv });
-    const storeCookies = fetchedCookies[store] ?? {};
-    return Object.fromEntries(cookieFields.map(field => [field, storeCookies[field] ?? ""]));
-  };
+export function createCredentialRefreshCallback(storeDef: { fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>> }, saveToEnv = true) {
+  return () => storeDef.fetchCredentials?.({}, saveToEnv) ?? Promise.resolve({});
 }

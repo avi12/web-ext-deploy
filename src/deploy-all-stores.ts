@@ -1,5 +1,5 @@
 import { deployStore, StoreValidationError } from "./deploy-single-store.js";
-import { createCookieRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
+import { createCredentialRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { StoreStatus, type StoreName } from "./types.js";
 import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
@@ -13,21 +13,21 @@ async function runStoreDeploy(
   inkLogger: ReturnType<typeof createInkLogger>,
   isDryRun?: boolean,
   isVerbose?: boolean,
-  isAutoFetchCookies?: boolean,
+  isAutoFetchCredentials?: boolean,
   mode?: "cli" | "env"
 ): Promise<{ store: StoreName; helpTables: HelpTableData[] } | null> {
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
   const saveToEnv = mode === "env";
-  const onCookieExpired = isAutoFetchCookies && storeDef?.cookieFields
-    ? createCookieRefreshCallback(store, storeDef.cookieFields, saveToEnv)
+  const onCredentialsExpired = isAutoFetchCredentials && storeDef?.credentialFields
+    ? createCredentialRefreshCallback(storeDef, saveToEnv)
     : undefined;
 
   try {
     await deployStore(json, store, {
       logger: inkLogger.forStore(store),
-      onCookieExpired,
+      onCredentialsExpired,
       isDryRun,
       isVerbose,
       mode,
@@ -83,10 +83,10 @@ export async function runDeploy(argv: Arguments) {
   for (const message of preDeployLogs) {
     inkLogger.logger.info("System", message);
   }
-  const isAutoFetchCookies = z.boolean().safeParse(argv.autoFetchCookies).data;
+  const isAutoFetchCredentials = z.boolean().safeParse(argv.autoFetchCredentials).data;
 
   const results = await Promise.all(
-    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCookies, mode))
+    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCredentials, mode))
   );
 
   const failures: StoreName[] = [];

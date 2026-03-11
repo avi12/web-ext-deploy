@@ -14,11 +14,11 @@ export type StoreLogger = {
   countdown?: (seconds: number, getMessage: (remaining: number) => string) => Promise<void>;
 };
 
-type CookieRefreshCallback = () => Promise<Record<string, string>>;
+type CredentialRefreshCallback = () => Promise<Record<string, string>>;
 
 export type DeployContext = {
   logger?: StoreLogger;
-  onCookieExpired?: CookieRefreshCallback;
+  onCredentialsExpired?: CredentialRefreshCallback;
   isVerbose?: boolean;
   setStatus?: (status: StoreStatus, message?: string) => void;
   setZipPath?: (zipPath: string) => void;
@@ -34,12 +34,13 @@ export enum StoreName {
 export type StoreDefinition<
   Name extends StoreName = StoreName,
   Schema extends z.ZodTypeAny = z.ZodTypeAny,
-  CookieFields extends readonly string[] = readonly string[]
+  CredentialFields extends readonly string[] = readonly string[]
 > = {
   name: Name;
   schema: Schema;
   deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
-  cookieFields?: CookieFields;
+  credentialFields?: CredentialFields;
+  fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>>;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
 };
@@ -47,15 +48,16 @@ export type StoreDefinition<
 export function defineStore<
   Schema extends z.ZodTypeAny,
   Name extends StoreName,
-  CookieFields extends readonly string[] = readonly string[]
+  CredentialFields extends readonly string[] = readonly string[]
 >(config: {
   name: Name;
   schema: Schema;
   deploy: (options: z.infer<Schema>, context?: DeployContext) => Promise<boolean>;
-  cookieFields?: CookieFields;
+  credentialFields?: CredentialFields;
+  fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>>;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
-}): StoreDefinition<Name, Schema, CookieFields> {
+}): StoreDefinition<Name, Schema, CredentialFields> {
   return {
     name: config.name,
     schema: config.schema,
@@ -67,7 +69,8 @@ export function defineStore<
 
       return config.deploy(result.data, context);
     },
-    cookieFields: config.cookieFields,
+    credentialFields: config.credentialFields,
+    fetchCredentials: config.fetchCredentials,
     dynamicFields: config.dynamicFields,
     cliOverridableFields: config.cliOverridableFields
   };
