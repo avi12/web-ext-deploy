@@ -1,6 +1,3 @@
-import { StoreName } from "../../types.js";
-import { config } from "../../utils/dotenv.js";
-import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
 import {
   Box,
   Newline,
@@ -9,16 +6,9 @@ import {
   useApp
 } from "ink";
 import { exec } from "node:child_process";
-import fs from "node:fs";
 import { createServer, type Server } from "node:http";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
-
-export const ChromeTokenOptionsSchema = z.object({
-  clientId: z.string().nonempty().describe("OAuth client ID"),
-  clientSecret: z.string().nonempty().describe("OAuth client secret"),
-  printOnly: z.boolean().optional().describe("Print token to terminal instead of saving to chrome.env")
-});
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#creatingclient
 type AuthRequest = {
@@ -241,21 +231,7 @@ function App({
   );
 }
 
-export async function runChromeToken(clientId: string, clientSecret: string, printOnly?: boolean) {
-  const refreshToken = await getChromeRefreshToken(clientId, clientSecret);
-  if (printOnly) {
-    console.log(`\n${refreshToken}`);
-    return;
-  }
-
-  const envFile = "chrome.env";
-  const { parsed: envCurrent = {} } = config({ path: envFile });
-  fs.writeFileSync(envFile, headersToEnv({ ...envCurrent, REFRESH_TOKEN: refreshToken }));
-  createGitIgnoreIfNeeded([StoreName.Chrome]);
-  console.log("\nSaved refresh token to chrome.env");
-}
-
-async function getChromeRefreshToken(clientId: string, clientSecret: string): Promise<string> {
+export async function getChromeRefreshToken(clientId: string, clientSecret: string): Promise<string> {
   let tokenResult = "";
   let errorResult: Error | undefined;
 
