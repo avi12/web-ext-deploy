@@ -25,14 +25,14 @@ const PublishErrorCode = z.enum([
 
 const BaseOperationResponse = z.object({
   id: z.string().optional(),
-  message: z.string()
+  message: z.string().nullable().optional()
 });
 
 // https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-publishing-status
 export const PublishOperationStatusSchema = z.union([
   BaseOperationResponse.extend({
-    createdTime: z.string(),
-    lastUpdatedTime: z.string(),
+    createdTime: z.string().nullable(),
+    lastUpdatedTime: z.string().nullable(),
     status: OperationStatusSchema,
     errorCode: z.union([PublishErrorCode, z.string()]).nullable(),
     errors: z.array(z.object({ message: z.string() })).nullable()

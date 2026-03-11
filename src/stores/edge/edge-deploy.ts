@@ -145,13 +145,13 @@ async function checkPublishStatus({
 }) {
   const data = await fetchPublishStatus({ productId, operationId, onRateLimit });
   if (!("status" in data)) {
-    throw new Error(storeError(data.message));
+    throw new Error(storeError(data.message ?? "Unknown error"));
   }
 
   if (data.status === OperationStatus.Failed) {
     const errors = (data.errors || []).map(error => error.message);
     if (errors.length === 0) {
-      errors.push(data.message);
+      errors.push(data.message ?? "Submission failed");
     }
 
     throw new Error(storeError(errors.join("\n")));
