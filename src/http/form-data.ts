@@ -14,7 +14,13 @@ function readValue(value: FormDataValue) {
   }
 
   if (value instanceof fs.ReadStream) {
-    return fs.readFileSync(value.path);
+    try {
+      return fs.readFileSync(value.path);
+    } finally {
+      if (!value.destroyed) {
+        value.destroy();
+      }
+    }
   }
 
   return Buffer.from(value, "utf8");
