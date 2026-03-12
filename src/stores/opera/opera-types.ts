@@ -1,128 +1,73 @@
-export interface ListVersions {
-  id: number;
-  slug: string;
-  name: string;
-  type: string;
-  versions: Array<{
-    version: string;
-    submitted_for_moderation: boolean;
-    type: string;
-    created: string;
-    warnings: Array<string>;
-    retirejs_warnings: [];
-  }>;
-  published_versions: Array<{
-    name: string;
-    version: {
-      version: string;
-      submitted_for_moderation: boolean;
-      type: string;
-      created: string;
-      warnings: Array<string>;
-      retirejs_warning: [];
-    };
-  }>;
-  developer: string;
-  is_editable: boolean;
-  app_id: string;
-  category: {
-    slug: string;
-    name: string;
-  };
-  warnings: Array<string>;
-  unlisted: boolean;
-  details_url: string;
-  is_published: boolean;
-  available_auto_moderation: boolean;
-  dev_promotional_image: {
-    id: number;
-    url: string;
-  };
-  is_extension: boolean;
-  retirejs_warnings: [];
-}
+import { z } from "zod";
 
-export type ListingDetail = {
-  version: string;
-  submitted_for_moderation: boolean;
-  support: string | null;
-  source_url: string | null;
-  service_url: string | null;
-  source_for_moderators_url: string | null;
-  build_instructions: string;
-  features: Array<{
-    name: string;
-  }>;
-  file_size: number;
-  icon: {
-    id: number;
-    width: number;
-    height: number;
-    url: string;
-  };
-  screenshots: Record<
-    string,
-    {
-      id: number;
-      url: string;
-    }
-  >;
-  video: string | null;
-  license: {
-    url: string | null;
-    full_text: string;
-  };
-  translations: Record<
-    string,
-    {
-      language: {
-        code: string;
-        name: string;
-      };
-      short_description: string;
-      long_description: string;
-      changelog: string;
-    }
-  >;
-  type: string;
-  created: string;
-  warnings: Array<string>;
-  download_url: string;
-  retirejs_warnings: [];
-};
+const VersionEntrySchema = z.object({
+  version: z.string(),
+  submitted_for_moderation: z.boolean(),
+  type: z.string(),
+  created: z.string(),
+  warnings: z.array(z.string()),
+  retirejs_warnings: z.array(z.unknown())
+});
 
-interface DidChanges {
-  version: string;
-  support: string;
-  source_url: string;
-  service_url: string;
-  source_for_moderators_url: string;
-  build_instructions: string;
-  video: string;
-  license: {
-    url: string;
-    full_text: string;
-  };
-  privacy_policy: {
-    url: string;
-    full_text: string;
-  };
-}
+export const ListVersionsSchema = z.looseObject({
+  id: z.number(),
+  slug: z.string(),
+  name: z.string(),
+  type: z.string(),
+  versions: z.array(VersionEntrySchema),
+  published_versions: z.array(
+    z.object({
+      name: z.string(),
+      version: VersionEntrySchema
+    })
+  ),
+  developer: z.string(),
+  is_editable: z.boolean(),
+  app_id: z.string(),
+  category: z.object({
+    slug: z.string(),
+    name: z.string()
+  }),
+  warnings: z.array(z.string()),
+  unlisted: z.boolean(),
+  details_url: z.string(),
+  is_published: z.boolean(),
+  available_auto_moderation: z.boolean(),
+  dev_promotional_image: z.object({
+    id: z.number(),
+    url: z.string()
+  }).nullable(),
+  is_extension: z.boolean(),
+  retirejs_warnings: z.array(z.unknown())
+});
 
-export type SubmitChanges = DidChanges;
-export type CancelChanges = DidChanges;
+export type ListVersions = z.infer<typeof ListVersionsSchema>;
 
-interface UploadResultSuccess {
-  version: string;
-  submitted_for_moderation: boolean;
-  type: string;
-  created: string;
-  warnings: Array<string>;
-  retirejs_warnings: [];
-}
+export const ListingDetailSchema = z.looseObject({
+  version: z.string(),
+  submitted_for_moderation: z.boolean(),
+  source_url: z.string().nullable(),
+  source_for_moderators_url: z.string().nullable()
+});
 
-interface UploadResultError {
-  package_file: string;
-}
+const DidChangesSchema = z.looseObject({ version: z.string() });
 
-export type UploadResult = UploadResultSuccess | UploadResultError;
+export const SubmitChangesSchema = DidChangesSchema;
+
+export const CancelChangesSchema = DidChangesSchema;
+
+const UploadResultSuccessSchema = z.object({
+  version: z.string(),
+  submitted_for_moderation: z.boolean(),
+  type: z.string(),
+  created: z.string(),
+  warnings: z.array(z.string()),
+  retirejs_warnings: z.array(z.unknown())
+});
+
+const UploadResultErrorSchema = z.object({ package_file: z.string() });
+
+export const UploadResultSchema = z.union([UploadResultSuccessSchema, UploadResultErrorSchema]);
+export type UploadResult = z.infer<typeof UploadResultSchema>;
+
+export const FileUploadResponseSchema = z.unknown();

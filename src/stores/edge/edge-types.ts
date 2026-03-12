@@ -1,131 +1,41 @@
-// https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/addons-api-reference#check-the-publishing-status
+import { z } from "zod";
 
-interface CreateNotAllowedPublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: "Can't create new extension.";
-  errorCode: "CreateNotAllowed";
-  errors: null;
-}
+const OperationStatusSchema = z.enum(["InProgress", "Succeeded", "Failed"]);
+export const OperationStatus = OperationStatusSchema.enum;
 
-interface NoModulesUpdatedPublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: "Can't publish extension since there are no updates, please try again after updating the package.";
-  errorCode: "NoModulesUpdated";
-  errors: null;
-}
+// https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-status-of-a-package-upload
+export const StatusPackageUploadSchema = z.object({
+  id: z.string(),
+  createdTime: z.string(),
+  lastUpdatedTime: z.string(),
+  status: OperationStatusSchema,
+  message: z.string().nullable(),
+  errorCode: z.string().nullable(),
+  errors: z.array(z.object({ message: z.string() })).nullable()
+});
 
-interface InProgressSubmissionPublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: "Can't publish extension as your extension submission is in progress. Please try again later.";
-  errorCode: "InProgressSubmission";
-  errors: null;
-}
+const PublishErrorCode = z.enum([
+  "CreateNotAllowed",
+  "NoModulesUpdated",
+  "InProgressSubmission",
+  "UnpublishInProgress",
+  "ModuleStateUnPublishable",
+  "SubmissionValidationError"
+]);
 
-interface UnpublishInProgressPublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: "Can't publish extension as your extension is being unpublished. Please try after you unpublished.";
-  errorCode: "UnpublishInProgress";
-  errors: null;
-}
+const BaseOperationResponse = z.object({
+  id: z.string().optional(),
+  message: z.string().nullable().optional()
+});
 
-interface ModuleStateUnPublishablePublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: "Can't publish extension as your extension has modules that are not valid. Fix the modules with errors and try to publish again.";
-  errorCode: "ModuleStateUnPublishable";
-  errors: Array<{ message: `Invalid module : ${string}` }>;
-}
-
-interface SubmissionValidationErrorPublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: "Extension can't be published as there are submission validation failures. Fix these errors and try again later.";
-  errorCode: "SubmissionValidationError";
-  errors: Array<{ message: string }>;
-}
-
-export interface SuccessPublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Succeeded";
-  message: `Successfully created submission with extension ID ${string}`;
-  errorCode: "";
-  errors: null;
-}
-
-interface IrrecoverableFailurePublishStatus {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: "An error occurred while performing the operation";
-  errorCode: null;
-  errors: null;
-}
-
-interface UnexpectedFailurePublishStatus {
-  id: string;
-  message: `An error occurred while processing the request. Please contact support Correlation ID: ${string} Timestamp: ${string}`;
-}
-
-export type PublishOperationStatus =
-  | CreateNotAllowedPublishStatus
-  | NoModulesUpdatedPublishStatus
-  | InProgressSubmissionPublishStatus
-  | UnpublishInProgressPublishStatus
-  | ModuleStateUnPublishablePublishStatus
-  | SubmissionValidationErrorPublishStatus
-  | SuccessPublishStatus
-  | IrrecoverableFailurePublishStatus
-  | UnexpectedFailurePublishStatus;
-
-// https://learn.microsoft.com/en-us/microsoft-edge/extensions-chromium/publish/api/addons-api-reference#check-the-status-of-a-package-upload
-
-interface InProgressStatusPackageUpload {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "InProgress";
-  message: null;
-  errorCode: null;
-  errors: null;
-}
-
-interface SuccessStatusPackageUpload {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Succeeded";
-  message: `Successfully updated package to ${string}.zip`;
-  errorCode: "";
-  errors: null;
-}
-
-interface IrrecoverableFailureStatusPackageUpload {
-  id: string;
-  createdTime: string;
-  lastUpdatedTime: string;
-  status: "Failed";
-  message: string;
-  errorCode: null;
-  errors: Array<{ message: string }>;
-}
-
-export type StatusPackageUpload = InProgressStatusPackageUpload | SuccessStatusPackageUpload | IrrecoverableFailureStatusPackageUpload;
+// https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/addons-api-reference#check-the-publishing-status
+export const PublishOperationStatusSchema = z.union([
+  BaseOperationResponse.extend({
+    createdTime: z.string().nullable(),
+    lastUpdatedTime: z.string().nullable(),
+    status: OperationStatusSchema,
+    errorCode: z.union([PublishErrorCode, z.string()]).nullable(),
+    errors: z.array(z.object({ message: z.string() })).nullable()
+  }),
+  BaseOperationResponse
+]);

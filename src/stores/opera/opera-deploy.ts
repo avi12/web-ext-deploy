@@ -1,319 +1,452 @@
-import Axios, { type AxiosInstance, type AxiosResponse } from "axios";
-import { backOff } from "exponential-backoff";
-import FormData from "form-data";
+import { createHttpClient } from "../../http/client.js";
+import { buildFormData } from "../../http/form-data.js";
+import { type DeployContext, StoreStatus } from "../../types.js";
+import { storeError } from "../../ui/logging.js";
+import {
+  CookieAuthError,
+  createRateLimitHandler,
+  type HttpLikeResponse,
+  type RateLimitHandler,
+  requestWithRetry
+} from "../../utils/retry.js";
+import { getExtJson } from "../../utils/zip.js";
 import { OperaOptions } from "./opera-input.js";
-import { CancelChanges, ListingDetail, ListVersions, SubmitChanges, UploadResult } from "./opera-types.js";
-import type { SupportedStoresCapitalized } from "../../types.js";
-import { getErrorMessage, getExtJson, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
-import fs from "fs";
+import {
+  CancelChangesSchema,
+  FileUploadResponseSchema,
+  ListingDetailSchema,
+  type ListVersions,
+  ListVersionsSchema,
+  SubmitChangesSchema,
+  type UploadResult,
+  UploadResultSchema
+} from "./opera-types.js";
+import fs from "node:fs";
+import { z } from "zod";
 
-const STORE: SupportedStoresCapitalized = "Opera";
-let axios: AxiosInstance;
+let httpClient: ReturnType<typeof createOperaHttpClient>;
 
-async function handleRequestWithBackOff<T>({
-  sendRequest,
-  errorActionOnFailure,
-  zip
-}: {
-  sendRequest: () => Promise<AxiosResponse<T>>;
-  errorActionOnFailure: string;
-  zip: string;
-}): Promise<[string] | [undefined, T]> {
-  while (true) {
-    try {
-      const { data } = await sendRequest();
-      return [undefined, data];
-    } catch (e) {
-      const isServerError = e.response.status >= 500;
-      if (isServerError) {
-        await backOff(() => Promise.resolve(), { maxDelay: 30_000, delayFirstAttempt: true, jitter: "full" });
-        continue;
-      }
+function createOperaHttpClient(
+  cookies: { sessionid: string; csrftoken: string },
+  logger?: DeployContext["logger"],
+  onCredentialsExpired?: DeployContext["onCredentialsExpired"]
+) {
+  const client = createHttpClient("https://addons.opera.com/api/", {
+    Accept: "application/json; version=1.0",
+    Referer: "https://addons.opera.com"
+  });
 
-      // A client error
-      return [
-        getErrorMessage({
-          store: STORE,
-          error: e.response.statusText,
-          actionName: errorActionOnFailure,
-          zip
-        })
-      ];
-    }
+  let { csrftoken, sessionid } = cookies;
+
+  function cookieHeaders() {
+    return {
+      Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}`,
+      "X-Csrftoken": csrftoken
+    };
   }
+
+  async function withCookieRefresh(sendRequest: () => Promise<HttpLikeResponse>): Promise<HttpLikeResponse> {
+    const response = await sendRequest();
+    const isAuthFailure = response.status === 401 || response.status === 403;
+    if (!isAuthFailure) {
+      return response;
+    }
+
+    if (!onCredentialsExpired) {
+      throw new CookieAuthError("Opera");
+    }
+
+    logger?.warning("Cookies expired, refreshing...");
+    const freshCookies = await onCredentialsExpired();
+    csrftoken = freshCookies.csrftoken || "";
+    sessionid = freshCookies.sessionid || "";
+
+    const retryResponse = await sendRequest();
+    if (retryResponse.status === 401 || retryResponse.status === 403) {
+      throw new CookieAuthError("Opera");
+    }
+
+    return retryResponse;
+  }
+
+  function get(endpoint: string) {
+    return withCookieRefresh(() => client.get(endpoint, { headers: cookieHeaders() }));
+  }
+
+  function post(endpoint: string, body?: BodyInit, options?: { headers?: Record<string, string>; params?: Record<string, string | number> }) {
+    return withCookieRefresh(() => client.post(endpoint, body, { ...options, headers: { ...cookieHeaders(), ...options?.headers } }));
+  }
+
+  function patch(endpoint: string, body?: BodyInit, options?: { headers?: Record<string, string> }) {
+    return withCookieRefresh(() => client.patch(endpoint, body, { ...options, headers: { ...cookieHeaders(), ...options?.headers } }));
+  }
+
+  return { get, post, patch };
 }
 
 async function verifySourceCodeExistence({
   zip,
-  packageId
+  packageId,
+  onRateLimit
 }: {
   zip: string;
   packageId: number;
-}): Promise<[undefined, boolean] | [string]> {
-  const { version, default_locale = "en" } = getExtJson(zip);
-  const sendRequest = async () => axios<ListingDetail>(`developer/package-versions/${packageId}-${version}/`);
+  onRateLimit?: RateLimitHandler;
+}) {
+  const extJson = await getExtJson(zip);
+  const { version, default_locale = "en" } = extJson;
   const params = new URLSearchParams({ language: default_locale });
   const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${params}`;
-  const errorMessage = `No source code provided. Provide a URL in ${url} and submit the changes`;
-  const [error, data] = await handleRequestWithBackOff<ListingDetail>({
-    zip,
-    sendRequest,
-    errorActionOnFailure: "verify source code existence of"
+
+  const data = await requestWithRetry({
+    sendRequest: () => httpClient.get(`developer/package-versions/${packageId}-${version}/`),
+    parseResponse(response) {
+      const result = ListingDetailSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Source code verification failed",
+    onRateLimit
   });
-  if (error) {
-    return [error];
+  if (!data.source_url && !data.source_for_moderators_url) {
+    throw new Error(storeError(`No source code provided. Provide a URL in ${url} and submit the changes`));
   }
-  const isSourceCodeProvided = Boolean(data.source_url || data.source_for_moderators_url);
-  if (isSourceCodeProvided) {
-    return [undefined, isSourceCodeProvided];
-  }
-  return [errorMessage];
 }
 
 async function cancelLatestVersionIfNotSubmitted({
   packageId,
   versionsListed,
-  isVerbose,
-  zip
+  logger,
+  onRateLimit
 }: {
   packageId: number;
   versionsListed: ListVersions["versions"];
-  isVerbose: boolean;
-  zip: string;
-}): Promise<[undefined, CancelChanges] | [string]> {
+  logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
+}) {
   if (versionsListed.length === 0 || versionsListed[0].submitted_for_moderation) {
-    return [undefined];
+    return;
   }
+
   const { version } = versionsListed[0];
-  if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: `Canceling unsubmitted version ${version}` }));
-  }
+  logger?.info(`Canceling unsubmitted version ${version}`);
 
-  const sendRequest = async () => {
-    return axios.post<CancelChanges>(`developer/package-versions/${packageId}-${version}/cancel_changes/`);
-  };
+  await requestWithRetry({
+    sendRequest: () => httpClient.post(`developer/package-versions/${packageId}-${version}/cancel_changes/`),
+    parseResponse(response) {
+      const result = CancelChangesSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
 
-  return handleRequestWithBackOff<CancelChanges>({
-    zip,
-    sendRequest,
-    errorActionOnFailure: "cancel unsubmitted changes of"
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Cancel changes failed",
+    onRateLimit
   });
 }
 
-async function submitChanges({ zip, packageId }: { zip: string; packageId: number }) {
-  const { version } = getExtJson(zip);
-  const sendRequest = async () =>
-    axios.post<SubmitChanges>(`developer/package-versions/${packageId}-${version}/submit_for_moderation/`);
-  return handleRequestWithBackOff<SubmitChanges>({
-    zip,
-    sendRequest,
-    errorActionOnFailure: "submit changes to"
-  });
+async function submitChanges({
+  zip,
+  packageId,
+  availableAutoModeration,
+  onRateLimit
+}: {
+  zip: string;
+  packageId: number;
+  availableAutoModeration: boolean;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const extJson = await getExtJson(zip);
+  const { version } = extJson;
+
+  try {
+    await requestWithRetry({
+      sendRequest: () => httpClient.post(
+        `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
+        JSON.stringify({ auto_moderation: availableAutoModeration }),
+        { headers: { "Content-Type": "application/json" } }
+      ),
+      parseResponse(response) {
+        const result = SubmitChangesSchema.safeParse(response.data);
+        if (!result.success) {
+          throw result.error;
+        }
+
+        return result.data;
+      },
+      formatError: storeError,
+      errorContext: "Submit changes failed",
+      onRateLimit
+    });
+  } catch (error) {
+    // The submit request may have succeeded on the server but returned an error response.
+    // Verify the actual submission state before propagating the error.
+    const versionDetail = await requestWithRetry({
+      sendRequest: () => httpClient.get(`developer/package-versions/${packageId}-${version}/`),
+      parseResponse(response) {
+        const result = ListingDetailSchema.safeParse(response.data);
+        if (!result.success) {
+          throw result.error;
+        }
+
+        return result.data;
+      },
+      formatError: storeError,
+      errorContext: "Version state verification failed",
+      onRateLimit
+    });
+    if (!versionDetail.submitted_for_moderation) {
+      throw error;
+    }
+  }
 }
 
 function getFileMetadata(zipPath: string) {
   const sizeInBytes = fs.statSync(zipPath).size;
-  const zipName = zipPath.split(/[\\/]/).pop();
+  const zipNameResult = z.string().safeParse(zipPath.split(/[\\/]/).pop());
+  if (!zipNameResult.success) {
+    throw new Error(`Invalid zip path: ${zipPath}`);
+  }
+
+  const zipName = zipNameResult.data;
   const zipNameWithoutForbiddenCharacters = zipName.replace(/[.]/g, "");
   const fileId = `${sizeInBytes}-${zipNameWithoutForbiddenCharacters}`;
   return { zipName, fileId };
 }
 
-async function uploadZip({ zip }: { zip: string }) {
+async function uploadZip({
+  zip,
+  onRateLimit
+}: {
+  zip: string;
+  onRateLimit?: RateLimitHandler;
+}) {
   const { zipName, fileId } = getFileMetadata(zip);
 
-  const formData = new FormData();
-  formData.append("flowChunkNumber", 1);
-  formData.append("flowFilename", zipName);
-  formData.append("flowIdentifier", fileId);
-  formData.append("file", fs.createReadStream(zip));
+  const formData = buildFormData([
+    { name: "flowChunkNumber", value: "1" },
+    { name: "flowFilename", value: zipName },
+    { name: "flowIdentifier", value: fileId },
+    { name: "file", value: fs.createReadStream(zip), filename: zipName }
+  ]);
 
-  const sendRequest = async () => axios.post("file-upload/", formData);
+  return requestWithRetry({
+    sendRequest: () => httpClient.post("file-upload/", formData.body, { headers: { "Content-Type": formData.headers["Content-Type"] } }),
+    parseResponse(response) {
+      const result = FileUploadResponseSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
 
-  return handleRequestWithBackOff({ zip, sendRequest, errorActionOnFailure: "upload zip for" });
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Upload failed",
+    onRateLimit
+  });
 }
 
 async function verifyUploadSuccessful({
   zipPath,
   packageId,
-  lastVersion
+  lastVersion,
+  onRateLimit
 }: {
   zipPath: string;
   packageId: number;
   lastVersion: string;
-}): Promise<[undefined, UploadResult] | [string]> {
+  onRateLimit?: RateLimitHandler;
+}): Promise<UploadResult> {
   const { zipName, fileId } = getFileMetadata(zipPath);
 
-  const sendRequest = async () =>
-    axios.post<UploadResult>(
+  const data = await requestWithRetry({
+    sendRequest: () => httpClient.post(
       "developer/package-versions/",
-      {
+      JSON.stringify({
         file_id: fileId,
         file_name: zipName,
         metadata_from: lastVersion
-      },
+      }),
       {
-        params: {
-          package_id: packageId
-        }
+        params: { package_id: packageId },
+        headers: { "Content-Type": "application/json" }
       }
-    );
-  const [error, data] = await handleRequestWithBackOff<UploadResult>({
-    zip: zipPath,
-    sendRequest,
-    errorActionOnFailure: "verify upload of"
+    ),
+    parseResponse(response) {
+      const result = UploadResultSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Upload verification failed",
+    onRateLimit,
+    maxRetries: 30,
+    maxBackoffMs: 30_000
   });
-  if (error) {
-    return [error];
-  }
   if ("package_file" in data) {
-    return [data.package_file];
+    throw new Error(storeError(data.package_file));
   }
-  return [undefined, data];
+
+  return data;
 }
 
-async function updateChangelog({ zip, packageId, changelog }: { zip: string; packageId: number; changelog: string }) {
-  const { version, default_locale = "en" } = getExtJson(zip);
-  const sendRequest = async () =>
-    axios.patch<ListingDetail>(`developer/package-versions/${packageId}-${version}/`, {
-      translations: {
-        [default_locale]: {
-          changelog
-        }
-      }
-    });
-  return handleRequestWithBackOff<ListingDetail>({ zip, sendRequest, errorActionOnFailure: "update changelog of" });
-}
-
-function verifyVersionNotSubmittedForModeration({
+async function updateChangelog({
   zip,
-  versionsListed
+  packageId,
+  changelog,
+  onRateLimit
 }: {
   zip: string;
-  versionsListed: ListVersions["versions"];
-}): [string | undefined] {
-  const { version } = getExtJson(zip);
-  const isVersionAlreadySubmitted = versionsListed.some(
-    entry => entry.version === version && entry.submitted_for_moderation
-  );
-  if (isVersionAlreadySubmitted) {
-    return [
-      getErrorMessage({
-        store: STORE,
-        error: `Version ${version} Has already been deployed`,
-        actionName: "update",
-        zip
-      })
-    ];
-  }
-  return [undefined];
-}
+  packageId: number;
+  changelog: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const { version, default_locale = "en" } = await getExtJson(zip);
 
-async function getVersions({ zip, packageId }: { zip: string; packageId: number }) {
-  const sendRequest = async () => axios<ListVersions>(`developer/packages/${packageId}/`);
-  return handleRequestWithBackOff<ListVersions>({
-    zip,
-    sendRequest,
-    errorActionOnFailure: "get all package versions of"
+  return requestWithRetry({
+    sendRequest: () => httpClient.patch(
+      `developer/package-versions/${packageId}-${version}/`,
+      JSON.stringify({ translations: { [default_locale]: { changelog } } }),
+      { headers: { "Content-Type": "application/json" } }
+    ),
+    parseResponse(response) {
+      const result = ListingDetailSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Changelog update failed",
+    onRateLimit
   });
 }
 
-export default async function deployToOpera({
-  sessionid,
-  csrftoken,
+function getVersions({
   packageId,
-  zip,
-  changelog = "",
-  verbose: isVerbose
-}: OperaOptions): Promise<boolean> {
-  axios = Axios.create({
-    baseURL: `https://addons.opera.com/api/`,
-    headers: {
-      Accept: "application/json; version=1.0",
-      Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}`,
-      "X-Csrftoken": csrftoken,
-      Referer: "https://addons.opera.com"
-    }
+  onRateLimit
+}: {
+  packageId: number;
+  onRateLimit?: RateLimitHandler;
+}) {
+  return requestWithRetry({
+    sendRequest: () => httpClient.get(`developer/packages/${packageId}/`),
+    parseResponse(response) {
+      const result = ListVersionsSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Get package versions failed",
+    onRateLimit
+  });
+}
+
+export async function deployToOpera(
+  {
+    sessionid, csrftoken, packageId, zip, changelog = ""
+  }: OperaOptions,
+  {
+    logger, onCredentialsExpired, isVerbose, setStatus, setZipPath
+  }: DeployContext = {}
+) {
+  httpClient = createOperaHttpClient({ sessionid, csrftoken }, logger, onCredentialsExpired);
+
+  const onRateLimit = createRateLimitHandler({
+    manualDeployUrl: `https://addons.opera.com/developer/package/${packageId}/`,
+    formatError: storeError,
+    logger
   });
 
-  const { name, version } = getExtJson(zip);
+  setZipPath?.(zip);
+  const { name, version } = await getExtJson(zip);
+  if (isVerbose) {
+    logger?.info(`Retrieving listed versions of ${name} with package ID ${packageId}`);
+  }
+
+  const versionsData = await getVersions({
+    packageId,
+    onRateLimit
+  });
+  if (versionsData.versions.some(entry => entry.version === version && entry.submitted_for_moderation)) {
+    throw new Error(storeError(`Version ${version} has already been deployed`));
+  }
+
+  await cancelLatestVersionIfNotSubmitted({
+    packageId,
+    versionsListed: versionsData.versions,
+    logger,
+    onRateLimit
+  });
 
   if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: STORE,
-        message: `Retrieving listed versions of ${name} with package ID ${packageId}`
-      })
-    );
+    logger?.info("Uploading zip");
   }
 
-  // eslint-disable-next-line prefer-const
-  let [error, data] = await getVersions({ zip, packageId });
-  if (error) {
-    throw error;
-  }
+  await uploadZip({
+    zip,
+    onRateLimit
+  });
 
   if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: `Verifying version ${version}` }));
+    logger?.info("Verifying upload");
   }
 
-  [error] = verifyVersionNotSubmittedForModeration({ zip, versionsListed: data.versions });
-  if (error) {
-    throw error;
-  }
-
-  [error] = await cancelLatestVersionIfNotSubmitted({ zip, packageId, versionsListed: data.versions, isVerbose });
-  if (error) {
-    throw error;
-  }
+  const lastVersion = versionsData.versions.find(entry => entry.submitted_for_moderation)?.version || "";
+  await verifyUploadSuccessful({
+    zipPath: zip,
+    packageId,
+    lastVersion,
+    onRateLimit
+  });
 
   if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: "Uploading zip" }));
+    logger?.info("Verifying source code existence");
   }
 
-  [error] = await uploadZip({ zip });
-  if (error) {
-    throw error;
-  }
-
-  if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: "Verifying upload" }));
-  }
-
-  const lastVersion = data.versions.find(version => version.submitted_for_moderation)?.version || "";
-  [error] = await verifyUploadSuccessful({ zipPath: zip, packageId, lastVersion });
-  if (error) {
-    throw error;
-  }
-
-  if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: "Verifying source code existence" }));
-  }
-
-  [error] = await verifySourceCodeExistence({ zip, packageId });
-  if (error) {
-    throw error;
-  }
+  await verifySourceCodeExistence({
+    zip,
+    packageId,
+    onRateLimit
+  });
 
   if (changelog) {
     if (isVerbose) {
-      console.log(getVerboseMessage({ store: STORE, message: "Updating changelog" }));
+      logger?.info("Updating changelog");
     }
-    [error] = await updateChangelog({ zip, packageId, changelog });
-    if (error) {
-      throw error;
-    }
+
+    await updateChangelog({
+      zip,
+      packageId,
+      changelog,
+      onRateLimit
+    });
   }
 
   if (isVerbose) {
-    console.log(getVerboseMessage({ store: STORE, message: "Submitting changes" }));
+    logger?.info("Submitting changes");
   }
 
-  [error] = await submitChanges({ zip, packageId });
-  if (error) {
-    throw error;
-  }
+  await submitChanges({
+    zip,
+    packageId,
+    availableAutoModeration: versionsData.available_auto_moderation,
+    onRateLimit
+  });
 
-  logSuccessfullyPublished({ extId: packageId, store: STORE, zip });
+  setStatus?.(StoreStatus.Success);
   return true;
 }

@@ -1,0 +1,111 @@
+import { deployStore, StoreValidationError } from "./deploy-single-store.js";
+import { createCredentialRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
+import { getStore, isSupportedStore } from "./stores/registry.js";
+import { StoreStatus, type StoreName } from "./types.js";
+import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
+import { toError } from "./utils/retry.js";
+import type { Arguments } from "yargs";
+import { z } from "zod";
+
+async function runStoreDeploy(
+  store: StoreName,
+  json: Record<string, unknown>,
+  inkLogger: ReturnType<typeof createInkLogger>,
+  isDryRun?: boolean,
+  isVerbose?: boolean,
+  isAutoFetchCredentials?: boolean,
+  mode?: "cli" | "env"
+): Promise<{ store: StoreName; helpTables: HelpTableData[] } | null> {
+  inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
+
+  const storeDef = getStore(store);
+  const saveToEnv = mode === "env";
+  const onCredentialsExpired = isAutoFetchCredentials && storeDef?.credentialFields
+    ? createCredentialRefreshCallback(storeDef, saveToEnv)
+    : undefined;
+
+  try {
+    await deployStore(json, store, {
+      logger: inkLogger.forStore(store),
+      onCredentialsExpired,
+      isDryRun,
+      isVerbose,
+      mode,
+      setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
+      setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath)
+    });
+    inkLogger.logger.success(store, isDryRun ? "Validation passed" : "Published!");
+    inkLogger.monitor.updateStore(store, StoreStatus.Success);
+    return null;
+  } catch (error) {
+    const err = toError(error);
+    for (const line of err.message.split("\n").filter(line => line.trim())) {
+      inkLogger.logger.error(store, line);
+    }
+    inkLogger.monitor.updateStore(store, StoreStatus.Error);
+    const helpTables = error instanceof StoreValidationError ? error.helpTables : [];
+    return { store, helpTables };
+  }
+}
+
+export async function runDeploy(argv: Arguments) {
+  const preDeployLogs: string[] = [];
+  const preDeployUI = createPreDeployUI();
+  let storeJsons;
+  try {
+    storeJsons = await getJsonStoresFromCli(argv, message => {
+      preDeployUI.log(message);
+      preDeployLogs.push(message);
+    });
+  } catch (error) {
+    preDeployUI.unmount();
+    throw error;
+  }
+  preDeployUI.unmount();
+
+  const storeEntries: [StoreName, Record<string, unknown>][] = [];
+  for (const [store, json] of Object.entries(storeJsons)) {
+    if (isSupportedStore(store) && json !== undefined) {
+      storeEntries.push([store, json]);
+    }
+  }
+
+  if (storeEntries.length === 0) {
+    throw new Error("No stores to deploy to");
+  }
+
+  const command = z.string().safeParse(argv._[0]).data;
+  const mode = command === "cli" || command === "env" ? command : undefined;
+  const isDryRun = z.boolean().safeParse(argv.dryRun).data;
+  const isVerbose = z.boolean().safeParse(argv.verbose).data;
+  const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun);
+  await inkLogger.ready;
+  for (const message of preDeployLogs) {
+    inkLogger.logger.info("System", message);
+  }
+  const isAutoFetchCredentials = z.boolean().safeParse(argv.autoFetchCredentials).data;
+
+  const results = await Promise.all(
+    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCredentials, mode))
+  );
+
+  const failures: StoreName[] = [];
+  const helpTables: HelpTableData[] = [];
+  for (const result of results) {
+    if (result !== null) {
+      failures.push(result.store);
+      helpTables.push(...result.helpTables);
+    }
+  }
+
+  const successes = results.length - failures.length;
+  inkLogger.logger.info("System", `Deployments complete! ${successes} succeeded, ${failures.length} failed`);
+  inkLogger.monitor.setHelpTables(helpTables);
+  await inkLogger.waitForRender();
+  inkLogger.unmount();
+
+  if (failures.length > 0) {
+    const isPlural = failures.length > 1;
+    throw new Error(`${failures.length} deployment${isPlural ? "s" : ""} failed`);
+  }
+}

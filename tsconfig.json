@@ -3,17 +3,19 @@
     "declaration": true,
     "declarationMap": true,
     "esModuleInterop": true,
+    "jsx": "react",
     "lib": ["esnext", "DOM", "DOM.Iterable"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
+    "noImplicitAny": true,
     "noUnusedLocals": false,
-    "outDir": "./dist-esm",
+    "outDir": "./dist",
     "strictNullChecks": false,
     "target": "ESNext",
     "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": ["src/**/*"]
+  "include": ["src"]
 }

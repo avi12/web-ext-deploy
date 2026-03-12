@@ -1,360 +1,278 @@
-import Axios, { type AxiosInstance, type AxiosResponse } from "axios";
-import chalk from "chalk";
-import dedent from "dedent";
-import { backOff } from "exponential-backoff";
-import FormData from "form-data";
-import status from "http-status";
-import jwt from "jsonwebtoken";
+import { createHttpClient } from "../../http/client.js";
+import { buildFormData } from "../../http/form-data.js";
+import { generateJwt } from "../../http/jwt.js";
+import { StoreStatus, type DeployContext } from "../../types.js";
+import { storeError } from "../../ui/logging.js";
+import { createRateLimitHandler, requestWithRetry, type RateLimitHandler } from "../../utils/retry.js";
+import { getExtJson } from "../../utils/zip.js";
 import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
-import type { FirefoxCreateNewVersion, FirefoxUploadDetail, FirefoxUploadSource } from "./firefox-types.js";
-import type { SupportedStoresCapitalized } from "../../types.js";
-import { getErrorMessage, getExtJson, getVerboseMessage, logSuccessfullyPublished } from "../../utils.js";
-import fs from "fs";
+import {
+  FirefoxUploadDetailSchema,
+  FirefoxCreateNewVersionSchema,
+  FirefoxUploadSourceSchema
+} from "./firefox-types.js";
+import fs from "node:fs";
+import path from "node:path";
+import { setTimeout } from "node:timers/promises";
+import { z } from "zod";
 
-const STORE: SupportedStoresCapitalized = "Firefox";
-let axios: AxiosInstance;
-const SECONDS_TO_TOKEN_EXPIRY = 60 * 3;
+let httpClient: ReturnType<typeof createHttpClient>;
 
-async function handleRequestWithBackOff<T>({
-  sendRequest,
-  errorActionOnFailure,
-  zip,
-  extId
-}: {
-  sendRequest: () => Promise<AxiosResponse<T>>;
-  errorActionOnFailure: string;
-  zip: string;
-  extId: string;
-}): Promise<[string] | [undefined, T]> {
-  while (true) {
-    try {
-      const { data } = await sendRequest();
-      return [undefined, data];
-    } catch (e) {
-      const isServerError = e.response.status >= 500;
-      if (isServerError) {
-        await backOff(Promise.resolve, { maxDelay: 30_000, delayFirstAttempt: true, jitter: "full" });
-        continue;
-      }
-
-      if (e.response.status === status.TOO_MANY_REQUESTS) {
-        const secondsToWait = Number(e.response.data.detail.match(/\d+/)[0]);
-        if (secondsToWait <= 60) {
-          if (secondsToWait < SECONDS_TO_TOKEN_EXPIRY) {
-            const newTime = new Date(Date.now() + secondsToWait * 1000).toLocaleTimeString();
-            console.log(
-              chalk.yellow(
-                getVerboseMessage({
-                  store: STORE,
-                  message: dedent(`
-                    Too many requests. A retry will automatically be at ${newTime}
-                    Or, you can deploy manually: https://addons.mozilla.org/developers/addon/${extId}/versions/submit/
-                  `),
-                  prefix: "Warning"
-                })
-              )
-            );
-          }
-          await new Promise(resolve => setTimeout(resolve, secondsToWait * 1000));
-          continue;
-        }
-        // If the wait time is greater than SECONDS_TO_TOKEN_EXPIRY, do not retry due to the token expiry
-        return [
-          getErrorMessage({
-            store: STORE,
-            error: `Too many API requests. Deploy manually at https://addons.mozilla.org/developers/addons/${extId}/versions/submit/`,
-            actionName: errorActionOnFailure,
-            zip
-          })
-        ];
-      }
-
-      // Some sort of client error
-      let errorMessage = getErrorMessage({
-        store: STORE,
-        error: JSON.stringify(e.response.data),
-        actionName: errorActionOnFailure,
-        zip
-      });
-      if (errorMessage.match(/release_notes.+The language code.+is invalid/)) {
-        errorMessage += " Supported language codes: https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py";
-      }
-      return [
-        errorMessage
-      ];
-    }
-  }
+function authHeader(jwtIssuer: string, jwtSecret: string) {
+  return { Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` };
 }
 
-function getJwtBlob({ jwtIssuer, jwtSecret }: { jwtIssuer: string; jwtSecret: string }): string {
-  const issuedAt = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: jwtIssuer,
-    jti: Math.random().toString(),
-    iat: issuedAt,
-    exp: issuedAt + SECONDS_TO_TOKEN_EXPIRY
-  };
-  return jwt.sign(payload, jwtSecret, { algorithm: "HS256" });
-}
-
-async function uploadZip({
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#upload-create */
+function uploadZip({
   zip,
-  extId
+  jwtIssuer,
+  jwtSecret,
+  onRateLimit
 }: {
   zip: string;
-  extId: string;
-}): Promise<[string] | [undefined, FirefoxUploadDetail]> {
-  // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#upload-create
-  const formData = new FormData();
-  formData.append("upload", fs.createReadStream(zip));
-  formData.append("channel", "listed");
+  jwtIssuer: string;
+  jwtSecret: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const formData = buildFormData([
+    { name: "upload", value: fs.createReadStream(zip), filename: path.basename(zip) },
+    { name: "channel", value: "listed" }
+  ]);
 
-  const sendRequest = () =>
-    axios.post<FirefoxUploadDetail>("upload/", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
+  return requestWithRetry({
+    sendRequest: () => httpClient.post("upload/", formData.body, { headers: { ...formData.headers, ...authHeader(jwtIssuer, jwtSecret) } }),
+    parseResponse(response) {
+      const result = FirefoxUploadDetailSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
       }
-    });
 
-  const [error, data] = await handleRequestWithBackOff<FirefoxUploadDetail>({
-    zip,
-    sendRequest,
-    errorActionOnFailure: "upload zip for",
-    extId
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Upload failed",
+    onRateLimit
   });
-  if (error) {
-    return [error];
-  }
-  return [undefined, data];
 }
 
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#version-create */
 async function createNewVersion({
   slug,
   uuid,
   changelog,
   changelogLang,
   devChangelog,
-  isVerbose,
-  zip
+  jwtIssuer,
+  jwtSecret,
+  logger,
+  onRateLimit
 }: {
   slug: string;
   uuid: string;
   changelog: string;
   changelogLang: string;
   devChangelog: string;
-  isVerbose: boolean;
-  zip: string;
-}): Promise<[undefined, FirefoxCreateNewVersion] | [string]> {
-  // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#version-create
-  const { default_locale = changelogLang } = getExtJson(zip);
-  const sendRequest = async () =>
-    axios.post(`addon/${slug}/versions/`, {
-      upload: uuid,
-      ...(changelog && {
-        release_notes: {
-          [default_locale.replaceAll("_", "-")]: changelog
-        }
+  jwtIssuer: string;
+  jwtSecret: string;
+  logger?: DeployContext["logger"];
+  onRateLimit?: RateLimitHandler;
+}) {
+  const locale = changelogLang ?? "en-US";
+  if (changelog) {
+    logger?.info(`Adding changelog: ${changelog}`);
+  }
+
+  if (devChangelog) {
+    logger?.info(`Adding changelog for reviewers: ${devChangelog}`);
+  }
+
+  return requestWithRetry({
+    sendRequest: () => httpClient.post(
+      `addon/${slug}/versions/`,
+      JSON.stringify({
+        upload: uuid,
+        ...(changelog && { release_notes: { [locale.replaceAll("_", "-")]: changelog } }),
+        ...(devChangelog && { approval_notes: devChangelog })
       }),
-      ...(devChangelog && {
-        approval_notes: devChangelog
-      })
-    });
+      { headers: { "Content-Type": "application/json", ...authHeader(jwtIssuer, jwtSecret) } }
+    ),
+    parseResponse(response) {
+      const result = FirefoxCreateNewVersionSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
 
-  if (isVerbose) {
-    if (changelog) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: `Adding changelog: ${changelog}`
-        })
-      );
-    }
-
-    if (devChangelog) {
-      console.log(
-        getVerboseMessage({
-          store: STORE,
-          message: `Adding changelog for reviewers: ${devChangelog}`
-        })
-      );
-    }
-  }
-
-  const [error, data] = await handleRequestWithBackOff<FirefoxCreateNewVersion>({
-    zip,
-    sendRequest,
-    errorActionOnFailure: "create new version of",
-    extId: slug
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Version creation failed",
+    onRateLimit
   });
-  if (error) {
-    return [error];
-  }
-  return [undefined, data];
 }
 
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#upload-detail */
 async function validateUpload({
-  zip,
-  extId,
-  uuid
+  uuid,
+  jwtIssuer,
+  jwtSecret,
+  onRateLimit
 }: {
-  zip: string;
-  extId: string;
   uuid: string;
-}): Promise<[string] | [undefined, FirefoxUploadDetail]> {
-  // https://mozilla.github.io/addons-server/topics/api/addons.html#upload-detail
-  const sendRequest = () => axios<FirefoxUploadDetail>(`upload/${uuid}/`);
+  jwtIssuer: string;
+  jwtSecret: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const pollIntervalMs = 5_000;
+  let data: z.infer<typeof FirefoxUploadDetailSchema>;
 
-  let data: FirefoxUploadDetail;
-  let error: string;
-  do {
-    [error, data] = await handleRequestWithBackOff<FirefoxUploadDetail>({
-      zip,
-      sendRequest,
-      errorActionOnFailure: "verify upload of",
-      extId
+  while (true) {
+    data = await requestWithRetry({
+      sendRequest: () => httpClient.get(`upload/${uuid}/`, { headers: authHeader(jwtIssuer, jwtSecret) }),
+      parseResponse(response) {
+        const result = FirefoxUploadDetailSchema.safeParse(response.data);
+        if (!result.success) {
+          throw result.error;
+        }
+
+        return result.data;
+      },
+      formatError: storeError,
+      errorContext: "Upload verification failed",
+      onRateLimit
     });
-    if (error) {
-      return [error];
-    }
-  } while (!data.processed);
 
-  const errors: Array<string> = [];
-  for (const error of data.validation.messages || []) {
-    if (error.type === "error") {
-      errors.push(error.message);
+    if (data.processed) {
+      break;
     }
+
+    await setTimeout(pollIntervalMs);
   }
 
+  const errors = (data.validation?.messages || [])
+    .filter(message => message.type === "error")
+    .map(message => message.message);
   if (errors.length > 0) {
-    return [errors.join("\n")];
+    throw new Error(storeError(errors.join("\n")));
   }
 
-  return [undefined, data];
+  return data;
 }
 
-async function uploadSourceCodeIfNeeded({
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#version-edit */
+function uploadSourceCodeIfNeeded({
   slug,
   zipSource,
   version,
-  zip
+  jwtIssuer,
+  jwtSecret,
+  onRateLimit
 }: {
   slug: string;
   zipSource: string;
   version: string;
-  zip: string;
-}): Promise<[undefined, FirefoxUploadSource] | [string]> {
-  // https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#version-sources
-  const formData = new FormData();
-  formData.append("source", fs.createReadStream(zipSource));
-  const sendRequest = async () =>
-    axios.patch<FirefoxUploadSource>(`addon/${slug}/versions/${version}/`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
-      }
-    });
+  jwtIssuer: string;
+  jwtSecret: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const formData = buildFormData([
+    { name: "source", value: fs.createReadStream(zipSource), filename: path.basename(zipSource) }
+  ]);
 
-  const [error, data] = await handleRequestWithBackOff<FirefoxUploadSource>({
-    zip,
-    sendRequest,
-    errorActionOnFailure: "upload source code of",
-    extId: slug
+  return requestWithRetry({
+    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.body, { headers: { ...formData.headers, ...authHeader(jwtIssuer, jwtSecret) } }),
+    parseResponse(response) {
+      const result = FirefoxUploadSourceSchema.safeParse(response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Source upload failed",
+    onRateLimit
   });
-  if (error) {
-    return [error];
-  }
-  return [undefined, data];
 }
 
-export default async function deployToFirefox({
-  extId,
-  jwtIssuer,
-  jwtSecret,
-  zip,
-  zipSource = "",
-  changelog = "",
-  changelogLang = "en-US",
-  devChangelog = "",
-  verbose: isVerbose
-}: FirefoxOptionsSubmissionApi): Promise<boolean> {
-  axios = Axios.create({
-    baseURL: `https://addons.mozilla.org/api/v5/addons/`,
-    headers: {
-      Authorization: `JWT ${getJwtBlob({ jwtIssuer, jwtSecret })}`
-    }
+export async function deployToFirefox(
+  {
+    extId,
+    jwtIssuer,
+    jwtSecret,
+    zip,
+    zipSource = "",
+    changelog = "",
+    changelogLang,
+    devChangelog = ""
+  }: FirefoxOptionsSubmissionApi,
+  {
+    logger, isVerbose, setStatus, setZipPath
+  }: DeployContext = {}
+) {
+  httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/");
+
+  const onRateLimit = createRateLimitHandler({
+    manualDeployUrl: `https://addons.mozilla.org/developers/addon/${extId}/versions/submit/`,
+    formatError: storeError,
+    getWaitSeconds(response) {
+      const detail = z.object({ detail: z.string() }).safeParse(response.data).data?.detail ?? "";
+      return Number(detail.match(/\d+/)?.[0] || "60");
+    },
+    logger
   });
 
-  const { name } = getExtJson(zip);
+  setZipPath?.(zip);
+  const { name } = await getExtJson(zip);
+  if (isVerbose) {
+    logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
+  }
+
+  const uploadData = await uploadZip({
+    zip,
+    jwtIssuer,
+    jwtSecret,
+    onRateLimit
+  });
+  const { uuid, version } = uploadData;
+  if (isVerbose) {
+    logger?.info("Verifying upload");
+  }
+
+  await validateUpload({
+    uuid, jwtIssuer, jwtSecret, onRateLimit
+  });
 
   if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: STORE,
-        message: `Uploading zip of ${name} with extension ID ${extId}`
-      })
-    );
+    logger?.info(`Creating a new version: ${version}`);
   }
 
-  // eslint-disable-next-line prefer-const
-  let [error, { uuid, version }] = await uploadZip({ zip, extId });
-  if (error) {
-    throw error;
-  }
-
-  if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: STORE,
-        message: "Verifying upload"
-      })
-    );
-  }
-
-  [error] = await validateUpload({ zip, extId, uuid });
-  if (error) {
-    throw error;
-  }
-
-  if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: STORE,
-        message: `Creating a new version: ${version}`
-      })
-    );
-  }
-
-  [error] = await createNewVersion({
+  await createNewVersion({
     slug: extId,
     uuid,
     changelog,
     changelogLang,
     devChangelog,
-    isVerbose,
-    zip
+    jwtIssuer,
+    jwtSecret,
+    logger,
+    onRateLimit
   });
-  if (error) {
-    throw error;
+
+  if (zipSource) {
+    if (isVerbose) {
+      logger?.info(`Uploading source ZIP: ${zipSource}`);
+    }
+
+    await uploadSourceCodeIfNeeded({
+      slug: extId,
+      zipSource,
+      version,
+      jwtIssuer,
+      jwtSecret,
+      onRateLimit
+    });
   }
 
-  if (isVerbose) {
-    console.log(
-      getVerboseMessage({
-        store: STORE,
-        message: `Uploading source ZIP: ${zipSource}`
-      })
-    );
-  }
-
-  [error] = await uploadSourceCodeIfNeeded({
-    slug: extId,
-    zipSource,
-    version,
-    zip
-  });
-  if (error) {
-    throw error;
-  }
-
-  logSuccessfullyPublished({ extId, store: STORE, zip });
+  setStatus?.(StoreStatus.Success);
   return true;
 }

@@ -1,138 +1,174 @@
-import chalk from "chalk";
-import { camelCase } from "change-case";
-import dotenv from "dotenv";
-import yargs from "yargs";
-import { getSignInCookie } from "./get-sign-in-cookie.js";
-import { ChromeOptions } from "./stores/chrome/chrome-input.js";
-import { EdgeOptionsPublishApi } from "./stores/edge/edge-input.js";
-import { FirefoxOptionsSubmissionApi } from "./stores/firefox/firefox-input.js";
-import { OperaOptions } from "./stores/opera/opera-input.js";
-import { Stores, SupportedGetCookies, SupportedStores } from "./types.js";
-import { isObjectEmpty } from "./utils.js";
+#!/usr/bin/env node
+import { runDeploy } from "./deploy-all-stores.js";
+import { BaseOptionsSchema, publishOnlyDescription } from "./store-argument-parser.js";
+import { getStoreDisplayName, storeRegistry } from "./stores/registry.js";
+import { type StoreDefinition, StoreName } from "./types.js";
+import { buildHelpTableData, renderApplicationError, renderHelpTables } from "./ui/ink-logger.js";
+import { type CamelToKebab, kebabCase } from "./utils/case-conversion.js";
+import { toError } from "./utils/retry.js";
+import {
+  getZodBaseType,
+  getZodDescription,
+  isZodOptional,
+  unwrapZod,
+  zodObjectEntries
+} from "./utils/zod.js";
+import yargs, { type Arguments, type Options } from "yargs";
+import { z } from "zod";
 
-const argv = yargs(process.argv.slice(2))
-  .options({
-    env: { type: "boolean" },
-    publishOnly: { type: "array" },
-    extId: { type: "string" },
-    zip: { type: "string" },
-    verbose: { type: "boolean" },
-    // chrome
-    chromeExtId: { type: "string" },
-    chromeRefreshToken: { type: "string" },
-    chromeClientId: { type: "string" },
-    chromeClientSecret: { type: "string" },
-    chromeZip: { type: "string" },
-    // firefox
-    firefoxJwtIssuer: { type: "string" },
-    firefoxJwtSecret: { type: "string" },
-    firefoxExtId: { type: "string" },
-    firefoxZip: { type: "string" },
-    firefoxZipSource: { type: "string" },
-    firefoxChangelog: { type: "string" },
-    firefoxChangelogLang: { default: "en-US" },
-    firefoxDevChangelog: { type: "string" },
-    // edge
-    edgeClientId: { type: "string" },
-    edgeApiKey: { type: "string" },
-    edgeProductId: { type: "string" },
-    edgeZip: { type: "string" },
-    edgeDevChangelog: { type: "string" },
-    // opera
-    operaSessionid: { type: "string" },
-    operaCsrftoken: { type: "string" },
-    operaExtId: { type: "string" },
-    operaZip: { type: "string" },
-    operaChangelog: { type: "string" }
-  })
-  .parseSync();
+type ExtractSchemaKeys<T> = T extends z.ZodObject<infer Shape> ? string & keyof Shape : never;
 
-function getJsons(isUseEnv?: boolean): Record<SupportedStores, any> {
-  if (isUseEnv) {
-    console.log(chalk.blue("Using env mode"));
-    const stores = (argv.publishOnly || Stores) as Array<SupportedStores>;
-    return stores.reduce((stores: Record<string, any>, store: SupportedStores) => {
-      const { parsed = {} } = dotenv.config({ path: `${store}.env` });
-      if (!isObjectEmpty(parsed)) {
-        const yargsStoreArgs = getJsons(false);
-        stores[store] = { ...parsed, ...yargsStoreArgs[store] };
-      }
-      return stores;
-    }, {});
+type StoreCliOptionKeys<Store extends typeof storeRegistry[number]> =
+  `${Store["name"]}-${CamelToKebab<ExtractSchemaKeys<Store["schema"]>>}`;
+
+type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
+
+function schemaToOptions<Key extends string>(store: StoreName | "base", schema: z.ZodObject<Record<Key, z.ZodTypeAny>>, demandRequired = false) {
+  const options: Record<string, Options> = {};
+
+  for (const [key, value] of zodObjectEntries(schema)) {
+    if (key === "verbose" && store !== "base") {
+      continue;
+    }
+
+    const optionName = store === "base" ? kebabCase(key) : `${store}-${kebabCase(key)}`;
+    const isOptional = isZodOptional(value);
+    const description = getZodDescription(value);
+    options[optionName] = {
+      type: getZodBaseType(unwrapZod(value)),
+      description: !isOptional && store !== "base" ? `${description} [required]`.trim() : description,
+      ...(demandRequired && !isOptional && { demandOption: true })
+    };
   }
 
-  if (!argv.env) {
-    console.log(chalk.blue("Using CLI mode"));
-  }
-  const getFlagsArguments = (argv: any, store: SupportedStores): Record<SupportedStores, unknown> => {
-    const entries = Object.entries(argv)
-      .filter(([key]) => key.startsWith(`${store}-`))
-      .map(([key, value]) => [key.replace(`${store}-`, ""), value]);
+  return options;
+}
 
-    return Object.fromEntries(entries);
-  };
-
-  return Stores.reduce(
-    (stores, store: SupportedStores) => {
-      const jsonStore = getFlagsArguments(argv, store);
-      if (!isObjectEmpty(jsonStore)) {
-        stores[store] = jsonStore;
-      }
-      return stores;
-    },
-    {} as Record<SupportedStores, any>
+function buildEnvModeCliOnlyOptions(store: StoreDefinition, allOptions: Record<string, Options>) {
+  const cliOverridableInEnvMode = new Set([
+    ...(store.dynamicFields ?? []).map(key => `${store.name}-${kebabCase(key)}`),
+    ...(store.cliOverridableFields ?? []).map(key => `${store.name}-${kebabCase(key)}`)
+  ]);
+  return Object.fromEntries(
+    Object.entries(allOptions)
+      .filter(([key]) => cliOverridableInEnvMode.has(key))
+      .map(([key, option]) => [key, { ...option, description: (option.description ?? "").replace(" [required]", "") }])
   );
 }
 
-function jsonCamelCased(jsonStores: Record<SupportedStores, any>): any {
-  const entriesStores = Object.entries(jsonStores);
+let allStoreOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
+const storeOptionGroups: Partial<Record<StoreName, AllCliOptionKeys[]>> = {};
+let envModeCliOnlyOptions: Partial<Record<AllCliOptionKeys, Options>> = {};
 
-  const entriesWithCamelCasedKeys = entriesStores.map(([store, values]) => {
-    const entriesKeyValues = Object.entries(values);
-    const entriesMapped = entriesKeyValues.map(([key, value]) => [camelCase(key), value]);
-    return [store, Object.fromEntries(entriesMapped)];
-  });
-
-  return Object.fromEntries(entriesWithCamelCasedKeys);
+for (const store of storeRegistry) {
+  const storeOptions = schemaToOptions<string>(store.name, store.schema);
+  allStoreOptions = { ...allStoreOptions, ...storeOptions };
+  storeOptionGroups[store.name] = Object.keys(storeOptions).filter(
+    (key): key is AllCliOptionKeys => storeRegistry.some(({ name }) => key.startsWith(`${name}-`))
+  );
+  envModeCliOnlyOptions = { ...envModeCliOnlyOptions, ...buildEnvModeCliOnlyOptions(store, storeOptions) };
 }
 
-type StoreObjects = Record<
-  SupportedStores,
-  ChromeOptions | FirefoxOptionsSubmissionApi | EdgeOptionsPublishApi | OperaOptions
->;
+const baseOptions = schemaToOptions("base", BaseOptionsSchema);
 
-/**
- * Used for fallbacks, e.g. in the case of `--zip="some-ext.zip" --chrome-zip="chrome-ext.zip" --firefox-ext-id="EXT_ID" --edge-ext-id="EXT_ID"`, the ZIP of Firefox and Edge will be `some-ext.zip`
- */
-function fillMissing(jsonStoresRaw: StoreObjects): StoreObjects {
-  const jsonStores = { ...jsonStoresRaw };
-  const storeArgsMissing = ["zip", "devChangelog", "verbose"];
-
-  const entries = Object.entries(jsonStoresRaw);
-  for (const argument of storeArgsMissing) {
-    if (!argv[argument]) {
+function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Record<StoreName, AllCliOptionKeys[]>> = storeOptionGroups) {
+  for (const { name } of storeRegistry) {
+    const keys = groups[name];
+    if (!keys) {
       continue;
     }
-    for (const [store, values] of entries) {
-      values[argument] ||= argv[argument];
-      jsonStores[store] = values;
+
+    builder.group(keys, `${getStoreDisplayName(name)}:`);
+  }
+  return builder;
+}
+
+function stripCamelCaseArgs(message: string) {
+  return message.replace(/Unknown arguments?: (.+)/, (_, args: string) => {
+    const kebabOnly = args.split(", ").filter(arg => arg.includes("-"));
+    const label = kebabOnly.length === 1 ? "Unknown argument" : "Unknown arguments";
+    return `${label}: ${kebabOnly.map(arg => `--${arg}`).join(", ")}`;
+  });
+}
+
+export const parser = yargs(process.argv.slice(2))
+  .scriptName("web-ext-deploy")
+  .usage("$0 <command> [options]")
+  .wrap(process.stdout.columns)
+  .command(
+    "env",
+    "Read from .env files",
+    builder => {
+      builder = builder.options({
+        ...baseOptions,
+        "publish-only": {
+          type: "array",
+          description: publishOnlyDescription
+        },
+        ...envModeCliOnlyOptions
+      });
+      for (const name in envModeCliOnlyOptions) {
+        builder = builder.hide(name);
+      }
+      return builder.version(false).epilogue("Create a .env file for each store you want to deploy to (e.g. chrome.env, firefox.env)\n" +
+        "Required fields go in the .env file; dynamic fields are passed as CLI arguments");
+    },
+    handleDeploy
+  )
+  .command(
+    "cli",
+    "Pass arguments directly",
+    builder => {
+      builder = builder.options({ ...baseOptions, ...allStoreOptions });
+      applyStoreGroups(builder);
+      return builder.version(false).epilogue("Choose which stores to deploy to by supplying their options\n" +
+        "Only stores with at least one argument will be included\n" +
+        "For each included store, all [required] options must be provided");
+    },
+    handleDeploy
+  )
+  .demandCommand(1, "You need at least one command before moving on")
+  .epilogue(`Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options`)
+  .strict()
+  .fail((message, _error, instance) => {
+    if (message) {
+      instance.showHelp();
+      console.error(`\n${stripCamelCaseArgs(message)}`);
+      process.exit(1);
     }
+  })
+  .exitProcess(false)
+  .help();
+
+async function handleCommand(run: () => Promise<void>) {
+  try {
+    await run();
+  } catch (error) {
+    await renderApplicationError(toError(error));
+    process.exit(1);
+  }
+}
+
+function handleDeploy(argv: Arguments) {
+  return handleCommand(() => runDeploy(argv));
+}
+
+async function init() {
+  const argv = await parser.parseAsync();
+  if (!argv.help) {
+    return;
   }
 
-  return jsonStores;
-}
-
-export function getJsonStoresFromCli(): StoreObjects {
-  const jsonStoresRaw = jsonCamelCased(getJsons(argv.env));
-  if (isObjectEmpty(jsonStoresRaw)) {
-    throw new Error(
-      chalk.red("Please supply parameters of at least one store. See https://github.com/avi12/web-ext-deploy#usage")
-    );
+  if (argv._[0] === "env") {
+    const tables = storeRegistry
+      .flatMap(store => {
+        const table = buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields);
+        return table ? [table] : [];
+      });
+    await renderHelpTables(tables);
   }
 
-  return fillMissing(jsonStoresRaw);
+  process.exit(0);
 }
 
-export async function getCookies(siteNames: Array<SupportedGetCookies>): Promise<void> {
-  return getSignInCookie(siteNames);
-}
+await init();
