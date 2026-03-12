@@ -52,7 +52,7 @@ Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/w
 
 # Usage
 
-## 1. Obtain the relevant cookie(s) of the publisher's account:
+## 1. Get the relevant cookie(s) of the publisher's account:
 
 ### Disclaimer: I do NOT take any responsibility for leaked cookies or credentials.
 
