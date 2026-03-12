@@ -64,7 +64,7 @@ function stripAnsi(str: string) {
   return str.replace(/\u001b\[[0-9;]*m/g, "");
 }
 
-export type HelpField = { name: string; type: string; isMissing?: boolean; defaultValue: string; description: string };
+export type HelpField = { name: string; type: string; isRequired: boolean; isMissing?: boolean; defaultValue: string; description: string };
 export type HelpTableData = { title: string; fields: HelpField[] };
 
 export class MissingArgsError extends Error {
@@ -98,13 +98,13 @@ function HelpTable({ data }: { data: HelpTableData }) {
       <Text>{"  "}{"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + 20)}</Text>
       {fields.map(field => {
         const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
-        const requiredPad = " ".repeat(field.isMissing ? requiredWidth - 1 : requiredWidth);
+        const requiredPad = " ".repeat(field.isRequired ? requiredWidth - 1 : requiredWidth);
         return (
           <Text key={field.name}>
             {"  "}
             <Text color={field.isMissing ? "red" : undefined}>{field.name}</Text>
             {`${namePad}${field.type.padEnd(typeWidth)}`}
-            {field.isMissing ? <Text color="green">✔</Text> : null}
+            {field.isRequired ? <Text color="green">✔</Text> : null}
             {`${requiredPad}${field.defaultValue.padEnd(defaultWidth)}${field.description}`}
           </Text>
         );
@@ -182,7 +182,8 @@ export function buildHelpTableData(
     fields.push({
       name: formatFieldName(key),
       type,
-      isMissing: !isOptional,
+      isRequired: !isOptional,
+      isMissing: missingFields?.includes(key),
       defaultValue,
       description
     });
@@ -226,6 +227,8 @@ export function buildGlobalHelpTableData(
     fields.push({
       name: formatFieldName(key),
       type,
+      isRequired: true,
+      isMissing: true,
       defaultValue,
       description
     });
