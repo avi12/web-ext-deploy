@@ -181,33 +181,6 @@ async function pollPublishStatus({
   }
 }
 
-async function detectInProgressSubmission({
-  productId,
-  devChangelog,
-  onRateLimit
-}: {
-  productId: string;
-  devChangelog: string;
-  onRateLimit?: RateLimitHandler;
-}) {
-  const operationId = await publishSubmission({ productId, devChangelog, onRateLimit });
-  let attempt = 0;
-
-  while (true) {
-    const data = await fetchPublishStatus({ productId, operationId, onRateLimit });
-    if (!("status" in data)) {
-      return false;
-    }
-
-    if (data.status === OperationStatus.InProgress) {
-      await setTimeout(getBackoffDelayMs(attempt++, 5_000));
-      continue;
-    }
-
-    return data.status === OperationStatus.Failed && data.errorCode === "InProgressSubmission";
-  }
-}
-
 export async function deployToEdgePublishApi(
   {
     productId, clientId, apiKey, zip, devChangelog
@@ -234,15 +207,7 @@ export async function deployToEdgePublishApi(
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
   if (isVerbose) {
-    logger?.info("Checking for in-progress submission");
-  }
-
-  const inProgress = await detectInProgressSubmission({ productId, devChangelog, onRateLimit });
-  if (isVerbose) {
-    logger?.info(inProgress
-      ? `Submission in progress. Replacing draft of ${name}`
-      : `Uploading zip of ${name} with product ID ${productId}`
-    );
+    logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
   }
 
   const uploadOperationId = await uploadZip({ zip, productId, onRateLimit });
