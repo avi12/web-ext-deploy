@@ -22,7 +22,7 @@ Supported stores:
 # Core packages/APIs used
 
 - [Playwright](https://github.com/microsoft/playwright) - for fetching Opera credentials
-- [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/publish)
+- [Chrome Web Store API v2](https://developer.chrome.com/blog/cws-api-v2)
 - [Microsoft Edge Publish API v1.1](https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/using-addons-api)
 - [Firefox Add-ons Store Submission API](https://mozilla.github.io/addons-server/topics/api/addons.html)
 - Opera Store API
@@ -88,6 +88,7 @@ web-ext-deploy env
 | `--auto-fetch-credentials` | Automatically fetch missing or expired credentials. Opera: fetches `sessionid`/`csrftoken` via Playwright (auto-installed if needed). Chrome: fetches `REFRESH_TOKEN` via OAuth. In `env` mode, saves fetched credentials to the store's `.env` file |
 | `--dry-run` | Validate inputs without deploying |
 | `--verbose` | Log each deployment step |
+
 
 **Chrome overrides:**
 
