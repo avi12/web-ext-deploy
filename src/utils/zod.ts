@@ -28,7 +28,8 @@ export function getZodDefaultValue(value: unknown) {
   let current = value;
   while (true) {
     if (current instanceof z.ZodDefault) {
-      return current.def.defaultValue;
+      const defaultValue = current.def.defaultValue;
+      return typeof defaultValue === "function" ? defaultValue() : defaultValue;
     }
 
     if (current instanceof z.ZodOptional || current instanceof z.ZodNullable) {
