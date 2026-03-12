@@ -117,8 +117,7 @@ export default [
         }
       ],
       "no-nested-ternary": "error",
-      "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }
-      ]
+      "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }]
     }
   }
 ];
