@@ -5,15 +5,6 @@ interface FetchOptions extends RequestInit {
   params?: Record<string, string | number>;
 }
 
-function streamToBuffer(stream: ReadStream) {
-  return new Promise<Buffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-    stream.on("end", () => resolve(Buffer.concat(chunks)));
-    stream.on("error", reject);
-  });
-}
-
 function stringifyParams(params: Record<string, string | number>) {
   const entries = Object.entries(params).map(([key, value]) => [key, String(value)]);
   return new URLSearchParams(entries).toString();
@@ -61,9 +52,22 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
     return fetchResponse(url, fetchOptions);
   }
 
-  async function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
-    const finalBody = body instanceof ReadStream ? await streamToBuffer(body) as BodyInit : body;
-    return request("POST", endpoint, { ...options, body: finalBody });
+  function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
+    if (body instanceof ReadStream) {
+      // Pass the stream directly to fetch (Node.js 18+); duplex: "half" is required
+      // for request bodies that are streams so the connection stays half-open while
+      // the server processes and responds.
+      const fetchInit = {
+        method: "POST" as const,
+        headers: { ...defaultHeaders, ...options.headers },
+        body: body as unknown as BodyInit,
+        duplex: "half"
+      };
+      const base = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
+      return fetchResponse(base, fetchInit);
+    }
+
+    return request("POST", endpoint, { ...options, body });
   }
 
   function get(endpoint: string, options: FetchOptions = {}) {
