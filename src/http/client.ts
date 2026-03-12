@@ -68,9 +68,9 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
         headers: { ...defaultHeaders, ...options.headers },
         body: new ReadableStream({
           start(controller) {
-            body.on("data", (chunk: Uint8Array) => controller.enqueue(chunk));
+            body.on("data", chunk => controller.enqueue(chunk));
             body.on("end", () => controller.close());
-            body.on("error", (error: Error) => controller.error(error));
+            body.on("error", error => controller.error(error));
           },
           cancel() {
             body.destroy();
