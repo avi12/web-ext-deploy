@@ -17,11 +17,7 @@ function readValue(value: FormDataValue) {
     return fs.readFileSync(value.path);
   }
 
-  if (fs.existsSync(value)) {
-    return fs.readFileSync(value);
-  }
-
-  return Buffer.from(value);
+  return Buffer.from(value, "utf8");
 }
 
 export function buildFormData(entries: FormDataEntry[]) {
