@@ -21,7 +21,7 @@ Supported stores:
 
 # Core packages/APIs used
 
-- [Playwright](https://github.com/microsoft/playwright) - for fetching the Opera cookies
+- [Playwright](https://github.com/microsoft/playwright) - for fetching Opera credentials
 - [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/publish)
 - [Microsoft Edge Publish API v1.1](https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/using-addons-api)
 - [Firefox Add-ons Store Submission API](https://mozilla.github.io/addons-server/topics/api/addons.html)
@@ -52,14 +52,14 @@ Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/w
 
 # Usage
 
-## 1. Get the relevant cookie(s) of the publisher's account:
+## 1. Get the relevant credentials for each store:
 
 ### Disclaimer: I do NOT take any responsibility for leaked cookies or credentials.
 
-- Opera: `sessionid`, `csrftoken`
+- Opera: `sessionid`, `csrftoken` — obtained via Playwright (use `--auto-fetch-credentials` to fetch automatically)
+- Chrome: `REFRESH_TOKEN` — obtained via OAuth (use `--auto-fetch-credentials` to fetch automatically)
 
-Note that for the Chrome Web Store, you'll use the Chrome Web Store Publish API
-As for the Edge Add-ons Store, you'll use the Microsoft Edge Publish API
+For the Edge Add-ons Store, you'll use the Microsoft Edge Publish API
 
 ## 2. Decide how to access the data & credentials
 
@@ -85,7 +85,7 @@ web-ext-deploy env
 | Flag | Description |
 |------|-------------|
 | `--publish-only <stores...>` | Only deploy to specific stores (e.g. `--publish-only chrome firefox`) |
-| `--auto-fetch-cookies` | Automatically refresh expired cookies mid-deployment (Opera). Playwright will be auto-installed if needed |
+| `--auto-fetch-credentials` | Automatically fetch missing or expired credentials. Opera: fetches `sessionid`/`csrftoken` via Playwright (auto-installed if needed). Chrome: fetches `REFRESH_TOKEN` via OAuth. In `env` mode, saves fetched credentials to the store's `.env` file |
 | `--dry-run` | Validate inputs without deploying |
 | `--verbose` | Log each deployment step |
 
@@ -120,7 +120,7 @@ web-ext-deploy env
 
 - Chrome Web Store:
 
-  - `REFRESH_TOKEN` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)
+  - `REFRESH_TOKEN` - follow [this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md), or omit and run `web-ext-deploy env --auto-fetch-credentials` to fetch and save it automatically
   - `PUBLISHER_ID` - Get it from the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/) > Account
   - `EXT_ID` - Get it from `https://chromewebstore.google.com/detail/EXT_ID`
 
@@ -140,6 +140,7 @@ web-ext-deploy env
 - Opera Add-ons store:
   - `PACKAGE_ID` - Get it from `https://addons.opera.com/developer/package/PACKAGE_ID`
   - `ZIP` - You can use `{version}`
+  - `SESSIONID`, `CSRFTOKEN` - can be omitted if you run `web-ext-deploy env --auto-fetch-credentials` (fetches and saves them automatically via Playwright)
   - **Source code inspection**:
     The Opera Add-ons reviewers require inspecting your extension's source code  
     This can be done by doing **one** of the following:
@@ -208,7 +209,7 @@ Options:
 
 | Flag | Description |
 |------|-------------|
-| `--auto-fetch-cookies` | Automatically refresh expired cookies mid-deployment (Opera). Playwright will be auto-installed if needed |
+| `--auto-fetch-credentials` | Automatically fetch missing or expired credentials. Opera: fetches `sessionid`/`csrftoken` via Playwright (auto-installed if needed). Chrome: fetches `REFRESH_TOKEN` via OAuth. In `env` mode, saves fetched credentials to the store's `.env` file |
 | `--dry-run` | Validate inputs without deploying |
 | `--verbose` | Log each deployment step |
 
@@ -218,7 +219,9 @@ Options:
 |------|-------------|
 | `--chrome-ext-id <id>` | Extension ID from `https://chromewebstore.google.com/detail/EXT_ID` |
 | `--chrome-publisher-id <id>` | Publisher ID from the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/) > Account |
-| `--chrome-refresh-token <token>` | OAuth refresh token ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)) |
+| `--chrome-client-id <id>` | OAuth client ID (required for `--auto-fetch-credentials`) |
+| `--chrome-client-secret <secret>` | OAuth client secret (required for `--auto-fetch-credentials`) |
+| `--chrome-refresh-token <token>` | OAuth refresh token. Can be omitted if `--auto-fetch-credentials` is set ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)) |
 | `--chrome-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
 | `[--chrome-skip-review]` | Publish without waiting for a review |
 | `[--chrome-deploy-percentage <n>]` | Staged rollout percentage (1-100) |
@@ -227,6 +230,12 @@ Example:
 
 ```shell
 web-ext-deploy cli --chrome-ext-id="ExtensionID" --chrome-publisher-id="PublisherID" --chrome-refresh-token="RefreshToken" --chrome-zip="some-zip-v{version}.zip"
+```
+
+Or, fetch the refresh token automatically (opens a browser for OAuth consent):
+
+```shell
+web-ext-deploy cli --auto-fetch-credentials --chrome-ext-id="ExtensionID" --chrome-publisher-id="PublisherID" --chrome-client-id="ClientID" --chrome-client-secret="ClientSecret" --chrome-zip="some-zip-v{version}.zip"
 ```
 
 #### Firefox Add-ons CLI
@@ -273,8 +282,8 @@ Therefore, if you publish after you had just published/canceled, expect to wait 
 | Flag | Description |
 |------|-------------|
 | `--opera-package-id <id>` | Package ID from `https://addons.opera.com/developer/package/PACKAGE_ID` |
-| `--opera-sessionid <value>` | Session cookie. Use `--auto-fetch-cookies` to obtain automatically |
-| `--opera-csrftoken <value>` | CSRF cookie. Use `--auto-fetch-cookies` to obtain automatically |
+| `--opera-sessionid <value>` | Session cookie. Use `--auto-fetch-credentials` to obtain automatically |
+| `--opera-csrftoken <value>` | CSRF cookie. Use `--auto-fetch-credentials` to obtain automatically |
 | `--opera-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
 | `[--opera-changelog <text>]` | Changelog for Opera users. Supports `\n` for new lines |
 
@@ -282,6 +291,12 @@ Example:
 
 ```shell
 web-ext-deploy cli --opera-package-id=123456 --opera-sessionid="sessionid_value" --opera-csrftoken="csrftoken_value" --opera-zip="dist/some-zip-v{version}.zip"
+```
+
+Or, fetch the cookies automatically via Playwright:
+
+```shell
+web-ext-deploy cli --auto-fetch-credentials --opera-package-id=123456 --opera-zip="dist/some-zip-v{version}.zip"
 ```
 
 **Notes:**
@@ -293,4 +308,4 @@ web-ext-deploy cli --opera-package-id=123456 --opera-sessionid="sessionid_value"
   - Uploading the ZIP that contains the [source code](https://www.npmjs.com/package/zip-self) to a public folder on a storage service like [Google Drive](https://drive.google.com)
   - Making the extension's code open source on a platform like GitHub, with clear instructions on the `README.md`, and then linking to its repository.
 
-  Note that you **do not** want to store the command with your extension package, as the review team will have access to your precious cookies.
+  Note that you **do not** want to store the command with your extension package, as the review team will have access to your credentials.
