@@ -152,10 +152,6 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCredential
 
     const credentialFields = store.credentialFields ?? [];
     const missingCredentialFields = credentialFields.filter(field => !storeConfig[field]);
-    if (isAutoFetchCredentials && credentialFields.length > 0 && missingCredentialFields.length === credentialFields.length) {
-      continue;
-    }
-
     const missingManualCredentialFields = !isAutoFetchCredentials || credentialFields.length === 0 ? missingCredentialFields : [];
     const missingRequired = [
       ...requiredFields.filter(field => !storeConfig[field]),
