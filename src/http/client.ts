@@ -58,38 +58,36 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
     return fetchResponse(buildUrl(endpoint, options.params), fetchOptions);
   }
 
-  function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
-    if (body instanceof ReadStream) {
-      // new ReadableStream(underlyingSource) is typed as ReadableStream<any>, which is
-      // part of BodyInit — no type assertion needed. duplex: "half" tells fetch to keep
-      // the connection open for sending while waiting for the response.
-      return fetchResponse(buildUrl(endpoint), {
-        method: "POST",
-        headers: { ...defaultHeaders, ...options.headers },
-        body: new ReadableStream({
-          start(controller) {
-            body.on("data", chunk => controller.enqueue(chunk));
-            body.on("end", () => controller.close());
-            body.on("error", error => controller.error(error));
-          },
-          cancel() {
-            body.destroy();
-          }
-        }),
-        duplex: "half"
-      });
+  return {
+    post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
+      if (body instanceof ReadStream) {
+        // new ReadableStream(underlyingSource) is typed as ReadableStream<any>, which is
+        // part of BodyInit — no type assertion needed. duplex: "half" tells fetch to keep
+        // the connection open for sending while waiting for the response.
+        return fetchResponse(buildUrl(endpoint), {
+          method: "POST",
+          headers: { ...defaultHeaders, ...options.headers },
+          body: new ReadableStream({
+            start(controller) {
+              body.on("data", chunk => controller.enqueue(chunk));
+              body.on("end", () => controller.close());
+              body.on("error", error => controller.error(error));
+            },
+            cancel() {
+              body.destroy();
+            }
+          }),
+          duplex: "half"
+        });
+      }
+
+      return request("POST", endpoint, { ...options, body });
+    },
+    get(endpoint: string, options: FetchOptions = {}) {
+      return request("GET", endpoint, options);
+    },
+    patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
+      return request("PATCH", endpoint, { ...options, body });
     }
-
-    return request("POST", endpoint, { ...options, body });
-  }
-
-  function get(endpoint: string, options: FetchOptions = {}) {
-    return request("GET", endpoint, options);
-  }
-
-  function patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
-    return request("PATCH", endpoint, { ...options, body });
-  }
-
-  return { post, get, patch };
+  };
 }
