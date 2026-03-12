@@ -6,16 +6,10 @@ interface FetchOptions extends RequestInit {
 }
 
 function streamToBuffer(stream: ReadStream) {
-  return new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
+  return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-    stream.on("end", () => {
-      const buf = Buffer.concat(chunks);
-      const arrayBuffer = new ArrayBuffer(buf.length);
-      const view = new Uint8Array(arrayBuffer);
-      view.set(buf);
-      resolve(view);
-    });
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
     stream.on("error", reject);
   });
 }
@@ -68,7 +62,7 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
   }
 
   async function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
-    const finalBody = body instanceof ReadStream ? await streamToBuffer(body) : body;
+    const finalBody = body instanceof ReadStream ? await streamToBuffer(body) as BodyInit : body;
     return request("POST", endpoint, { ...options, body: finalBody });
   }
 
