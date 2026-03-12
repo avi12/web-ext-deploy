@@ -38,9 +38,34 @@ async function exchangeRefreshTokenForAccessToken(clientId: string, clientSecret
       grant_type: "refresh_token"
     } satisfies RefreshTokenRequest)
   });
-  const result = AccessTokenResponseSchema.safeParse(await response.json());
+
+  const rawBody = await response.text();
+  let parsedBody: unknown;
+  try {
+    parsedBody = rawBody ? JSON.parse(rawBody) : undefined;
+  } catch {
+    // Leave parsedBody undefined if the body is not valid JSON
+  }
+
+  if (!response.ok) {
+    let detail = "";
+    if (parsedBody && typeof parsedBody === "object") {
+      const body = parsedBody as Record<string, unknown>;
+      const message = body.error_description ?? body.error ?? body.message;
+      if (typeof message === "string") {
+        detail = `: ${message}`;
+      }
+    } else if (rawBody) {
+      detail = `: ${rawBody.slice(0, 200)}`;
+    }
+
+    const statusText = response.statusText ? ` ${response.statusText}` : "";
+    throw new Error(storeError(`Failed to exchange refresh token for access token (${response.status}${statusText})${detail}`));
+  }
+
+  const result = AccessTokenResponseSchema.safeParse(parsedBody);
   if (!result.success) {
-    throw new Error(storeError("Failed to exchange refresh token for access token"));
+    throw new Error(storeError("Failed to exchange refresh token for access token: invalid token response"));
   }
 
   return result.data.access_token;
