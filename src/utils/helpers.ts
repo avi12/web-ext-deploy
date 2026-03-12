@@ -1,7 +1,6 @@
 import type { StoreName } from "../types.js";
 import { camelCase } from "./case-conversion.js";
 import fs from "node:fs";
-import os from "node:os";
 
 export function isObjectEmpty(object: object) {
   return Object.keys(object).length === 0;
@@ -10,15 +9,15 @@ export function isObjectEmpty(object: object) {
 export function createGitIgnoreIfNeeded(stores: StoreName[]) {
   const filename = ".gitignore";
   if (!fs.existsSync(filename)) {
-    fs.writeFileSync(filename, "*.env" + os.EOL);
+    fs.writeFileSync(filename, "*.env" + "\n");
     return;
   }
 
   const gitIgnoreCurrent = fs.readFileSync(filename, "utf8");
-  const trailingNewline = gitIgnoreCurrent.endsWith(os.EOL) ? "" : os.EOL;
+  const trailingNewline = gitIgnoreCurrent.endsWith("\n") ? "" : "\n";
 
   if (!gitIgnoreCurrent.includes(".env")) {
-    fs.appendFileSync(filename, `${trailingNewline}*.env${os.EOL}`);
+    fs.appendFileSync(filename, `${trailingNewline}*.env${"\n"}`);
     return;
   }
 
@@ -28,7 +27,7 @@ export function createGitIgnoreIfNeeded(stores: StoreName[]) {
 
   const storesToAppend = stores.filter(store => !gitIgnoreCurrent.includes(`${store}.env`));
   if (storesToAppend.length > 0) {
-    fs.appendFileSync(filename, `${trailingNewline}${storesToAppend.map(store => `${store}.env`).join(os.EOL)}${os.EOL}`);
+    fs.appendFileSync(filename, `${trailingNewline}${storesToAppend.map(store => `${store}.env`).join("\n")}${"\n"}`);
   }
 }
 
@@ -44,5 +43,5 @@ export function mapStoreArgs(rawArgs: Record<string, unknown>, store: string) {
 export function headersToEnv(headersTotal: Record<string, unknown>) {
   return Object.entries(headersTotal)
     .map(([header, value]) => `${header.toUpperCase()}="${value}"`)
-    .join(os.EOL);
+    .join("\n");
 }
