@@ -2,8 +2,10 @@ import { spawnSync, execSync } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect, beforeAll } from "vitest";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const BINARY = path.join(ROOT, "dist/cli.js");
 const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");

@@ -1,8 +1,9 @@
 import { EdgeOptionsPublishApiSchema } from "../../src/stores/edge/edge-input.js";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 
-const FIXTURE_ZIP = path.resolve(__dirname, "../fixtures/test.zip");
+const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../fixtures/test.zip");
 
 const validInput = {
   productId: "product-123",

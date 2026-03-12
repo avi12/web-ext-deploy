@@ -2,9 +2,10 @@ import { EdgeOptionsPublishApiSchema } from "../src/stores/edge/edge-input.js";
 import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
 import { OperaOptionsSchema } from "../src/stores/opera/opera-input.js";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 
-const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/test.zip");
+const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/test.zip");
 
 describe("changelog newline conversions", () => {
   it("Firefox: \\n literal in changelog is converted to a newline", () => {
