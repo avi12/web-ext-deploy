@@ -14,7 +14,7 @@ const ExtensionManifestSchema = z.object({
 // so zip.js only reads the EOCD record, the central directory, and the bytes
 // of the specific entry being extracted — never the full ZIP.
 class FileHandleReader extends Reader<string> {
-  private fileHandle?: FileHandle;
+  private fileHandle: FileHandle | undefined;
 
   constructor(private filePath: string) {
     super(filePath);
