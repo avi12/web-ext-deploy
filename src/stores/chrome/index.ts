@@ -14,6 +14,11 @@ export const chrome = defineStore({
   async fetchCredentials(storeConfig, saveToEnv) {
     const clientId = String(storeConfig.clientId ?? "");
     const clientSecret = String(storeConfig.clientSecret ?? "");
+
+    if (!clientId || !clientSecret) {
+      throw new Error("Chrome credentials auto-fetch requires both 'clientId' and 'clientSecret'");
+    }
+
     const refreshToken = await getChromeRefreshToken(clientId, clientSecret);
     if (saveToEnv) {
       const envFile = "chrome.env";
