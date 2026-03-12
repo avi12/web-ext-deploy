@@ -11,7 +11,7 @@ export const StatusPackageUploadSchema = z.object({
   status: OperationStatusSchema,
   message: z.string().nullable(),
   errorCode: z.string().nullable(),
-  errors: z.array(z.string()).nullable()
+  errors: z.array(z.object({ message: z.string() })).nullable()
 });
 
 const PublishErrorCode = z.enum([
