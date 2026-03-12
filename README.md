@@ -47,7 +47,7 @@ pnpm i -g web-ext-deploy
 bun add -g web-ext-deploy
 ```
 
-Deployment to Chrome Web Store: [follow this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)
+Deployment to Chrome Web Store: [follow this guide](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)  
 Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)
 
 # Usage
