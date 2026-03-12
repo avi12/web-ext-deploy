@@ -1,5 +1,14 @@
 import { ReadStream } from "node:fs";
 
+// duplex: "half" is required by the Fetch spec for streaming request bodies
+// (the connection stays half-open while the server reads and responds).
+// Node.js 18+ supports it but TypeScript's lib.dom.d.ts omits the field.
+declare global {
+  interface RequestInit {
+    duplex?: "half";
+  }
+}
+
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
   params?: Record<string, string | number>;
@@ -34,37 +43,41 @@ async function fetchResponse(url: string, options: RequestInit) {
 }
 
 export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
-  function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
+  function buildUrl(endpoint: string, params?: Record<string, string | number>) {
     const base = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
-    const url = options.params ? `${base}?${stringifyParams(options.params)}` : base;
+    return params ? `${base}?${stringifyParams(params)}` : base;
+  }
 
-    const headers = {
-      ...defaultHeaders,
-      ...options.headers
-    };
-
+  function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
     const fetchOptions: RequestInit = {
       method,
-      headers,
+      headers: { ...defaultHeaders, ...options.headers },
       ...options.body !== undefined && { body: options.body }
     };
 
-    return fetchResponse(url, fetchOptions);
+    return fetchResponse(buildUrl(endpoint, options.params), fetchOptions);
   }
 
   function post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
     if (body instanceof ReadStream) {
-      // Pass the stream directly to fetch (Node.js 18+); duplex: "half" is required
-      // for request bodies that are streams so the connection stays half-open while
-      // the server processes and responds.
-      const fetchInit = {
-        method: "POST" as const,
+      // new ReadableStream(underlyingSource) is typed as ReadableStream<any>, which is
+      // part of BodyInit — no type assertion needed. duplex: "half" tells fetch to keep
+      // the connection open for sending while waiting for the response.
+      return fetchResponse(buildUrl(endpoint), {
+        method: "POST",
         headers: { ...defaultHeaders, ...options.headers },
-        body: body as unknown as BodyInit,
+        body: new ReadableStream({
+          start(controller) {
+            body.on("data", (chunk: Uint8Array) => controller.enqueue(chunk));
+            body.on("end", () => controller.close());
+            body.on("error", (error: Error) => controller.error(error));
+          },
+          cancel() {
+            body.destroy();
+          }
+        }),
         duplex: "half"
-      };
-      const base = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
-      return fetchResponse(base, fetchInit);
+      });
     }
 
     return request("POST", endpoint, { ...options, body });
