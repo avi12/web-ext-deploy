@@ -101,7 +101,7 @@ web-ext-deploy env
 | Flag | Description                                                                            |
 |------|----------------------------------------------------------------------------------------|
 | `--firefox-changelog <text>` | Changelog for Firefox users. Supports `\n` for new lines                               |
-| `--firefox-changelog-lang <code>` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: manifest's `default_locale` or `en-US`) |
+| `--firefox-changelog-lang <code>` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: `en-US`) |
 | `--firefox-dev-changelog <text>` | Changelog for Firefox Add-ons reviewers only. Supports `\n` for new lines              |
 
 **Edge overrides:**
@@ -248,7 +248,7 @@ web-ext-deploy cli --auto-fetch-credentials --chrome-ext-id="ExtensionID" --chro
 | `--firefox-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
 | `[--firefox-zip-source <path>]` | Path to the source code ZIP. Supports `{version}` placeholder |
 | `[--firefox-changelog <text>]` | Changelog for Firefox users. Supports `\n` for new lines |
-| `[--firefox-changelog-lang <code>]` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: manifest's `default_locale` or `en-US`) |
+| `[--firefox-changelog-lang <code>]` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: `en-US`) |
 | `[--firefox-dev-changelog <text>]` | Changelog for reviewers only. Supports `\n` for new lines |
 
 Example:
