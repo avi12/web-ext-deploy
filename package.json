@@ -1,6 +1,6 @@
 {
   "name": "web-ext-deploy",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A tool for deploying WebExtensions to multiple stores.",
   "type": "module",
   "typesVersions": {
