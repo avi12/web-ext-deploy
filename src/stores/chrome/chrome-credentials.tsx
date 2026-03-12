@@ -18,6 +18,7 @@ type AuthRequest = {
   access_type: "offline";
   scope: string;
   prompt: "consent";
+  state: string;
 };
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#exchange-authorization-code
@@ -130,18 +131,27 @@ function App({
   const { exit } = useApp();
   const [step, setStep] = useState<Step>(Step.Waiting);
   const [errorMessage, setErrorMessage] = useState("");
+  const [state] = useState(() => crypto.randomUUID());
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
     client_id: clientId,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
     access_type: "offline",
     scope: "https://www.googleapis.com/auth/chromewebstore",
-    prompt: "consent"
+    prompt: "consent",
+    state
   } satisfies AuthRequest)}`;
 
   useEffect(() => {
     const server: Server = createServer(async (request, response) => {
       const url = new URL(request.url ?? "/", REDIRECT_URI);
+      const callbackState = url.searchParams.get("state");
+      if (callbackState !== state) {
+        response.writeHead(HTTP_BAD_REQUEST);
+        response.end();
+        return;
+      }
+
       const code = url.searchParams.get("code");
       const authError = url.searchParams.get("error");
       if (authError) {
@@ -186,7 +196,7 @@ function App({
       server.close();
     });
 
-    server.listen(PORT, () => {
+    server.listen(PORT, "127.0.0.1", () => {
       openBrowser(authUrl);
     });
 
