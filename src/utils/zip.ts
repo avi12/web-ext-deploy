@@ -34,12 +34,26 @@ export async function getExtJson(zip: string) {
   const entries = await reader.getEntries();
 
   const manifestEntry = entries.find(entry => entry.filename === "manifest.json" && "getData" in entry);
-  const manifestContent = manifestEntry && "getData" in manifestEntry
-    ? await manifestEntry.getData(new TextWriter())
-    : "";
+  if (!manifestEntry || !("getData" in manifestEntry)) {
+    await reader.close();
+    throw new Error("manifest.json not found in zip");
+  }
 
+  const manifestContent = await manifestEntry.getData(new TextWriter());
   await reader.close();
-  const manifest = ExtensionManifestSchema.safeParse(JSON.parse(manifestContent));
+
+  if (!manifestContent) {
+    throw new Error("manifest.json is empty");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(manifestContent);
+  } catch (error) {
+    throw new Error(`Failed to parse manifest.json: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const manifest = ExtensionManifestSchema.safeParse(parsed);
   if (!manifest.success) {
     throw new Error(`Invalid manifest.json: ${manifest.error.message}`);
   }
