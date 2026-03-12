@@ -20,7 +20,7 @@ function extractCookies(cookiesInput: string) {
     .join("\n");
 }
 
-async function captureCookiesFromBrowser(page: Page): Promise<string> {
+async function captureCookiesFromBrowser(page: Page) {
   const cookiePromise = new Promise<string>((resolve, reject) => {
     let done = false;
 
@@ -40,7 +40,7 @@ async function captureCookiesFromBrowser(page: Page): Promise<string> {
         return;
       }
 
-      const hasAllCookies = COOKIE_NAMES.every(name => cookie!.includes(` ${name}=`));
+      const hasAllCookies = COOKIE_NAMES.every(name => new RegExp(`(^|; )${name}=`).test(cookie!));
       if (hasAllCookies && request.url() === DEVELOPER_URL) {
         done = true;
         resolve(extractCookies(cookie));
