@@ -1,7 +1,6 @@
 import { Reader, TextWriter, ZipReader } from "@zip.js/zip.js";
 import fs from "node:fs";
-import { open } from "node:fs/promises";
-import type { FileHandle } from "node:fs/promises";
+import { open, type FileHandle } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
