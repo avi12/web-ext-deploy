@@ -32,7 +32,8 @@ async function runStoreDeploy(
       isVerbose,
       mode,
       setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
-      setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath)
+      setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath),
+      setExtensionName: name => inkLogger.monitor.setExtensionName(store, name)
     });
     inkLogger.logger.success(store, isDryRun ? "Validation passed" : "Published!");
     inkLogger.monitor.updateStore(store, StoreStatus.Success);

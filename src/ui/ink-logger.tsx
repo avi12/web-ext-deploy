@@ -352,6 +352,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
     sharedStatuses[store] = StoreStatus.Pending;
   }
   const sharedEntries: LogEntry[] = [];
+  const sharedExtensionNames: Partial<Record<StoreName, string>> = {};
   let sharedHelpTables: HelpTableData[] = [];
   let triggerRender: (() => void) | null = null;
   let resolveReady!: () => void;
@@ -432,10 +433,11 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
             : status === StoreStatus.Error && firstErrorEntry
               ? stripAnsi(firstErrorEntry.message).split("\n")[0]
               : defaultStatusText;
+          const extensionName = sharedExtensionNames[store];
           return (
             <Text key={store}>
               <Text color={statusColors[status]}>{icon}</Text>
-              {" "}{getStoreDisplayName(store)}: <Text color={statusColors[status]}>{statusText}</Text>
+              {" "}{getStoreDisplayName(store)}{extensionName ? ` (${extensionName})` : ""}: <Text color={statusColors[status]}>{statusText}</Text>
             </Text>
           );
         })}
@@ -534,6 +536,10 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
         });
       }
 
+      triggerRender?.();
+    },
+    setExtensionName(store: StoreName, name: string) {
+      sharedExtensionNames[store] = name;
       triggerRender?.();
     },
     setZipPath(store: StoreName, zipPath: string) {

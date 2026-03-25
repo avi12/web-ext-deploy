@@ -206,7 +206,7 @@ export async function deployToFirefox(
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
   {
-    logger, isVerbose, setStatus, setZipPath
+    logger, isVerbose, setStatus, setZipPath, setExtensionName
   }: DeployContext = {}
 ) {
   httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/");
@@ -223,6 +223,7 @@ export async function deployToFirefox(
 
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
+  setExtensionName?.(name);
   if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
   }

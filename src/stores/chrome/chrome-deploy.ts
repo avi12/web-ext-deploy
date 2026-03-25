@@ -1,4 +1,5 @@
 import { createHttpClient } from "../../http/client.js";
+import { getExtJson } from "../../utils/zip.js";
 import { type DeployContext, StoreStatus } from "../../types.js";
 import { storeError } from "../../ui/logging.js";
 import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "../../utils/retry.js";
@@ -297,10 +298,12 @@ export async function deployToChrome(
     extId, publisherId, clientId, clientSecret, refreshToken, zip, skipReview, deployPercentage
   }: ChromeOptions,
   {
-    logger, isVerbose, setStatus, setZipPath
+    logger, isVerbose, setStatus, setZipPath, setExtensionName
   }: DeployContext = {}
 ) {
   setZipPath?.(zip);
+  const { name } = await getExtJson(zip);
+  setExtensionName?.(name);
   const accessToken = await exchangeRefreshTokenForAccessToken(clientId, clientSecret, refreshToken);
   httpClient = createHttpClient("https://chromewebstore.googleapis.com", { Authorization: `Bearer ${accessToken}` });
 

@@ -186,7 +186,7 @@ export async function deployToEdgePublishApi(
     productId, clientId, apiKey, zip, devChangelog
   }: EdgeOptionsPublishApi,
   {
-    logger, isVerbose, setStatus, setZipPath
+    logger, isVerbose, setStatus, setZipPath, setExtensionName
   }: DeployContext = {}
 ) {
   httpClient = createHttpClient("https://api.addons.microsoftedge.microsoft.com/v1", {
@@ -206,6 +206,7 @@ export async function deployToEdgePublishApi(
 
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
+  setExtensionName?.(name);
   if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
   }

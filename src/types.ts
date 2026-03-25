@@ -22,6 +22,7 @@ export type DeployContext = {
   isVerbose?: boolean;
   setStatus?: (status: StoreStatus, message?: string) => void;
   setZipPath?: (zipPath: string) => void;
+  setExtensionName?: (name: string) => void;
 };
 
 export enum StoreName {

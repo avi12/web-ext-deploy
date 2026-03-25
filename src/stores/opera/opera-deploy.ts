@@ -360,7 +360,7 @@ export async function deployToOpera(
     sessionid, csrftoken, packageId, zip, changelog = ""
   }: OperaOptions,
   {
-    logger, onCredentialsExpired, isVerbose, setStatus, setZipPath
+    logger, onCredentialsExpired, isVerbose, setStatus, setZipPath, setExtensionName
   }: DeployContext = {}
 ) {
   httpClient = createOperaHttpClient({ sessionid, csrftoken }, logger, onCredentialsExpired);
@@ -373,6 +373,7 @@ export async function deployToOpera(
 
   setZipPath?.(zip);
   const { name, version } = await getExtJson(zip);
+  setExtensionName?.(name);
   if (isVerbose) {
     logger?.info(`Retrieving listed versions of ${name} with package ID ${packageId}`);
   }
