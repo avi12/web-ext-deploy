@@ -18,16 +18,20 @@ import { z } from "zod";
 
 type ExtractSchemaKeys<T> = T extends z.ZodObject<infer Shape> ? string & keyof Shape : never;
 
-type StoreCliOptionKeys<Store extends typeof storeRegistry[number]> =
-  `${Store["name"]}-${CamelToKebab<ExtractSchemaKeys<Store["schema"]>>}`;
+type StoreCliOptionKeys<Store> = Store extends typeof storeRegistry[number]
+  ? `${Store["name"]}-${CamelToKebab<ExtractSchemaKeys<Store["schema"]>>}`
+  : never;
 
 type AllCliOptionKeys = StoreCliOptionKeys<typeof storeRegistry[number]>;
+
+type ChangelogFlagName = `--${Extract<AllCliOptionKeys, `${string}-changelog`>}`;
 
 function schemaToOptions<Key extends string>(store: StoreName | "base", schema: z.ZodObject<Record<Key, z.ZodTypeAny>>, demandRequired = false) {
   const options: Record<string, Options> = {};
 
   for (const [key, value] of zodObjectEntries(schema)) {
-    if (key === "verbose" && store !== "base") {
+    const isVerboseOnStore = key === "verbose" && store !== "base";
+    if (isVerboseOnStore) {
       continue;
     }
 
@@ -85,13 +89,63 @@ function applyStoreGroups(builder: ReturnType<typeof yargs>, groups: Partial<Rec
 
 function stripCamelCaseArgs(message: string) {
   return message.replace(/Unknown arguments?: (.+)/, (_, args: string) => {
-    const kebabOnly = args.split(", ").filter(arg => arg.includes("-"));
-    const label = kebabOnly.length === 1 ? "Unknown argument" : "Unknown arguments";
-    return `${label}: ${kebabOnly.map(arg => `--${arg}`).join(", ")}`;
+    const tokens = args.split(", ");
+    const flags = tokens.filter(arg => arg.includes("-")).map(arg => `--${arg}`);
+    const positional = tokens.filter(arg => !arg.includes("-"));
+    const all = [...flags, ...positional];
+    const label = all.length === 1 ? "Unknown argument" : "Unknown arguments";
+    return `${label}: ${all.join(", ")}`;
   });
 }
 
-export const parser = yargs(process.argv.slice(2))
+function isChangelogField(fieldName: string) {
+  return fieldName.toLowerCase().endsWith("changelog");
+}
+
+function hasChangelogFlagShape(value: string): value is ChangelogFlagName {
+  return value.startsWith("--") && value.toLowerCase().endsWith("-changelog");
+}
+
+const changelogFlagNames: readonly ChangelogFlagName[] = storeRegistry.flatMap(store =>
+  (store.schema instanceof z.ZodObject ? Object.keys(store.schema.shape) : [])
+    .filter(isChangelogField)
+    .map(field => `--${store.name}-${kebabCase(field)}`)
+).filter(hasChangelogFlagShape);
+
+function isChangelogFlag(token: string): token is ChangelogFlagName {
+  const haystack: readonly string[] = changelogFlagNames;
+  return haystack.includes(token);
+}
+
+function splitAt<T>(items: T[], index: number) {
+  return [items.slice(0, index), items.slice(index)] as const;
+}
+
+function joinChangelogArgs(argv: string[]) {
+  const result: string[] = [];
+  let remaining = argv;
+  while (remaining.length > 0) {
+    const [head, ...rest] = remaining;
+    result.push(head);
+
+    if (!isChangelogFlag(head)) {
+      remaining = rest;
+      continue;
+    }
+
+    const nextFlagOffset = rest.findIndex(next => next.startsWith("--"));
+    const splitPoint = nextFlagOffset === -1 ? rest.length : nextFlagOffset;
+    const [values, afterValues] = splitAt(rest, splitPoint);
+    if (values.length > 0) {
+      result.push(values.join("\\n"));
+    }
+
+    remaining = afterValues;
+  }
+  return result;
+}
+
+export const parser = yargs(joinChangelogArgs(process.argv.slice(2)))
   .scriptName("web-ext-deploy")
   .usage("$0 <command> [options]")
   .wrap(process.stdout.columns)
