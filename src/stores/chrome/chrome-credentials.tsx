@@ -206,7 +206,8 @@ function App({
   }, []);
 
   useEffect(() => {
-    if (step === Step.Success || step === Step.Error) {
+    const isTerminalStep = step === Step.Success || step === Step.Error;
+    if (isTerminalStep) {
       exit();
     }
   }, [step, exit]);

@@ -118,7 +118,8 @@ function extractApiMessage(data: unknown, statusText: string) {
   }
 
   const serialized = JSON.stringify(data);
-  if (serialized && serialized !== "{}") {
+  const isNonEmptyObject = Boolean(serialized) && serialized !== "{}";
+  if (isNonEmptyObject) {
     return `${statusText}: ${serialized}`;
   }
 

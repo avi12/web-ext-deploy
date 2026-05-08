@@ -62,7 +62,8 @@ function createOperaHttpClient(
     sessionid = freshCookies.sessionid || "";
 
     const retryResponse = await sendRequest();
-    if (retryResponse.status === 401 || retryResponse.status === 403) {
+    const isStillUnauthorized = retryResponse.status === 401 || retryResponse.status === 403;
+    if (isStillUnauthorized) {
       throw new CookieAuthError("Opera");
     }
 
@@ -112,7 +113,8 @@ async function verifySourceCodeExistence({
     errorContext: "Source code verification failed",
     onRateLimit
   });
-  if (!data.source_url && !data.source_for_moderators_url) {
+  const isMissingSourceUrls = !data.source_url && !data.source_for_moderators_url;
+  if (isMissingSourceUrls) {
     throw new Error(storeError(`No source code provided. Provide a URL in ${url} and submit the changes`));
   }
 }
@@ -128,7 +130,9 @@ async function cancelLatestVersionIfNotSubmitted({
   logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
-  if (versionsListed.length === 0 || versionsListed[0].submitted_for_moderation) {
+  const isEmpty = versionsListed.length === 0;
+  const isAlreadySubmitted = !isEmpty && versionsListed[0].submitted_for_moderation;
+  if (isEmpty || isAlreadySubmitted) {
     return;
   }
 
@@ -154,12 +158,12 @@ async function cancelLatestVersionIfNotSubmitted({
 async function submitChanges({
   zip,
   packageId,
-  availableAutoModeration,
+  isAutoModerationAvailable,
   onRateLimit
 }: {
   zip: string;
   packageId: number;
-  availableAutoModeration: boolean;
+  isAutoModerationAvailable: boolean;
   onRateLimit?: RateLimitHandler;
 }) {
   const extJson = await getExtJson(zip);
@@ -169,7 +173,7 @@ async function submitChanges({
     await requestWithRetry({
       sendRequest: () => httpClient.post(
         `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
-        JSON.stringify({ auto_moderation: availableAutoModeration }),
+        JSON.stringify({ auto_moderation: isAutoModerationAvailable }),
         { headers: { "Content-Type": "application/json" } }
       ),
       parseResponse(response) {
@@ -374,6 +378,7 @@ export async function deployToOpera(
   setZipPath?.(zip);
   const { name, version } = await getExtJson(zip);
   setExtensionName?.(name);
+
   if (isVerbose) {
     logger?.info(`Retrieving listed versions of ${name} with package ID ${packageId}`);
   }
@@ -382,7 +387,8 @@ export async function deployToOpera(
     packageId,
     onRateLimit
   });
-  if (versionsData.versions.some(entry => entry.version === version && entry.submitted_for_moderation)) {
+  const isVersionAlreadyDeployed = versionsData.versions.some(entry => entry.version === version && entry.submitted_for_moderation);
+  if (isVersionAlreadyDeployed) {
     throw new Error(storeError(`Version ${version} has already been deployed`));
   }
 
@@ -444,7 +450,7 @@ export async function deployToOpera(
   await submitChanges({
     zip,
     packageId,
-    availableAutoModeration: versionsData.available_auto_moderation,
+    isAutoModerationAvailable: versionsData.available_auto_moderation,
     onRateLimit
   });
 

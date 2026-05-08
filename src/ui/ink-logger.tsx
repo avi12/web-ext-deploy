@@ -59,7 +59,6 @@ const dryRunStatusTexts = {
   error: "Invalid"
 } as const;
 
-
 function stripAnsi(str: string) {
   return str.replace(/\u001b\[[0-9;]*m/g, "");
 }
@@ -147,7 +146,9 @@ export function buildHelpTableData(
   function formatFieldName(key: string) {
     const isDynamic = dynamicFields?.includes(key);
     const isOverridable = cliOverridableFields?.includes(key);
-    if (mode === "cli" || (mode === "env" && isDynamic)) {
+    const isCliMode = mode === "cli";
+    const isDynamicEnvField = mode === "env" && isDynamic;
+    if (isCliMode || isDynamicEnvField) {
       return `--${kebabCase(storeName)}-${kebabCase(key)}`;
     }
 
@@ -167,11 +168,13 @@ export function buildHelpTableData(
 
   for (const key in schema.shape) {
     // verbose is a global flag, not per-store
-    if (key === "verbose" && mode) {
+    const isVerboseInStoreContext = key === "verbose" && Boolean(mode);
+    if (isVerboseInStoreContext) {
       continue;
     }
 
-    if (missingFields && !missingFields.includes(key)) {
+    const isFilteredOut = Boolean(missingFields) && !missingFields?.includes(key);
+    if (isFilteredOut) {
       continue;
     }
 
@@ -198,7 +201,9 @@ export function buildGlobalHelpTableData(
   missingArgs: string[],
   mode?: "cli" | "env"
 ) {
-  if (missingArgs.length === 0 || !(schema instanceof z.ZodObject)) {
+  const hasNoArgs = missingArgs.length === 0;
+  const isNotObjectSchema = !(schema instanceof z.ZodObject);
+  if (hasNoArgs || isNotObjectSchema) {
     return null;
   }
 
@@ -323,7 +328,8 @@ export async function renderApplicationError(error: Error) {
       resolveRendered();
     }, []);
 
-    if (error instanceof MissingArgsError || error instanceof NoStoresError) {
+    const isHelpableError = error instanceof MissingArgsError || error instanceof NoStoresError;
+    if (isHelpableError) {
       return (
         <Box flexDirection="column">
           <Text><Text color="red">✖</Text> {error.message}</Text>
@@ -428,11 +434,13 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
           const latestEntry = storeEntries[storeEntries.length - 1];
           const firstErrorEntry = storeEntries.find(entry => entry.level === LogLevel.Error);
           const defaultStatusText = isDryRun ? dryRunStatusTexts[status] : deployStatusTexts[status];
-          const statusText = status === StoreStatus.Running && latestEntry
-            ? stripAnsi(latestEntry.message).split("\n")[0]
-            : status === StoreStatus.Error && firstErrorEntry
-              ? stripAnsi(firstErrorEntry.message).split("\n")[0]
-              : defaultStatusText;
+          let statusText: string = defaultStatusText;
+          if (status === StoreStatus.Running && latestEntry) {
+            statusText = stripAnsi(latestEntry.message).split("\n")[0];
+          } else if (status === StoreStatus.Error && firstErrorEntry) {
+            statusText = stripAnsi(firstErrorEntry.message).split("\n")[0];
+          }
+
           const extensionName = sharedExtensionNames[store];
           return (
             <Text key={store}>

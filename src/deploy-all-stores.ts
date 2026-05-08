@@ -66,7 +66,9 @@ export async function runDeploy(argv: Arguments) {
 
   const storeEntries: [StoreName, Record<string, unknown>][] = [];
   for (const [store, json] of Object.entries(storeJsons)) {
-    if (isSupportedStore(store) && json !== undefined) {
+    const isStoreSupported = isSupportedStore(store);
+    const hasJson = json !== undefined;
+    if (isStoreSupported && hasJson) {
       storeEntries.push([store, json]);
     }
   }

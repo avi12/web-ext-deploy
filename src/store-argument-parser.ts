@@ -22,7 +22,7 @@ export const BaseOptionsSchema = z.object({
 
 export const publishOnlyDescription = `Only publish to specific stores: ${storeNames.join(", ")}`;
 
-export const EnvOptionsSchema = z.object({
+const EnvOptionsSchema = z.object({
   publishOnly: z.array(z.string()).optional().describe(publishOnlyDescription),
   ...BaseOptionsSchema.shape
 });
@@ -73,7 +73,7 @@ function getJsons(command: string, argv: Arguments) {
   return result;
 }
 
-export function readCredentialsFromEnv(storeName: StoreName, credentialFields: readonly string[]) {
+function readCredentialsFromEnv(storeName: StoreName, credentialFields: readonly string[]) {
   const { parsed: rawParsed = {} } = config({ path: `${storeName}.env` });
   const parsed = Object.fromEntries(
     Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
@@ -92,7 +92,8 @@ export function readCredentialsFromEnv(storeName: StoreName, credentialFields: r
 async function fetchMissingCredentials(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void, saveToEnv = true) {
   for (const store of storeRegistry) {
     const fields = store.credentialFields;
-    if (!fields || fields.length === 0) {
+    const hasNoCredentialFields = !fields || fields.length === 0;
+    if (hasNoCredentialFields) {
       continue;
     }
 
@@ -104,7 +105,9 @@ async function fetchMissingCredentials(jsonStoresRaw: StoreConfigMap, log?: (mes
     if (saveToEnv) {
       const envCredentials = readCredentialsFromEnv(store.name, fields);
       for (const field of fields) {
-        if (storeConfig[field] || !envCredentials[field]) {
+        const isAlreadySet = Boolean(storeConfig[field]);
+        const hasEnvValue = Boolean(envCredentials[field]);
+        if (isAlreadySet || !hasEnvValue) {
           continue;
         }
 
@@ -113,7 +116,8 @@ async function fetchMissingCredentials(jsonStoresRaw: StoreConfigMap, log?: (mes
     }
 
     const missingFields = fields.filter(field => !storeConfig[field]);
-    if (missingFields.length === 0 || !store.fetchCredentials) {
+    const hasNothingToFetch = missingFields.length === 0 || !store.fetchCredentials;
+    if (hasNothingToFetch) {
       continue;
     }
 
@@ -126,7 +130,9 @@ async function fetchMissingCredentials(jsonStoresRaw: StoreConfigMap, log?: (mes
     }
 
     for (const field of fields) {
-      if (!storeConfig[field] && fetchedCredentials[field]) {
+      const isMissing = !storeConfig[field];
+      const hasFetchedValue = Boolean(fetchedCredentials[field]);
+      if (isMissing && hasFetchedValue) {
         storeConfig[field] = fetchedCredentials[field];
       }
     }

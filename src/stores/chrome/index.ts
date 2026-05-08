@@ -15,7 +15,8 @@ export const chrome = defineStore({
     const clientId = String(storeConfig.clientId ?? "");
     const clientSecret = String(storeConfig.clientSecret ?? "");
 
-    if (!clientId || !clientSecret) {
+    const isMissingCredentials = !clientId || !clientSecret;
+    if (isMissingCredentials) {
       throw new Error("Chrome credentials auto-fetch requires both 'clientId' and 'clientSecret'");
     }
 

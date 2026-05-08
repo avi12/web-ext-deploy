@@ -1,8 +1,8 @@
 import { createHttpClient } from "../../http/client.js";
-import { getExtJson } from "../../utils/zip.js";
 import { type DeployContext, StoreStatus } from "../../types.js";
 import { storeError } from "../../ui/logging.js";
 import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "../../utils/retry.js";
+import { getExtJson } from "../../utils/zip.js";
 import { ChromeOptions } from "./chrome-input.js";
 import {
   FetchStatusSchema,
@@ -14,6 +14,10 @@ import {
 import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#refreshing-an-expired-access-token
 type RefreshTokenRequest = {
@@ -50,9 +54,8 @@ async function exchangeRefreshTokenForAccessToken(clientId: string, clientSecret
 
   if (!response.ok) {
     let detail = "";
-    if (parsedBody && typeof parsedBody === "object") {
-      const body = parsedBody as Record<string, unknown>;
-      const message = body.error_description ?? body.error ?? body.message;
+    if (isRecord(parsedBody)) {
+      const message = parsedBody.error_description ?? parsedBody.error ?? parsedBody.message;
       if (typeof message === "string") {
         detail = `: ${message}`;
       }
@@ -118,7 +121,8 @@ async function cancelSubmissionIfPending({
 }) {
   const status = await fetchStatus({ extId, publisherId, onRateLimit });
   const submittedState = status.submittedItemRevisionStatus?.state;
-  if (!submittedState || !PENDING_REVIEW_STATES.includes(submittedState)) {
+  const isNotPendingReview = !submittedState || !PENDING_REVIEW_STATES.includes(submittedState);
+  if (isNotPendingReview) {
     return;
   }
 
@@ -281,11 +285,13 @@ async function verifySubmission({
   });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const publishedState = status.publishedItemRevisionStatus?.state;
-  if (publishedState === ItemState.PUBLISHED || publishedState === ItemState.PUBLISHED_TO_TESTERS) {
+  const isAlreadyPublished = publishedState === ItemState.PUBLISHED || publishedState === ItemState.PUBLISHED_TO_TESTERS;
+  if (isAlreadyPublished) {
     return;
   }
 
-  if (submittedState && PUBLISH_SUCCESS_STATES.includes(submittedState)) {
+  const isSubmittedSuccessfully = submittedState !== undefined && PUBLISH_SUCCESS_STATES.includes(submittedState);
+  if (isSubmittedSuccessfully) {
     return;
   }
 

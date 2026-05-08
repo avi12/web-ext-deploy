@@ -81,7 +81,8 @@ export function zodObjectEntries<T extends z.ZodObject<z.ZodRawShape>>(schema: T
 }
 
 export function isZodOptional(value: unknown) {
-  if (value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault) {
+  const isWrappedOptional = value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
+  if (isWrappedOptional) {
     return true;
   }
 
