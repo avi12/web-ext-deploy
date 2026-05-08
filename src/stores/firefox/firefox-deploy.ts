@@ -224,6 +224,7 @@ export async function deployToFirefox(
   setZipPath?.(zip);
   const { name } = await getExtJson(zip);
   setExtensionName?.(name);
+
   if (isVerbose) {
     logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
   }
