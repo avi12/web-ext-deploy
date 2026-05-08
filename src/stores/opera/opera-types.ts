@@ -45,9 +45,9 @@ export type ListVersions = z.infer<typeof ListVersionsSchema>;
 
 export const ListingDetailSchema = z.looseObject({
   version: z.string(),
-  submitted_for_moderation: z.boolean(),
-  source_url: z.string().nullable(),
-  source_for_moderators_url: z.string().nullable()
+  submitted_for_moderation: z.boolean().optional(),
+  source_url: z.string().nullish(),
+  source_for_moderators_url: z.string().nullish()
 });
 
 const DidChangesSchema = z.looseObject({ version: z.string() });
