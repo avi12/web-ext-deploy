@@ -126,9 +126,8 @@ function joinChangelogArgs(argv: string[]) {
   let remaining = argv;
   while (remaining.length > 0) {
     const [head, ...rest] = remaining;
-    result.push(head);
-
     if (!isChangelogFlag(head)) {
+      result.push(head);
       remaining = rest;
       continue;
     }
@@ -136,10 +135,10 @@ function joinChangelogArgs(argv: string[]) {
     const nextFlagOffset = rest.findIndex(next => next.startsWith("--"));
     const splitPoint = nextFlagOffset === -1 ? rest.length : nextFlagOffset;
     const [values, afterValues] = splitAt(rest, splitPoint);
-    if (values.length > 0) {
-      result.push(values.join("\\n"));
-    }
-
+    // Use `--flag=value` form so values starting with `-` (e.g. "- bullet")
+    // aren't reparsed by yargs as short-option groups.
+    const merged = values.length > 0 ? `${head}=${values.join("\\n")}` : head;
+    result.push(merged);
     remaining = afterValues;
   }
   return result;
