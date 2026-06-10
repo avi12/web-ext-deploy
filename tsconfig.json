@@ -13,9 +13,10 @@
     "noImplicitAny": true,
     "noUnusedLocals": false,
     "outDir": "./dist",
+    "rootDir": "./src",
     "strictNullChecks": false,
     "target": "ESNext",
-    "typeRoots": ["./types", "./node_modules/@types"]
+    "types": ["node"]
   },
   "include": ["src"]
 }
