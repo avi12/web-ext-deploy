@@ -32,6 +32,13 @@ export enum StoreName {
   Opera = "opera"
 }
 
+// Parsed CLI arguments. `_` holds positionals (`_[0]` is the command); every
+// option is keyed by both its kebab-case and camelCase form, mirroring how the
+// rest of the code reads store flags (kebab) and global flags (camelCase).
+export type Arguments = {
+  _: string[];
+} & Record<string, unknown>;
+
 export type StoreDefinition<
   Name extends StoreName = StoreName,
   Schema extends z.ZodTypeAny = z.ZodTypeAny,

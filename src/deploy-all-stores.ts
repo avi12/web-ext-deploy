@@ -1,10 +1,9 @@
 import { deployStore, StoreValidationError } from "./deploy-single-store.js";
 import { createCredentialRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
-import { StoreStatus, type StoreName } from "./types.js";
+import { type Arguments, StoreStatus, type StoreName } from "./types.js";
 import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
 import { toError } from "./utils/retry.js";
-import type { Arguments } from "yargs";
 import { z } from "zod";
 
 async function runStoreDeploy(

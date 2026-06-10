@@ -66,6 +66,53 @@ function stripAnsi(str: string) {
 export type HelpField = { name: string; type: string; isRequired: boolean; isMissing?: boolean; defaultValue: string; description: string };
 export type HelpTableData = { title: string; fields: HelpField[] };
 
+type WrapAccumulator = { lines: string[]; current: string };
+
+// An over-long word (e.g. a URL) is kept whole on its own line rather than split.
+function flushLongWord(accumulator: WrapAccumulator, word: string) {
+  if (accumulator.current) {
+    accumulator.lines.push(accumulator.current);
+  }
+
+  accumulator.lines.push(word);
+  accumulator.current = "";
+}
+
+function placeWord(accumulator: WrapAccumulator, word: string, width: number) {
+  if (word.length > width) {
+    flushLongWord(accumulator, word);
+    return;
+  }
+
+  if (!accumulator.current) {
+    accumulator.current = word;
+    return;
+  }
+
+  if (accumulator.current.length + 1 + word.length <= width) {
+    accumulator.current += ` ${word}`;
+    return;
+  }
+
+  accumulator.lines.push(accumulator.current);
+  accumulator.current = word;
+}
+
+// Word-wrap to `width`, keeping any single over-long word (e.g. a URL) intact on its
+// own line rather than splitting it, even if that line overflows `width`.
+function wrapText(text: string, width: number) {
+  const accumulator: WrapAccumulator = { lines: [], current: "" };
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    placeWord(accumulator, word, width);
+  }
+
+  if (accumulator.current) {
+    accumulator.lines.push(accumulator.current);
+  }
+
+  return accumulator.lines.length > 0 ? accumulator.lines : [text];
+}
+
 export class MissingArgsError extends Error {
   constructor(public readonly tables: HelpTableData[]) {
     super("Missing required arguments");
@@ -88,6 +135,8 @@ function HelpTable({ data }: { data: HelpTableData }) {
   const typeWidth = 10;
   const requiredWidth = 10;
   const defaultWidth = Math.max(10, ...fields.map(field => field.defaultValue.length)) + 2;
+  const descriptionIndent = 2 + nameWidth + typeWidth + requiredWidth + defaultWidth;
+  const descriptionWidth = Math.max(24, (process.stdout.columns ?? 80) - descriptionIndent);
 
   return (
     <Box flexDirection="column">
@@ -98,21 +147,30 @@ function HelpTable({ data }: { data: HelpTableData }) {
       {fields.map(field => {
         const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
         const requiredPad = " ".repeat(field.isRequired ? requiredWidth - 1 : requiredWidth);
+        const [firstLine = "", ...continuationLines] = wrapText(field.description, descriptionWidth);
         return (
-          <Text key={field.name}>
-            {"  "}
-            <Text color={field.isMissing ? "red" : undefined}>{field.name}</Text>
-            {`${namePad}${field.type.padEnd(typeWidth)}`}
-            {field.isRequired ? <Text color="green">✔</Text> : null}
-            {`${requiredPad}${field.defaultValue.padEnd(defaultWidth)}${field.description}`}
-          </Text>
+          <React.Fragment key={field.name}>
+            <Text>
+              {"  "}
+              <Text color={field.isMissing ? "red" : undefined}>{field.name}</Text>
+              {`${namePad}${field.type.padEnd(typeWidth)}`}
+              {field.isRequired ? <Text color="green">✔</Text> : null}
+              {`${requiredPad}${field.defaultValue.padEnd(defaultWidth)}${firstLine}`}
+            </Text>
+            {continuationLines.map((line, index) => {
+              // A line wider than the column is an over-long word kept whole (e.g. a URL);
+              // drop it to column 0 for the full width instead of an almost-empty indented row.
+              const indent = line.length > descriptionWidth ? 0 : descriptionIndent;
+              return <Text key={index}>{`${" ".repeat(indent)}${line}`}</Text>;
+            })}
+          </React.Fragment>
         );
       })}
     </Box>
   );
 }
 
-function unwrapZodType(zodValue: z.ZodTypeAny) {
+export function unwrapZodType(zodValue: z.ZodTypeAny) {
   const rawDescription = getZodDescription(zodValue);
   const defaultMatch = rawDescription.match(/\s*\(default:\s*(.+?)\)\s*$/i);
 

@@ -5,13 +5,12 @@ import {
   storeNames,
   storeRegistry
 } from "./stores/registry.js";
-import type { StoreName } from "./types.js";
+import type { Arguments, StoreName } from "./types.js";
 import { buildGlobalHelpTableData, buildHelpTableData, MissingArgsError, NoStoresError } from "./ui/ink-logger.js";
 import { camelCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
 import { isZodOptional, zodObjectEntries } from "./utils/zod.js";
-import type { Arguments } from "yargs";
 import { z } from "zod";
 
 export const BaseOptionsSchema = z.object({
@@ -20,9 +19,9 @@ export const BaseOptionsSchema = z.object({
   verbose: z.boolean().optional().default(false).describe("Log each deployment step")
 });
 
-export const publishOnlyDescription = `Only publish to specific stores: ${storeNames.join(", ")}`;
+const publishOnlyDescription = `Only publish to specific stores: ${storeNames.join(", ")}`;
 
-const EnvOptionsSchema = z.object({
+export const EnvOptionsSchema = z.object({
   publishOnly: z.array(z.string()).optional().describe(publishOnlyDescription),
   ...BaseOptionsSchema.shape
 });
