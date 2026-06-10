@@ -1,4 +1,4 @@
-import { Reader, TextWriter, ZipReader } from "@zip.js/zip.js";
+import { inflateSync } from "fflate";
 import fs from "node:fs";
 import { open, type FileHandle } from "node:fs/promises";
 import path from "node:path";
@@ -10,31 +10,116 @@ const ExtensionManifestSchema = z.object({
   default_locale: z.string().optional()
 });
 
-// Reader subclass that issues targeted fs.read() range calls via a FileHandle,
-// so zip.js only reads the EOCD record, the central directory, and the bytes
-// of the specific entry being extracted — never the full ZIP.
-class FileHandleReader extends Reader<string> {
-  private fileHandle: FileHandle | undefined;
+// ZIP record signatures and fixed header sizes (see APPNOTE.TXT).
+const END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054b50;
+const CENTRAL_DIRECTORY_HEADER_SIGNATURE = 0x02014b50;
+const LOCAL_FILE_HEADER_SIGNATURE = 0x04034b50;
+const END_OF_CENTRAL_DIRECTORY_SIZE = 22;
+const CENTRAL_DIRECTORY_HEADER_SIZE = 46;
+const LOCAL_FILE_HEADER_SIZE = 30;
+const MAXIMUM_COMMENT_SIZE = 0xffff;
 
-  constructor(private filePath: string) {
-    super(filePath);
-  }
+const COMPRESSION_STORED = 0;
+const COMPRESSION_DEFLATE = 8;
 
-  async init() {
-    this.fileHandle = await open(this.filePath, "r");
-    const stat = await this.fileHandle.stat();
-    this.size = stat.size;
-  }
+interface CentralDirectoryEntry {
+  compressionMethod: number;
+  compressedSize: number;
+  localHeaderOffset: number;
+}
 
-  async readUint8Array(index: number, length: number) {
-    const buffer = new Uint8Array(length);
-    await this.fileHandle!.read(buffer, 0, length, index);
+// Issues a single targeted fs read for the given byte range, so the whole ZIP
+// is never loaded — only the end-of-central-directory record, the central
+// directory, and the bytes of the specific entry being extracted.
+async function readRange(fileHandle: FileHandle, position: number, length: number) {
+  const buffer = new Uint8Array(length);
+  if (length === 0) {
     return buffer;
   }
 
-  async close() {
-    await this.fileHandle?.close();
+  await fileHandle.read(buffer, 0, length, position);
+  return buffer;
+}
+
+function toDataView(buffer: Uint8Array) {
+  return new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
+async function findCentralDirectoryLocation(fileHandle: FileHandle, fileSize: number) {
+  const searchSize = Math.min(fileSize, END_OF_CENTRAL_DIRECTORY_SIZE + MAXIMUM_COMMENT_SIZE);
+  const searchStart = fileSize - searchSize;
+  const buffer = await readRange(fileHandle, searchStart, searchSize);
+  const view = toDataView(buffer);
+
+  for (let offset = searchSize - END_OF_CENTRAL_DIRECTORY_SIZE; offset >= 0; offset--) {
+    if (view.getUint32(offset, true) !== END_OF_CENTRAL_DIRECTORY_SIGNATURE) {
+      continue;
+    }
+
+    return {
+      offset: view.getUint32(offset + 16, true),
+      size: view.getUint32(offset + 12, true)
+    };
   }
+
+  throw new Error("End of central directory record not found in zip");
+}
+
+function findCentralDirectoryEntry(centralDirectory: Uint8Array, filename: string): CentralDirectoryEntry | undefined {
+  const view = toDataView(centralDirectory);
+  const decoder = new TextDecoder();
+
+  let offset = 0;
+  while (offset + CENTRAL_DIRECTORY_HEADER_SIZE <= centralDirectory.byteLength) {
+    if (view.getUint32(offset, true) !== CENTRAL_DIRECTORY_HEADER_SIGNATURE) {
+      throw new Error("Invalid central directory header in zip");
+    }
+
+    const fileNameLength = view.getUint16(offset + 28, true);
+    const extraFieldLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    const nameStart = offset + CENTRAL_DIRECTORY_HEADER_SIZE;
+    const entryName = decoder.decode(centralDirectory.subarray(nameStart, nameStart + fileNameLength));
+    if (entryName === filename) {
+      return {
+        compressionMethod: view.getUint16(offset + 10, true),
+        compressedSize: view.getUint32(offset + 20, true),
+        localHeaderOffset: view.getUint32(offset + 42, true)
+      };
+    }
+
+    offset = nameStart + fileNameLength + extraFieldLength + commentLength;
+  }
+
+  return undefined;
+}
+
+async function readEntryData(fileHandle: FileHandle, entry: CentralDirectoryEntry) {
+  const localHeader = await readRange(fileHandle, entry.localHeaderOffset, LOCAL_FILE_HEADER_SIZE);
+  const view = toDataView(localHeader);
+  if (view.getUint32(0, true) !== LOCAL_FILE_HEADER_SIGNATURE) {
+    throw new Error("Invalid local file header in zip");
+  }
+
+  // The local header's name and extra-field lengths can differ from the central
+  // directory's, so the data offset must be derived from the local header.
+  const fileNameLength = view.getUint16(26, true);
+  const extraFieldLength = view.getUint16(28, true);
+  const dataStart = entry.localHeaderOffset + LOCAL_FILE_HEADER_SIZE + fileNameLength + extraFieldLength;
+
+  return readRange(fileHandle, dataStart, entry.compressedSize);
+}
+
+function decompressEntry(data: Uint8Array, compressionMethod: number) {
+  if (compressionMethod === COMPRESSION_STORED) {
+    return data;
+  }
+
+  if (compressionMethod === COMPRESSION_DEFLATE) {
+    return inflateSync(data);
+  }
+
+  throw new Error(`Unsupported compression method ${compressionMethod} in zip`);
 }
 
 export function getFullPath(file: string) {
@@ -57,17 +142,20 @@ export function getCorrectZip(zipName: string) {
 }
 
 export async function getExtJson(zip: string) {
-  const fileReader = new FileHandleReader(zip);
-  const zipReader = new ZipReader(fileReader);
+  const fileHandle = await open(zip, "r");
 
   try {
-    const entries = await zipReader.getEntries();
-    const manifestEntry = entries.find(entry => entry.filename === "manifest.json" && "getData" in entry);
-    if (!manifestEntry || !("getData" in manifestEntry)) {
+    const { size } = await fileHandle.stat();
+    const location = await findCentralDirectoryLocation(fileHandle, size);
+    const centralDirectory = await readRange(fileHandle, location.offset, location.size);
+
+    const entry = findCentralDirectoryEntry(centralDirectory, "manifest.json");
+    if (!entry) {
       throw new Error("manifest.json not found in zip");
     }
 
-    const manifestContent = await manifestEntry.getData(new TextWriter());
+    const compressedData = await readEntryData(fileHandle, entry);
+    const manifestContent = new TextDecoder().decode(decompressEntry(compressedData, entry.compressionMethod));
     if (!manifestContent) {
       throw new Error("manifest.json is empty");
     }
@@ -86,7 +174,6 @@ export async function getExtJson(zip: string) {
 
     return manifest.data;
   } finally {
-    await zipReader.close();
-    await fileReader.close();
+    await fileHandle.close();
   }
 }
