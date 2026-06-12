@@ -85,21 +85,16 @@ function createOperaHttpClient(
   return { get, post, patch };
 }
 
-async function verifySourceCodeExistence({
-  zip,
+function getVersionListingDetail({
   packageId,
+  version,
   onRateLimit
 }: {
-  zip: string;
   packageId: number;
+  version: string;
   onRateLimit?: RateLimitHandler;
 }) {
-  const extJson = await getExtJson(zip);
-  const { version, default_locale = "en" } = extJson;
-  const params = new URLSearchParams({ language: default_locale });
-  const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${params}`;
-
-  const data = await requestWithRetry({
+  return requestWithRetry({
     sendRequest: () => httpClient.get(`developer/package-versions/${packageId}-${version}/`),
     parseResponse(response) {
       const result = ListingDetailSchema.safeParse(response.data);
@@ -113,8 +108,32 @@ async function verifySourceCodeExistence({
     errorContext: "Source code verification failed",
     onRateLimit
   });
-  const isMissingSourceUrls = !data.source_url && !data.source_for_moderators_url;
-  if (isMissingSourceUrls) {
+}
+
+async function verifySourceCodeExistence({
+  zip,
+  packageId,
+  lastVersion,
+  onRateLimit
+}: {
+  zip: string;
+  packageId: number;
+  lastVersion: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const { version, default_locale = "en" } = await getExtJson(zip);
+  const queryParameters = new URLSearchParams({ language: default_locale });
+  const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${queryParameters}`;
+
+  // The public source URL lives on the previously submitted version and is not always reflected on the
+  // freshly uploaded version, so check both and accept either a public or a moderator source URL.
+  const versionsToCheck = lastVersion && lastVersion !== version ? [version, lastVersion] : [version];
+  const listingDetails = await Promise.all(
+    versionsToCheck.map(versionToCheck => getVersionListingDetail({ packageId, version: versionToCheck, onRateLimit }))
+  );
+
+  const isSourceCodeProvided = listingDetails.some(detail => detail.source_url || detail.source_for_moderators_url);
+  if (!isSourceCodeProvided) {
     throw new Error(storeError(`No source code provided. Provide a URL in ${url} and submit the changes`));
   }
 }
@@ -427,6 +446,7 @@ export async function deployToOpera(
   await verifySourceCodeExistence({
     zip,
     packageId,
+    lastVersion,
     onRateLimit
   });
 
