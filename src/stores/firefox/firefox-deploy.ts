@@ -77,7 +77,6 @@ async function createNewVersion({
   logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
-  const locale = changelogLang ?? "en-US";
   if (changelog) {
     logger?.info(`Adding changelog: ${changelog}`);
   }
@@ -91,7 +90,7 @@ async function createNewVersion({
       `addon/${slug}/versions/`,
       JSON.stringify({
         upload: uuid,
-        ...(changelog && { release_notes: { [locale.replaceAll("_", "-")]: changelog } }),
+        ...(changelog && { release_notes: { [changelogLang.replaceAll("_", "-")]: changelog } }),
         ...(devChangelog && { approval_notes: devChangelog })
       }),
       { headers: { "Content-Type": "application/json", ...authHeader(jwtIssuer, jwtSecret) } }
@@ -148,10 +147,10 @@ async function validateUpload({
     await setTimeout(pollIntervalMs);
   }
 
-  const errors = (data.validation?.messages || [])
-    .filter(message => message.type === "error")
-    .map(message => message.message);
-  if (errors.length > 0) {
+  if (!data.valid) {
+    const errors = (data.validation?.messages ?? [])
+      .filter(message => message.type === "error")
+      .map(message => message.message);
     throw new Error(storeError(errors.join("\n")));
   }
 
@@ -206,7 +205,7 @@ export async function deployToFirefox(
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
   {
-    logger, isVerbose, setStatus, setZipPath, setExtensionName
+    logger, setStatus, setExtensionName
   }: DeployContext = {}
 ) {
   httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/");
@@ -221,14 +220,10 @@ export async function deployToFirefox(
     logger
   });
 
-  setZipPath?.(zip);
   const { name } = await getExtJson(zip);
   setExtensionName?.(name);
 
-  if (isVerbose) {
-    logger?.info(`Uploading zip of ${name} with extension ID ${extId}`);
-  }
-
+  logger?.info("Uploading ZIP");
   const uploadData = await uploadZip({
     zip,
     jwtIssuer,
@@ -236,18 +231,13 @@ export async function deployToFirefox(
     onRateLimit
   });
   const { uuid, version } = uploadData;
-  if (isVerbose) {
-    logger?.info("Verifying upload");
-  }
 
+  logger?.info("Verifying upload");
   await validateUpload({
     uuid, jwtIssuer, jwtSecret, onRateLimit
   });
 
-  if (isVerbose) {
-    logger?.info(`Creating a new version: ${version}`);
-  }
-
+  logger?.info(`Creating version ${version}`);
   await createNewVersion({
     slug: extId,
     uuid,
@@ -261,10 +251,7 @@ export async function deployToFirefox(
   });
 
   if (zipSource) {
-    if (isVerbose) {
-      logger?.info(`Uploading source ZIP: ${zipSource}`);
-    }
-
+    logger?.info("Uploading source ZIP");
     await uploadSourceCodeIfNeeded({
       slug: extId,
       zipSource,

@@ -26,14 +26,9 @@ export const FirefoxUploadDetailSchema = z.object({
 export const FirefoxCreateNewVersionSchema = z
   .looseObject({
     id: z.number(),
-    approval_notes: z.string(),
+    approval_notes: z.string().nullable(),
     channel: z.enum(["listed", "unlisted"]),
-    compatibility: z.object({
-      firefox: z.object({
-        min: z.string(),
-        max: z.string()
-      }).optional()
-    }),
+    compatibility: z.record(z.string(), z.object({ min: z.string(), max: z.string() })),
     edit_url: z.string(),
     file: z.object({
       id: z.number(),
@@ -56,7 +51,7 @@ export const FirefoxCreateNewVersionSchema = z
       slug: z.string(),
       text: z.record(z.string(), z.string()),
       url: z.string()
-    }),
+    }).nullable(),
     release_notes: z.record(z.string(), z.string()).nullable(),
     reviewed: z.string().nullable(),
     source: z.string().nullable(),
