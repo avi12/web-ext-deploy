@@ -12,11 +12,7 @@ const DEVELOPER_URL = "https://addons.opera.com/developer/";
 function extractCookies(cookiesInput: string) {
   return cookiesInput
     .split("; ")
-    .filter(cookieName => cookieName.match(new RegExp("^(" + COOKIE_NAMES.join("|") + ")")))
-    .map(cookieNameValuePair => {
-      const [name, value] = cookieNameValuePair.split("=");
-      return `${name}=${value}`;
-    })
+    .filter(cookie => COOKIE_NAMES.some(name => cookie.startsWith(`${name}=`)))
     .join("\n");
 }
 
@@ -41,8 +37,8 @@ async function captureCookiesFromBrowser(page: Page) {
       }
 
       const hasAllCookies = COOKIE_NAMES.every(name => new RegExp(`(^|; )${name}=`).test(cookie!));
-      const isDeveloperRequest = request.url() === DEVELOPER_URL;
-      if (hasAllCookies && isDeveloperRequest) {
+      const isOperaDomain = new URL(request.url()).hostname === new URL(DEVELOPER_URL).hostname;
+      if (hasAllCookies && isOperaDomain) {
         isDone = true;
         resolve(extractCookies(cookie));
       }

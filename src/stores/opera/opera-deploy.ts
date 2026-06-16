@@ -57,9 +57,21 @@ function createOperaHttpClient(
     }
 
     logger?.warning("Cookies expired, refreshing...");
-    const freshCookies = await onCredentialsExpired();
-    csrftoken = freshCookies.csrftoken || "";
-    sessionid = freshCookies.sessionid || "";
+    let freshCookies: Record<string, string>;
+    try {
+      freshCookies = await onCredentialsExpired();
+    } catch {
+      throw new CookieAuthError("Opera");
+    }
+
+    const freshCsrftoken = freshCookies.csrftoken;
+    const freshSessionid = freshCookies.sessionid;
+    if (!freshCsrftoken || !freshSessionid) {
+      throw new CookieAuthError("Opera");
+    }
+
+    csrftoken = freshCsrftoken;
+    sessionid = freshSessionid;
 
     const retryResponse = await sendRequest();
     const isStillUnauthorized = retryResponse.status === 401 || retryResponse.status === 403;
@@ -383,7 +395,7 @@ export async function deployToOpera(
     sessionid, csrftoken, packageId, zip, changelog = ""
   }: OperaOptions,
   {
-    logger, onCredentialsExpired, isVerbose, setStatus, setZipPath, setExtensionName
+    logger, onCredentialsExpired, setStatus, setExtensionName
   }: DeployContext = {}
 ) {
   httpClient = createOperaHttpClient({ sessionid, csrftoken }, logger, onCredentialsExpired);
@@ -394,14 +406,10 @@ export async function deployToOpera(
     logger
   });
 
-  setZipPath?.(zip);
   const { name, version } = await getExtJson(zip);
   setExtensionName?.(name);
 
-  if (isVerbose) {
-    logger?.info(`Retrieving listed versions of ${name} with package ID ${packageId}`);
-  }
-
+  logger?.info("Checking versions");
   const versionsData = await getVersions({
     packageId,
     onRateLimit
@@ -418,19 +426,13 @@ export async function deployToOpera(
     onRateLimit
   });
 
-  if (isVerbose) {
-    logger?.info("Uploading zip");
-  }
-
+  logger?.info("Uploading ZIP");
   await uploadZip({
     zip,
     onRateLimit
   });
 
-  if (isVerbose) {
-    logger?.info("Verifying upload");
-  }
-
+  logger?.info("Verifying upload");
   const lastVersion = versionsData.versions.find(entry => entry.submitted_for_moderation)?.version || "";
   await verifyUploadSuccessful({
     zipPath: zip,
@@ -439,10 +441,7 @@ export async function deployToOpera(
     onRateLimit
   });
 
-  if (isVerbose) {
-    logger?.info("Verifying source code existence");
-  }
-
+  logger?.info("Verifying source code");
   await verifySourceCodeExistence({
     zip,
     packageId,
@@ -451,10 +450,7 @@ export async function deployToOpera(
   });
 
   if (changelog) {
-    if (isVerbose) {
-      logger?.info("Updating changelog");
-    }
-
+    logger?.info("Updating changelog");
     await updateChangelog({
       zip,
       packageId,
@@ -463,9 +459,7 @@ export async function deployToOpera(
     });
   }
 
-  if (isVerbose) {
-    logger?.info("Submitting changes");
-  }
+  logger?.info("Submitting for review");
 
   await submitChanges({
     zip,
