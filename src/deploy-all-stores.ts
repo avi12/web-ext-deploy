@@ -11,7 +11,6 @@ async function runStoreDeploy(
   json: Record<string, unknown>,
   inkLogger: ReturnType<typeof createInkLogger>,
   isDryRun?: boolean,
-  isVerbose?: boolean,
   isAutoFetchCredentials?: boolean,
   mode?: "cli" | "env"
 ): Promise<{ store: StoreName; helpTables: HelpTableData[] } | null> {
@@ -28,10 +27,8 @@ async function runStoreDeploy(
       logger: inkLogger.forStore(store),
       onCredentialsExpired,
       isDryRun,
-      isVerbose,
       mode,
       setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
-      setZipPath: zipPath => inkLogger.monitor.setZipPath(store, zipPath),
       setExtensionName: name => inkLogger.monitor.setExtensionName(store, name)
     });
     inkLogger.logger.success(store, isDryRun ? "Validation passed" : "Published!");
@@ -79,7 +76,6 @@ export async function runDeploy(argv: Arguments) {
   const command = z.string().safeParse(argv._[0]).data;
   const mode = command === "cli" || command === "env" ? command : undefined;
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
-  const isVerbose = z.boolean().safeParse(argv.verbose).data;
   const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun);
   await inkLogger.ready;
   for (const message of preDeployLogs) {
@@ -88,7 +84,7 @@ export async function runDeploy(argv: Arguments) {
   const isAutoFetchCredentials = z.boolean().safeParse(argv.autoFetchCredentials).data;
 
   const results = await Promise.all(
-    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isVerbose, isAutoFetchCredentials, mode))
+    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isAutoFetchCredentials, mode))
   );
 
   const failures: StoreName[] = [];

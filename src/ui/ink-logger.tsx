@@ -608,14 +608,6 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
       sharedExtensionNames[store] = name;
       triggerRender?.();
     },
-    setZipPath(store: StoreName, zipPath: string) {
-      addLogEntry({
-        store,
-        level: LogLevel.Info,
-        message: `ZIP: ${zipPath}`,
-        timestamp: new Date()
-      });
-    },
     setHelpTables(tables: HelpTableData[]) {
       sharedHelpTables = tables;
       triggerRender?.();

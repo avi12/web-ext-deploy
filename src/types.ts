@@ -19,9 +19,7 @@ type CredentialRefreshCallback = () => Promise<Record<string, string>>;
 export type DeployContext = {
   logger?: StoreLogger;
   onCredentialsExpired?: CredentialRefreshCallback;
-  isVerbose?: boolean;
   setStatus?: (status: StoreStatus, message?: string) => void;
-  setZipPath?: (zipPath: string) => void;
   setExtensionName?: (name: string) => void;
 };
 

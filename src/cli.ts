@@ -57,11 +57,6 @@ function optionName(scope: StoreName | "base", key: string) {
 function schemaToSpecs(scope: StoreName | "base", schema: z.ZodObject<z.ZodRawShape>) {
   const specs: CliOptionSpecs = {};
   for (const [key, value] of zodObjectEntries(schema)) {
-    const isVerboseOnStore = key === "verbose" && scope !== "base";
-    if (isVerboseOnStore) {
-      continue;
-    }
-
     specs[optionName(scope, key)] = getZodBaseType(unwrapZod(value));
   }
   return specs;

@@ -15,8 +15,7 @@ import { z } from "zod";
 
 export const BaseOptionsSchema = z.object({
   autoFetchCredentials: z.boolean().optional().default(false).describe("Automatically fetch credentials as needed (cookies, tokens) for stores that require them"),
-  dryRun: z.boolean().optional().default(false).describe("Validate inputs without deploying"),
-  verbose: z.boolean().optional().default(false).describe("Log each deployment step")
+  dryRun: z.boolean().optional().default(false).describe("Validate inputs without deploying")
 });
 
 const publishOnlyDescription = `Only publish to specific stores: ${storeNames.join(", ")}`;

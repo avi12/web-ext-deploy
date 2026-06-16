@@ -110,13 +110,11 @@ async function cancelSubmissionIfPending({
   extId,
   publisherId,
   logger,
-  isVerbose,
   onRateLimit
 }: {
   extId: string;
   publisherId: string;
   logger?: DeployContext["logger"];
-  isVerbose?: boolean;
   onRateLimit?: RateLimitHandler;
 }) {
   const status = await fetchStatus({ extId, publisherId, onRateLimit });
@@ -126,9 +124,7 @@ async function cancelSubmissionIfPending({
     return;
   }
 
-  if (isVerbose) {
-    logger?.info(`Canceling pending submission (state: ${submittedState})`);
-  }
+  logger?.info(`Canceling pending submission (state: ${submittedState})`);
 
   await requestWithRetry({
     sendRequest: () => httpClient.post(`v2/publishers/${publisherId}/items/${extId}:cancelSubmission`),
@@ -304,10 +300,9 @@ export async function deployToChrome(
     extId, publisherId, clientId, clientSecret, refreshToken, zip, skipReview, deployPercentage
   }: ChromeOptions,
   {
-    logger, isVerbose, setStatus, setZipPath, setExtensionName
+    logger, setStatus, setExtensionName
   }: DeployContext = {}
 ) {
-  setZipPath?.(zip);
   const { name } = await getExtJson(zip);
   setExtensionName?.(name);
   const accessToken = await exchangeRefreshTokenForAccessToken(clientId, clientSecret, refreshToken);
@@ -320,13 +315,10 @@ export async function deployToChrome(
   });
 
   await cancelSubmissionIfPending({
-    extId, publisherId, logger, isVerbose, onRateLimit
+    extId, publisherId, logger, onRateLimit
   });
 
-  if (isVerbose) {
-    logger?.info(`Uploading zip with extension ID ${extId}`);
-  }
-
+  logger?.info("Uploading ZIP");
   await uploadZip({
     zip,
     extId,
@@ -334,18 +326,12 @@ export async function deployToChrome(
     onRateLimit
   });
 
-  if (isVerbose) {
-    logger?.info("Publishing extension");
-  }
-
+  logger?.info("Publishing");
   await publishExtension({
     extId, publisherId, skipReview, deployPercentage, onRateLimit
   });
 
-  if (isVerbose) {
-    logger?.info("Verifying submission");
-  }
-
+  logger?.info("Verifying submission");
   await verifySubmission({ extId, publisherId, onRateLimit });
 
   setStatus?.(StoreStatus.Success);

@@ -186,7 +186,7 @@ export async function deployToEdgePublishApi(
     productId, clientId, apiKey, zip, devChangelog
   }: EdgeOptionsPublishApi,
   {
-    logger, isVerbose, setStatus, setZipPath, setExtensionName
+    logger, setStatus, setExtensionName
   }: DeployContext = {}
 ) {
   httpClient = createHttpClient("https://api.addons.microsoftedge.microsoft.com/v1", {
@@ -204,30 +204,19 @@ export async function deployToEdgePublishApi(
     logger
   });
 
-  setZipPath?.(zip);
   const { name } = await getExtJson(zip);
   setExtensionName?.(name);
 
-  if (isVerbose) {
-    logger?.info(`Uploading zip of ${name} with product ID ${productId}`);
-  }
-
+  logger?.info("Uploading ZIP");
   const uploadOperationId = await uploadZip({ zip, productId, onRateLimit });
-  if (isVerbose) {
-    logger?.info("Verifying upload");
-  }
 
+  logger?.info("Verifying upload");
   await checkStatusOfPackageUpload({ productId, operationId: uploadOperationId, onRateLimit });
 
-  if (isVerbose) {
-    logger?.info("Publishing submission");
-  }
-
+  logger?.info("Publishing");
   const publishOperationId = await publishSubmission({ productId, devChangelog, onRateLimit });
-  if (isVerbose) {
-    logger?.info("Checking submission status");
-  }
 
+  logger?.info("Checking submission status");
   await pollPublishStatus({ productId, operationId: publishOperationId, onRateLimit });
 
   setStatus?.(StoreStatus.Success);
