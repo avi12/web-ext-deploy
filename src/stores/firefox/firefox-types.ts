@@ -47,10 +47,10 @@ export const FirefoxCreateNewVersionSchema = z
     license: z.object({
       id: z.number(),
       is_custom: z.boolean(),
-      name: z.record(z.string(), z.string()),
-      slug: z.string(),
-      text: z.record(z.string(), z.string()),
-      url: z.string()
+      name: z.record(z.string(), z.string()).nullable(),
+      slug: z.string().nullable(),
+      text: z.record(z.string(), z.string()).nullable().optional(),
+      url: z.string().nullable()
     }).nullable(),
     release_notes: z.record(z.string(), z.string()).nullable(),
     reviewed: z.string().nullable(),
