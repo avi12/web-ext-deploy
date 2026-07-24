@@ -134,6 +134,7 @@ export async function requestWithRetry<T>({
   formatError,
   errorContext,
   onRateLimit,
+  acceptedClientErrorStatuses = [],
   maxRetries = DEFAULT_MAX_RETRIES,
   maxBackoffMs = 5_000
 }: {
@@ -142,6 +143,7 @@ export async function requestWithRetry<T>({
   formatError: (message: string) => string;
   errorContext: string;
   onRateLimit?: (response: HttpLikeResponse) => Promise<void>;
+  acceptedClientErrorStatuses?: number[];
   maxRetries?: number;
   maxBackoffMs?: number;
 }) {
@@ -170,7 +172,9 @@ export async function requestWithRetry<T>({
       return attempt(count + 1);
     }
 
-    const isClientError = response.status >= 400 && response.status < 500;
+    const isClientError = response.status >= 400
+      && response.status < 500
+      && !acceptedClientErrorStatuses.includes(response.status);
     if (isClientError) {
       throw new Error(formatError(`${errorContext}: ${extractApiMessage(response.data, response.statusText)}`));
     }

@@ -109,6 +109,40 @@ async function createNewVersion({
   });
 }
 
+/** @see https://mozilla.github.io/addons-server/topics/api/addons.html#version-detail */
+function getVersionIfExists({
+  slug,
+  version,
+  jwtIssuer,
+  jwtSecret,
+  onRateLimit
+}: {
+  slug: string;
+  version: string;
+  jwtIssuer: string;
+  jwtSecret: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  return requestWithRetry({
+    sendRequest: () => httpClient.get(
+      `addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`,
+      { headers: authHeader(jwtIssuer, jwtSecret) }
+    ),
+    parseResponse(response) {
+      const result = FirefoxCreateNewVersionSchema.nullable().safeParse(response.status === 404 ? null : response.data);
+      if (!result.success) {
+        throw result.error;
+      }
+
+      return result.data;
+    },
+    formatError: storeError,
+    errorContext: "Version lookup failed",
+    onRateLimit,
+    acceptedClientErrorStatuses: [404]
+  });
+}
+
 /** @see https://mozilla.github.io/addons-server/topics/api/addons.html#upload-detail */
 async function validateUpload({
   uuid,
@@ -178,7 +212,7 @@ function uploadSourceCodeIfNeeded({
   ]);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${version}/`, formData.body, { headers: { ...formData.headers, ...authHeader(jwtIssuer, jwtSecret) } }),
+    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, formData.body, { headers: { ...formData.headers, ...authHeader(jwtIssuer, jwtSecret) } }),
     parseResponse(response) {
       const result = FirefoxUploadSourceSchema.safeParse(response.data);
       if (!result.success) {
@@ -204,9 +238,7 @@ export async function deployToFirefox(
     changelogLang,
     devChangelog = ""
   }: FirefoxOptionsSubmissionApi,
-  {
-    logger, setStatus, setExtensionName
-  }: DeployContext = {}
+  { logger, setStatus, setExtensionName }: DeployContext = {}
 ) {
   httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/");
 
@@ -220,37 +252,62 @@ export async function deployToFirefox(
     logger
   });
 
-  const { name } = await getExtJson(zip);
+  const { name, version } = await getExtJson(zip);
   setExtensionName?.(name);
 
-  logger?.info("Uploading ZIP");
-  const uploadData = await uploadZip({
-    zip,
-    jwtIssuer,
-    jwtSecret,
-    onRateLimit
-  });
-  const { uuid, version } = uploadData;
-
-  logger?.info("Verifying upload");
-  await validateUpload({
-    uuid, jwtIssuer, jwtSecret, onRateLimit
-  });
-
-  logger?.info(`Creating version ${version}`);
-  await createNewVersion({
+  let versionData = await getVersionIfExists({
     slug: extId,
-    uuid,
-    changelog,
-    changelogLang,
-    devChangelog,
+    version,
     jwtIssuer,
     jwtSecret,
-    logger,
     onRateLimit
   });
+  if (!versionData) {
+    logger?.info("Uploading ZIP");
+    const uploadData = await uploadZip({
+      zip,
+      jwtIssuer,
+      jwtSecret,
+      onRateLimit
+    });
+    const { uuid } = uploadData;
 
-  if (zipSource) {
+    logger?.info("Verifying upload");
+    await validateUpload({
+      uuid, jwtIssuer, jwtSecret, onRateLimit
+    });
+
+    logger?.info(`Creating version ${version}`);
+    try {
+      versionData = await createNewVersion({
+        slug: extId,
+        uuid,
+        changelog,
+        changelogLang,
+        devChangelog,
+        jwtIssuer,
+        jwtSecret,
+        logger,
+        onRateLimit
+      });
+    } catch (error) {
+      versionData = await getVersionIfExists({
+        slug: extId,
+        version,
+        jwtIssuer,
+        jwtSecret,
+        onRateLimit
+      });
+
+      if (!versionData) {
+        throw error;
+      }
+    }
+  } else {
+    logger?.info(`Version ${version} already exists; resuming deployment`);
+  }
+
+  if (zipSource && !versionData.source) {
     logger?.info("Uploading source ZIP");
     await uploadSourceCodeIfNeeded({
       slug: extId,
