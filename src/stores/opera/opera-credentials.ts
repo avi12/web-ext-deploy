@@ -3,6 +3,8 @@ import { config, parse } from "../../utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
 import { chromium, type Page } from "playwright";
 
 const CREDENTIALS_FILE = `${StoreName.Opera}.env`;
@@ -64,17 +66,26 @@ function saveToEnvFile(cookiesRaw: string) {
   fs.writeFileSync(CREDENTIALS_FILE, headersToEnv(envNew));
 }
 
+// Installs Chromium through the bundled Playwright CLI directly, so the matching browser build is
+// fetched regardless of which package manager (npx/pnpm/yarn) the environment's install hint names.
+function installChromium() {
+  const require = createRequire(import.meta.url);
+  const playwrightCli = path.join(path.dirname(require.resolve("playwright/package.json")), "cli.js");
+  execSync(`node "${playwrightCli}" install chromium`, { stdio: "inherit" });
+}
+
 export async function fetchOperaCredentials(saveToEnv: boolean): Promise<Record<string, string>> {
   const width = 1280;
   const height = 720;
   const launchOptions = { headless: false, args: [`--window-size=${width},${height}`] };
   const browser = await chromium.launch(launchOptions).catch(async error => {
     const message = error instanceof Error ? error.message : String(error);
-    if (!message.includes("npx playwright install")) {
+    const isBrowserMissing = message.includes("Executable doesn't exist");
+    if (!isBrowserMissing) {
       throw error;
     }
 
-    execSync("npx playwright install", { stdio: "inherit" });
+    installChromium();
     return chromium.launch(launchOptions);
   });
   const context = await browser.newContext({ viewport: { width, height } });
