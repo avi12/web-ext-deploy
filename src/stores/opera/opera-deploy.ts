@@ -43,30 +43,22 @@ function createOperaHttpClient(
   // Opera's file-upload endpoint sits behind an nginx ingress that pins a chunked upload to a single
   // backend pod via a Set-Cookie sticky-session cookie (INGRESSCOOKIE_API). Every chunk and the finalize
   // must carry it or the chunks scatter across pods and reassembly fails ("not a valid ZIP" / 500).
-  const stickySessionCookies = new Map<string, string>();
+  let stickySessionCookie = "";
 
   function cookieHeaders() {
-    const sticky = [...stickySessionCookies].map(([name, value]) => `${name}=${value}`).join("; ");
     return {
-      Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}${sticky ? `; ${sticky}` : ""}`,
+      Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}${stickySessionCookie ? `; ${stickySessionCookie}` : ""}`,
       "X-Csrftoken": csrftoken
     };
   }
 
   function absorbSetCookies(response: HttpLikeResponse) {
-    for (const setCookie of response.setCookies ?? []) {
-      const [pair] = setCookie.split(";");
-      const separatorIndex = pair.indexOf("=");
-      if (separatorIndex === -1) {
-        continue;
-      }
-
-      const name = pair.slice(0, separatorIndex).trim();
-      const isReservedAuthCookie = name === "csrftoken" || name === "sessionid";
-      if (!isReservedAuthCookie) {
-        stickySessionCookies.set(name, pair.slice(separatorIndex + 1).trim());
-      }
+    const setCookie = response.setCookies?.find(cookie => cookie.startsWith("INGRESSCOOKIE_API="));
+    if (!setCookie) {
+      return;
     }
+
+    [stickySessionCookie] = setCookie.split(";");
   }
 
   async function withCookieRefresh(sendRequest: () => Promise<HttpLikeResponse>): Promise<HttpLikeResponse> {
