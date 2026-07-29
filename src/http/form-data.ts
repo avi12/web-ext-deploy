@@ -6,6 +6,7 @@ interface FormDataEntry {
   name: string;
   value: FormDataValue;
   filename?: string;
+  contentType?: string;
 }
 
 function readValue(value: FormDataValue) {
@@ -33,7 +34,7 @@ export function buildFormData(entries: FormDataEntry[]) {
   for (const entry of entries) {
     const disposition = `Content-Disposition: form-data; name="${entry.name}"`;
     const fileHeader = entry.filename !== undefined
-      ? `${disposition}; filename="${entry.filename}"\r\nContent-Type: application/octet-stream`
+      ? `${disposition}; filename="${entry.filename}"\r\nContent-Type: ${entry.contentType ?? "application/octet-stream"}`
       : disposition;
 
     chunks.push(Buffer.from(`--${boundary}\r\n${fileHeader}\r\n\r\n`));

@@ -35,7 +35,8 @@ async function fetchResponse(url: string, options: RequestInit) {
       data,
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
+      headers: Object.fromEntries(response.headers.entries()),
+      setCookies: response.headers.getSetCookie?.() ?? []
     };
   } finally {
     globalThis.clearTimeout(timeoutId);

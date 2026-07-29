@@ -22,6 +22,7 @@ export type HttpLikeResponse = {
   status: number;
   statusText: string;
   headers?: Record<string, string>;
+  setCookies?: string[];
 };
 
 export type RateLimitHandler = (response: HttpLikeResponse) => Promise<void>;

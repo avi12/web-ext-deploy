@@ -24,6 +24,8 @@ import {
 import fs from "node:fs";
 import { z } from "zod";
 
+const UPLOAD_CHUNK_SIZE_BYTES = 1024 * 1024;
+
 let httpClient: ReturnType<typeof createOperaHttpClient>;
 
 function createOperaHttpClient(
@@ -38,15 +40,38 @@ function createOperaHttpClient(
 
   let { csrftoken, sessionid } = cookies;
 
+  // Opera's file-upload endpoint sits behind an nginx ingress that pins a chunked upload to a single
+  // backend pod via a Set-Cookie sticky-session cookie (INGRESSCOOKIE_API). Every chunk and the finalize
+  // must carry it or the chunks scatter across pods and reassembly fails ("not a valid ZIP" / 500).
+  const stickySessionCookies = new Map<string, string>();
+
   function cookieHeaders() {
+    const sticky = [...stickySessionCookies].map(([name, value]) => `${name}=${value}`).join("; ");
     return {
-      Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}`,
+      Cookie: `csrftoken=${csrftoken}; sessionid=${sessionid}${sticky ? `; ${sticky}` : ""}`,
       "X-Csrftoken": csrftoken
     };
   }
 
+  function absorbSetCookies(response: HttpLikeResponse) {
+    for (const setCookie of response.setCookies ?? []) {
+      const [pair] = setCookie.split(";");
+      const separatorIndex = pair.indexOf("=");
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const name = pair.slice(0, separatorIndex).trim();
+      const isReservedAuthCookie = name === "csrftoken" || name === "sessionid";
+      if (!isReservedAuthCookie) {
+        stickySessionCookies.set(name, pair.slice(separatorIndex + 1).trim());
+      }
+    }
+  }
+
   async function withCookieRefresh(sendRequest: () => Promise<HttpLikeResponse>): Promise<HttpLikeResponse> {
     const response = await sendRequest();
+    absorbSetCookies(response);
     const isAuthFailure = response.status === 401 || response.status === 403;
     if (!isAuthFailure) {
       return response;
@@ -74,6 +99,7 @@ function createOperaHttpClient(
     sessionid = freshSessionid;
 
     const retryResponse = await sendRequest();
+    absorbSetCookies(retryResponse);
     const isStillUnauthorized = retryResponse.status === 401 || retryResponse.status === 403;
     if (isStillUnauthorized) {
       throw new CookieAuthError("Opera");
@@ -250,25 +276,43 @@ function getFileMetadata(zipPath: string) {
   }
 
   const zipName = zipNameResult.data;
-  const zipNameWithoutForbiddenCharacters = zipName.replace(/[.]/g, "");
+
+  // Matches ng-flow's generateUniqueIdentifier (the store's dashboard uploader), which strips every
+  // character outside [0-9a-zA-Z_-] from the name - the server keys the reassembled file by this.
+  const zipNameWithoutForbiddenCharacters = zipName.replace(/[^0-9a-zA-Z_-]/g, "");
   const fileId = `${sizeInBytes}-${zipNameWithoutForbiddenCharacters}`;
-  return { zipName, fileId };
+  return { zipName, fileId, sizeInBytes };
 }
 
-async function uploadZip({
-  zip,
+async function uploadChunk({
+  chunk,
+  chunkNumber,
+  totalChunks,
+  totalSize,
+  zipName,
+  fileId,
   onRateLimit
 }: {
-  zip: string;
+  chunk: Buffer;
+  chunkNumber: number;
+  totalChunks: number;
+  totalSize: number;
+  zipName: string;
+  fileId: string;
   onRateLimit?: RateLimitHandler;
 }) {
-  const { zipName, fileId } = getFileMetadata(zip);
-
   const formData = buildFormData([
-    { name: "flowChunkNumber", value: "1" },
-    { name: "flowFilename", value: zipName },
+    { name: "flowChunkNumber", value: String(chunkNumber) },
+    { name: "flowChunkSize", value: String(UPLOAD_CHUNK_SIZE_BYTES) },
+    { name: "flowCurrentChunkSize", value: String(chunk.length) },
+    { name: "flowTotalSize", value: String(totalSize) },
     { name: "flowIdentifier", value: fileId },
-    { name: "file", value: fs.createReadStream(zip), filename: zipName }
+    { name: "flowFilename", value: zipName },
+    { name: "flowRelativePath", value: zipName },
+    { name: "flowTotalChunks", value: String(totalChunks) },
+    {
+      name: "file", value: chunk, filename: zipName, contentType: "application/x-zip-compressed"
+    }
   ]);
 
   return requestWithRetry({
@@ -285,6 +329,38 @@ async function uploadZip({
     errorContext: "Upload failed",
     onRateLimit
   });
+}
+
+// Opera's file-upload endpoint is ng-flow behind nginx, which rejects a single body over ~1.5 MB
+// with 413. Split the ZIP the way ng-flow does with forceChunkSize disabled: floor(size / chunkSize)
+// chunks where the final chunk absorbs the trailing remainder (so it can exceed one chunk size). The
+// server reassembles them by the shared flowIdentifier.
+async function uploadZip({
+  zip,
+  onRateLimit
+}: {
+  zip: string;
+  onRateLimit?: RateLimitHandler;
+}) {
+  const { zipName, fileId, sizeInBytes } = getFileMetadata(zip);
+  const file = fs.readFileSync(zip);
+  const totalChunks = Math.max(Math.floor(sizeInBytes / UPLOAD_CHUNK_SIZE_BYTES), 1);
+
+  for (let offset = 0; offset < totalChunks; offset++) {
+    const startByte = offset * UPLOAD_CHUNK_SIZE_BYTES;
+    const nextBoundary = Math.min(sizeInBytes, startByte + UPLOAD_CHUNK_SIZE_BYTES);
+    const isRemainderTooSmallForOwnChunk = sizeInBytes - nextBoundary < UPLOAD_CHUNK_SIZE_BYTES;
+    const endByte = isRemainderTooSmallForOwnChunk ? sizeInBytes : nextBoundary;
+    await uploadChunk({
+      chunk: file.subarray(startByte, endByte),
+      chunkNumber: offset + 1,
+      totalChunks,
+      totalSize: sizeInBytes,
+      zipName,
+      fileId,
+      onRateLimit
+    });
+  }
 }
 
 async function verifyUploadSuccessful({
