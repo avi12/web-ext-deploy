@@ -18,7 +18,7 @@ export const ListVersionsSchema = z.looseObject({
   published_versions: z.array(
     z.object({
       name: z.string(),
-      version: VersionEntrySchema
+      version: VersionEntrySchema.nullable()
     })
   ),
   developer: z.string(),
