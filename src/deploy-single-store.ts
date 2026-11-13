@@ -1,5 +1,5 @@
 import { storeRegistry } from "./stores/registry.js";
-import { StoreStatus, type DeployContext } from "./types.js";
+import { type DeployContext, StoreStatus } from "./types.js";
 import { buildHelpTableData, type HelpTableData } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
 
@@ -19,7 +19,10 @@ export class StoreValidationError extends Error {
 export function deployStore(
   options: unknown,
   storeName: string,
-  context?: DeployContext & { isDryRun?: boolean; mode?: "cli" | "env" }
+  context?: DeployContext & {
+    isDryRun?: boolean;
+    mode?: "cli" | "env";
+  }
 ) {
   const store = storeRegistry.find(store => store.name === storeName);
   if (!store) {
@@ -32,13 +35,18 @@ export function deployStore(
     const messages = error.issues.map(issue => issue.message);
     const structuralIssues = error.issues.filter(issue => issue.code !== "custom");
     if (structuralIssues.length > 0) {
-      const failedFields = [...new Set(
-        structuralIssues
-          .map(issue => issue.path[0])
-          .filter(path => typeof path === "string")
-      )];
+      const failedFields = [
+        ...new Set(structuralIssues.map(issue => issue.path[0]).filter(path => typeof path === "string"))
+      ];
       const missingFields = failedFields.length > 0 ? failedFields : undefined;
-      const helpTableData = buildHelpTableData(store.name, store.schema, context?.mode, missingFields, store.dynamicFields, store.cliOverridableFields);
+      const helpTableData = buildHelpTableData(
+        store.name,
+        store.schema,
+        context?.mode,
+        missingFields,
+        store.dynamicFields,
+        store.cliOverridableFields
+      );
       throw new StoreValidationError(messages.join("\n"), helpTableData ? [helpTableData] : [], error);
     }
 

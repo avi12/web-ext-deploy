@@ -26,7 +26,10 @@ async function fetchResponse(url: string, options: RequestInit) {
   const timeoutId = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
     const contentType = response.headers.get("content-type");
     const data: unknown =
       contentType && contentType.includes("application/json") ? await response.json() : await response.text();
@@ -52,8 +55,13 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
   function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
     const fetchOptions: RequestInit = {
       method,
-      headers: { ...defaultHeaders, ...options.headers },
-      ...options.body !== undefined && { body: options.body }
+      headers: {
+        ...defaultHeaders,
+        ...options.headers
+      },
+      ...(options.body !== undefined && {
+        body: options.body
+      })
     };
 
     return fetchResponse(buildUrl(endpoint, options.params), fetchOptions);
@@ -67,7 +75,10 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
         // the connection open for sending while waiting for the response.
         return fetchResponse(buildUrl(endpoint), {
           method: "POST",
-          headers: { ...defaultHeaders, ...options.headers },
+          headers: {
+            ...defaultHeaders,
+            ...options.headers
+          },
           body: new ReadableStream({
             start(controller) {
               body.on("data", chunk => controller.enqueue(chunk));
@@ -82,13 +93,19 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
         });
       }
 
-      return request("POST", endpoint, { ...options, body });
+      return request("POST", endpoint, {
+        ...options,
+        body
+      });
     },
     get(endpoint: string, options: FetchOptions = {}) {
       return request("GET", endpoint, options);
     },
     patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
-      return request("PATCH", endpoint, { ...options, body });
+      return request("PATCH", endpoint, {
+        ...options,
+        body
+      });
     }
   };
 }

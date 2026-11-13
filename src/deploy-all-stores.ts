@@ -1,10 +1,11 @@
+import { z } from "zod";
+
 import { deployStore, StoreValidationError } from "./deploy-single-store.js";
 import { createCredentialRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
-import { type Arguments, StoreStatus, type StoreName } from "./types.js";
+import { type Arguments, type StoreName, StoreStatus } from "./types.js";
 import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
 import { toError } from "./utils/retry.js";
-import { z } from "zod";
 
 async function runStoreDeploy(
   store: StoreName,
@@ -13,14 +14,18 @@ async function runStoreDeploy(
   isDryRun?: boolean,
   isAutoFetchCredentials?: boolean,
   mode?: "cli" | "env"
-): Promise<{ store: StoreName; helpTables: HelpTableData[] } | null> {
+): Promise<{
+  store: StoreName;
+  helpTables: HelpTableData[];
+} | null> {
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
   const saveToEnv = mode === "env";
-  const onCredentialsExpired = isAutoFetchCredentials && storeDef?.credentialFields
-    ? createCredentialRefreshCallback(storeDef, saveToEnv)
-    : undefined;
+  const onCredentialsExpired =
+    isAutoFetchCredentials && storeDef?.credentialFields
+      ? createCredentialRefreshCallback(storeDef, saveToEnv)
+      : undefined;
 
   try {
     await deployStore(json, store, {
@@ -41,7 +46,10 @@ async function runStoreDeploy(
     }
     inkLogger.monitor.updateStore(store, StoreStatus.Error);
     const helpTables = error instanceof StoreValidationError ? error.helpTables : [];
-    return { store, helpTables };
+    return {
+      store,
+      helpTables
+    };
   }
 }
 
@@ -76,7 +84,10 @@ export async function runDeploy(argv: Arguments) {
   const command = z.string().safeParse(argv._[0]).data;
   const mode = command === "cli" || command === "env" ? command : undefined;
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
-  const inkLogger = createInkLogger(storeEntries.map(([store]) => store), isDryRun);
+  const inkLogger = createInkLogger(
+    storeEntries.map(([store]) => store),
+    isDryRun
+  );
   await inkLogger.ready;
   for (const message of preDeployLogs) {
     inkLogger.logger.info("System", message);

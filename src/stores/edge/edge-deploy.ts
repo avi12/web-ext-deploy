@@ -1,3 +1,8 @@
+import fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
+
+import { z } from "zod";
+
 import { createHttpClient } from "@/http/client.js";
 import { type DeployContext, StoreStatus } from "@/types.js";
 import { storeError } from "@/ui/logging.js";
@@ -9,11 +14,9 @@ import {
   requestWithRetry
 } from "@/utils/retry.js";
 import { getExtJson } from "@/utils/zip.js";
-import { EdgeOptionsPublishApi } from "./edge-input.js";
+
+import type { EdgeOptionsPublishApi } from "./edge-input.js";
 import { OperationStatus, PublishOperationStatusSchema, StatusPackageUploadSchema } from "./edge-types.js";
-import fs from "node:fs";
-import { setTimeout } from "node:timers/promises";
-import { z } from "zod";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
@@ -81,7 +84,12 @@ function uploadZip({
   onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
-    sendRequest: () => httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), { headers: { "Content-Type": "application/zip" } }),
+    sendRequest: () =>
+      httpClient.post(`products/${productId}/submissions/draft/package`, fs.createReadStream(zip), {
+        headers: {
+          "Content-Type": "application/zip"
+        }
+      }),
     parseResponse: parseLocation,
     formatError: storeError,
     errorContext: "Upload failed",
@@ -100,7 +108,12 @@ function publishSubmission({
   onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
-    sendRequest: () => httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), { headers: { "Content-Type": "application/json" } }),
+    sendRequest: () =>
+      httpClient.post(`products/${productId}/submissions`, JSON.stringify({ notes: devChangelog }), {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }),
     parseResponse: parseLocation,
     formatError: storeError,
     errorContext: "Publish failed",
@@ -143,7 +156,11 @@ async function checkPublishStatus({
   operationId: string;
   onRateLimit?: RateLimitHandler;
 }) {
-  const data = await fetchPublishStatus({ productId, operationId, onRateLimit });
+  const data = await fetchPublishStatus({
+    productId,
+    operationId,
+    onRateLimit
+  });
   if (!("status" in data)) {
     throw new Error(storeError(data.message ?? "Unknown error"));
   }
@@ -172,7 +189,11 @@ async function pollPublishStatus({
   let attempt = 0;
 
   while (true) {
-    const data = await checkPublishStatus({ productId, operationId, onRateLimit });
+    const data = await checkPublishStatus({
+      productId,
+      operationId,
+      onRateLimit
+    });
     if (data.status === OperationStatus.Succeeded) {
       return;
     }
@@ -182,12 +203,8 @@ async function pollPublishStatus({
 }
 
 export async function deployToEdgePublishApi(
-  {
-    productId, clientId, apiKey, zip, devChangelog
-  }: EdgeOptionsPublishApi,
-  {
-    logger, setStatus, setExtensionName
-  }: DeployContext = {}
+  { productId, clientId, apiKey, zip, devChangelog }: EdgeOptionsPublishApi,
+  { logger, setStatus, setExtensionName }: DeployContext = {}
 ) {
   httpClient = createHttpClient("https://api.addons.microsoftedge.microsoft.com/v1", {
     Authorization: `ApiKey ${apiKey}`,
@@ -208,16 +225,32 @@ export async function deployToEdgePublishApi(
   setExtensionName?.(name);
 
   logger?.info("Uploading ZIP");
-  const uploadOperationId = await uploadZip({ zip, productId, onRateLimit });
+  const uploadOperationId = await uploadZip({
+    zip,
+    productId,
+    onRateLimit
+  });
 
   logger?.info("Verifying upload");
-  await checkStatusOfPackageUpload({ productId, operationId: uploadOperationId, onRateLimit });
+  await checkStatusOfPackageUpload({
+    productId,
+    operationId: uploadOperationId,
+    onRateLimit
+  });
 
   logger?.info("Publishing");
-  const publishOperationId = await publishSubmission({ productId, devChangelog, onRateLimit });
+  const publishOperationId = await publishSubmission({
+    productId,
+    devChangelog,
+    onRateLimit
+  });
 
   logger?.info("Checking submission status");
-  await pollPublishStatus({ productId, operationId: publishOperationId, onRateLimit });
+  await pollPublishStatus({
+    productId,
+    operationId: publishOperationId,
+    onRateLimit
+  });
 
   setStatus?.(StoreStatus.Success);
   return true;

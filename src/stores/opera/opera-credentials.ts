@@ -1,11 +1,13 @@
-import { StoreName } from "@/types.js";
-import { config, parse } from "@/utils/dotenv.js";
-import { createGitIgnoreIfNeeded, headersToEnv } from "@/utils/helpers.js";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+
 import { chromium, type Page } from "playwright";
+
+import { StoreName } from "@/types.js";
+import { config, parse } from "@/utils/dotenv.js";
+import { createGitIgnoreIfNeeded, headersToEnv } from "@/utils/helpers.js";
 
 const CREDENTIALS_FILE = `${StoreName.Opera}.env`;
 const COOKIE_NAMES = ["sessionid", "csrftoken"] as const;
@@ -77,7 +79,10 @@ function installChromium() {
 export async function fetchOperaCredentials(saveToEnv: boolean): Promise<Record<string, string>> {
   const width = 1280;
   const height = 720;
-  const launchOptions = { headless: false, args: [`--window-size=${width},${height}`] };
+  const launchOptions = {
+    headless: false,
+    args: [`--window-size=${width},${height}`]
+  };
   const browser = await chromium.launch(launchOptions).catch(async error => {
     const message = error instanceof Error ? error.message : String(error);
     const isBrowserMissing = message.includes("Executable doesn't exist");
@@ -88,7 +93,12 @@ export async function fetchOperaCredentials(saveToEnv: boolean): Promise<Record<
     installChromium();
     return chromium.launch(launchOptions);
   });
-  const context = await browser.newContext({ viewport: { width, height } });
+  const context = await browser.newContext({
+    viewport: {
+      width,
+      height
+    }
+  });
   const page = await context.newPage();
 
   const cookiesRaw = await captureCookiesFromBrowser(page);

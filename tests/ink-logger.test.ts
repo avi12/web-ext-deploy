@@ -1,10 +1,14 @@
+import { describe, expect, it } from "vitest";
+
 import { StoreName } from "@/types.js";
 import { type LogEntry } from "@/ui/ink-logger.js";
-import { describe, expect, it } from "vitest";
 
 function makeEntry(store: StoreName, level: LogEntry["level"], message: string): LogEntry {
   return {
-    store, level, message, timestamp: new Date()
+    store,
+    level,
+    message,
+    timestamp: new Date()
   };
 }
 

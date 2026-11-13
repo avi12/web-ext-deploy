@@ -1,25 +1,33 @@
-import { createHttpClient } from "@/http/client.js";
-import { buildFormData } from "@/http/form-data.js";
-import { generateJwt } from "@/http/jwt.js";
-import { StoreStatus, type DeployContext } from "@/types.js";
-import { storeError } from "@/ui/logging.js";
-import { createRateLimitHandler, requestWithRetry, type RateLimitHandler } from "@/utils/retry.js";
-import { getExtJson } from "@/utils/zip.js";
-import { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
-import {
-  FirefoxUploadDetailSchema,
-  FirefoxCreateNewVersionSchema,
-  FirefoxUploadSourceSchema
-} from "./firefox-types.js";
 import fs from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+
 import { z } from "zod";
+
+import { createHttpClient } from "@/http/client.js";
+import { buildFormData } from "@/http/form-data.js";
+import { generateJwt } from "@/http/jwt.js";
+import { type DeployContext, StoreStatus } from "@/types.js";
+import { storeError } from "@/ui/logging.js";
+import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "@/utils/retry.js";
+import { getExtJson } from "@/utils/zip.js";
+
+import type { FirefoxOptionsSubmissionApi } from "./firefox-input.js";
+import {
+  FirefoxCreateNewVersionSchema,
+  FirefoxUploadDetailSchema,
+  FirefoxUploadSourceSchema
+} from "./firefox-types.js";
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
 function authHeader(jwtIssuer: string, jwtSecret: string) {
-  return { Authorization: `JWT ${generateJwt({ jwtIssuer, jwtSecret })}` };
+  return {
+    Authorization: `JWT ${generateJwt({
+      jwtIssuer,
+      jwtSecret
+    })}`
+  };
 }
 
 /** @see https://mozilla.github.io/addons-server/topics/api/addons.html#upload-create */
@@ -35,12 +43,25 @@ function uploadZip({
   onRateLimit?: RateLimitHandler;
 }) {
   const formData = buildFormData([
-    { name: "upload", value: fs.createReadStream(zip), filename: path.basename(zip) },
-    { name: "channel", value: "listed" }
+    {
+      name: "upload",
+      value: fs.createReadStream(zip),
+      filename: path.basename(zip)
+    },
+    {
+      name: "channel",
+      value: "listed"
+    }
   ]);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.post("upload/", formData.body, { headers: { ...formData.headers, ...authHeader(jwtIssuer, jwtSecret) } }),
+    sendRequest: () =>
+      httpClient.post("upload/", formData.body, {
+        headers: {
+          ...formData.headers,
+          ...authHeader(jwtIssuer, jwtSecret)
+        }
+      }),
     parseResponse(response) {
       const result = FirefoxUploadDetailSchema.safeParse(response.data);
       if (!result.success) {
@@ -86,15 +107,27 @@ async function createNewVersion({
   }
 
   return requestWithRetry({
-    sendRequest: () => httpClient.post(
-      `addon/${slug}/versions/`,
-      JSON.stringify({
-        upload: uuid,
-        ...(changelog && { release_notes: { [changelogLang.replaceAll("_", "-")]: changelog } }),
-        ...(devChangelog && { approval_notes: devChangelog })
-      }),
-      { headers: { "Content-Type": "application/json", ...authHeader(jwtIssuer, jwtSecret) } }
-    ),
+    sendRequest: () =>
+      httpClient.post(
+        `addon/${slug}/versions/`,
+        JSON.stringify({
+          upload: uuid,
+          ...(changelog && {
+            release_notes: {
+              [changelogLang.replaceAll("_", "-")]: changelog
+            }
+          }),
+          ...(devChangelog && {
+            approval_notes: devChangelog
+          })
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeader(jwtIssuer, jwtSecret)
+          }
+        }
+      ),
     parseResponse(response) {
       const result = FirefoxCreateNewVersionSchema.safeParse(response.data);
       if (!result.success) {
@@ -124,10 +157,10 @@ function getVersionIfExists({
   onRateLimit?: RateLimitHandler;
 }) {
   return requestWithRetry({
-    sendRequest: () => httpClient.get(
-      `addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`,
-      { headers: authHeader(jwtIssuer, jwtSecret) }
-    ),
+    sendRequest: () =>
+      httpClient.get(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, {
+        headers: authHeader(jwtIssuer, jwtSecret)
+      }),
     parseResponse(response) {
       const result = FirefoxCreateNewVersionSchema.nullable().safeParse(response.status === 404 ? null : response.data);
       if (!result.success) {
@@ -208,11 +241,21 @@ function uploadSourceCodeIfNeeded({
   onRateLimit?: RateLimitHandler;
 }) {
   const formData = buildFormData([
-    { name: "source", value: fs.createReadStream(zipSource), filename: path.basename(zipSource) }
+    {
+      name: "source",
+      value: fs.createReadStream(zipSource),
+      filename: path.basename(zipSource)
+    }
   ]);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.patch(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, formData.body, { headers: { ...formData.headers, ...authHeader(jwtIssuer, jwtSecret) } }),
+    sendRequest: () =>
+      httpClient.patch(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, formData.body, {
+        headers: {
+          ...formData.headers,
+          ...authHeader(jwtIssuer, jwtSecret)
+        }
+      }),
     parseResponse(response) {
       const result = FirefoxUploadSourceSchema.safeParse(response.data);
       if (!result.success) {
@@ -274,7 +317,10 @@ export async function deployToFirefox(
 
     logger?.info("Verifying upload");
     await validateUpload({
-      uuid, jwtIssuer, jwtSecret, onRateLimit
+      uuid,
+      jwtIssuer,
+      jwtSecret,
+      onRateLimit
     });
 
     logger?.info(`Creating version ${version}`);

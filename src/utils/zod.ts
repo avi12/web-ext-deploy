@@ -18,7 +18,12 @@ export function getZodBaseType(value: unknown) {
 
 export function unwrapZod(value: unknown) {
   let current = value;
-  while (current instanceof z.ZodDefault || current instanceof z.ZodOptional || current instanceof z.ZodNullable || current instanceof z.ZodPipe) {
+  while (
+    current instanceof z.ZodDefault ||
+    current instanceof z.ZodOptional ||
+    current instanceof z.ZodNullable ||
+    current instanceof z.ZodPipe
+  ) {
     current = current instanceof z.ZodPipe ? current.in : current.unwrap();
   }
   return current;
@@ -81,7 +86,8 @@ export function zodObjectEntries<T extends z.ZodObject<z.ZodRawShape>>(schema: T
 }
 
 export function isZodOptional(value: unknown) {
-  const isWrappedOptional = value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
+  const isWrappedOptional =
+    value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
   if (isWrappedOptional) {
     return true;
   }

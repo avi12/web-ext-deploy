@@ -1,4 +1,5 @@
 import { defineStore, StoreName } from "@/types.js";
+
 import { deployToFirefox } from "./firefox-deploy.js";
 import { FirefoxOptionsSubmissionApiSchema } from "./firefox-input.js";
 

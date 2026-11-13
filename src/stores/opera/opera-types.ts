@@ -33,10 +33,12 @@ export const ListVersionsSchema = z.looseObject({
   details_url: z.string(),
   is_published: z.boolean(),
   available_auto_moderation: z.boolean(),
-  dev_promotional_image: z.object({
-    id: z.number(),
-    url: z.string()
-  }).nullable(),
+  dev_promotional_image: z
+    .object({
+      id: z.number(),
+      url: z.string()
+    })
+    .nullable(),
   is_extension: z.boolean(),
   retirejs_warnings: z.array(z.unknown())
 });

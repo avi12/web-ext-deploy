@@ -1,20 +1,19 @@
-import {
-  getStore,
-  getStoreDisplayName,
-  isSupportedStore,
-  storeNames,
-  storeRegistry
-} from "./stores/registry.js";
+import { z } from "zod";
+
+import { getStore, getStoreDisplayName, isSupportedStore, storeNames, storeRegistry } from "./stores/registry.js";
 import type { Arguments, StoreName } from "./types.js";
 import { buildGlobalHelpTableData, buildHelpTableData, MissingArgsError, NoStoresError } from "./ui/ink-logger.js";
 import { camelCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
 import { isZodOptional, zodObjectEntries } from "./utils/zod.js";
-import { z } from "zod";
 
 export const BaseOptionsSchema = z.object({
-  autoFetchCredentials: z.boolean().optional().default(false).describe("Automatically fetch credentials as needed (cookies, tokens) for stores that require them"),
+  autoFetchCredentials: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe("Automatically fetch credentials as needed (cookies, tokens) for stores that require them"),
   dryRun: z.boolean().optional().default(false).describe("Validate inputs without deploying")
 });
 
@@ -56,7 +55,10 @@ function getJsons(command: string, argv: Arguments) {
       const allowedOverrides = Object.fromEntries(
         Object.entries(cliOverrides).filter(([key, value]) => cliOverridableFields.has(key) && value !== undefined)
       );
-      result[store] = { ...envValues, ...allowedOverrides };
+      result[store] = {
+        ...envValues,
+        ...allowedOverrides
+      };
     }
     return result;
   }
@@ -87,7 +89,11 @@ function readCredentialsFromEnv(storeName: StoreName, credentialFields: readonly
   return result;
 }
 
-async function fetchMissingCredentials(jsonStoresRaw: StoreConfigMap, log?: (message: string) => void, saveToEnv = true) {
+async function fetchMissingCredentials(
+  jsonStoresRaw: StoreConfigMap,
+  log?: (message: string) => void,
+  saveToEnv = true
+) {
   for (const store of storeRegistry) {
     const fields = store.credentialFields;
     const hasNoCredentialFields = !fields || fields.length === 0;
@@ -138,7 +144,15 @@ async function fetchMissingCredentials(jsonStoresRaw: StoreConfigMap, log?: (mes
 }
 
 function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCredentials?: boolean) {
-  const missingArgs: Partial<Record<StoreName, { required: string[]; optional?: string[] }>> = {};
+  const missingArgs: Partial<
+    Record<
+      StoreName,
+      {
+        required: string[];
+        optional?: string[];
+      }
+    >
+  > = {};
 
   for (const store of storeRegistry) {
     const storeConfig = jsonStoresRaw[store.name];
@@ -156,11 +170,9 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCredential
 
     const credentialFields = store.credentialFields ?? [];
     const missingCredentialFields = credentialFields.filter(field => !storeConfig[field]);
-    const missingManualCredentialFields = !isAutoFetchCredentials || credentialFields.length === 0 ? missingCredentialFields : [];
-    const missingRequired = [
-      ...requiredFields.filter(field => !storeConfig[field]),
-      ...missingManualCredentialFields
-    ];
+    const missingManualCredentialFields =
+      !isAutoFetchCredentials || credentialFields.length === 0 ? missingCredentialFields : [];
+    const missingRequired = [...requiredFields.filter(field => !storeConfig[field]), ...missingManualCredentialFields];
     if (missingRequired.length === 0) {
       continue;
     }
@@ -168,7 +180,9 @@ function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCredential
     const missingOptional = optionalFields.filter(field => !storeConfig[field]);
     missingArgs[store.name] = {
       required: missingRequired,
-      ...(missingOptional.length > 0 && { optional: missingOptional })
+      ...(missingOptional.length > 0 && {
+        optional: missingOptional
+      })
     };
   }
 
@@ -181,9 +195,11 @@ function buildEnvHelpTables() {
     .map(([key]) => key)
     .filter(key => hasCookieStores || key !== "autoFetchCredentials");
   return [
-    ...storeRegistry.map(store => buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields)),
+    ...storeRegistry.map(store =>
+      buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields)
+    ),
     buildGlobalHelpTableData(EnvOptionsSchema, globalKeys, "cli")
-  ].flatMap(data => data ? [data] : []);
+  ].flatMap(data => (data ? [data] : []));
 }
 
 function collectMissingGlobalArgs(argv: Arguments) {
@@ -197,7 +213,10 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   const jsonStoresRaw = getJsons(command, argv);
   if (isObjectEmpty(jsonStoresRaw)) {
     if (command === "env") {
-      throw new NoStoresError("No .env files found. In env mode, store credentials are read from .env files", buildEnvHelpTables());
+      throw new NoStoresError(
+        "No .env files found. In env mode, store credentials are read from .env files",
+        buildEnvHelpTables()
+      );
     }
 
     throw new NoStoresError("Supply arguments for at least one store", []);
@@ -216,8 +235,12 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
 
   const isCliMode = command === "cli";
   const mode = isCliMode ? "cli" : "env";
-  const hasCookieStores = storeRegistry.some(store => missingArgs[store.name] && store.credentialFields && store.credentialFields.length > 0);
-  const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(key => hasCookieStores || key !== "autoFetchCredentials");
+  const hasCookieStores = storeRegistry.some(
+    store => missingArgs[store.name] && store.credentialFields && store.credentialFields.length > 0
+  );
+  const missingGlobalArgs = collectMissingGlobalArgs(argv).filter(
+    key => hasCookieStores || key !== "autoFetchCredentials"
+  );
   const globalSchema = isCliMode ? BaseOptionsSchema : EnvOptionsSchema;
   const storeTables = storeRegistry.flatMap(store => {
     const missingEntry = missingArgs[store.name];
@@ -226,7 +249,14 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
     }
 
     const { required, optional = [] } = missingEntry;
-    const tableData = buildHelpTableData(store.name, store.schema, mode, [...required, ...optional], store.dynamicFields, store.cliOverridableFields);
+    const tableData = buildHelpTableData(
+      store.name,
+      store.schema,
+      mode,
+      [...required, ...optional],
+      store.dynamicFields,
+      store.cliOverridableFields
+    );
     return tableData ? [tableData] : [];
   });
   const globalTable = buildGlobalHelpTableData(globalSchema, missingGlobalArgs, "cli");
@@ -234,6 +264,11 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
   throw new MissingArgsError(tables);
 }
 
-export function createCredentialRefreshCallback(storeDef: { fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>> }, saveToEnv = true) {
+export function createCredentialRefreshCallback(
+  storeDef: {
+    fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>>;
+  },
+  saveToEnv = true
+) {
   return () => storeDef.fetchCredentials?.({}, saveToEnv) ?? Promise.resolve({});
 }

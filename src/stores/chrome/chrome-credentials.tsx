@@ -1,17 +1,12 @@
-import {
-  Box,
-  Newline,
-  render,
-  Text,
-  useApp
-} from "ink";
 import { exec } from "node:child_process";
 import { createServer, type Server } from "node:http";
+
+import { Box, Newline, render, Text, useApp } from "ink";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#creatingclient
-type AuthRequest = {
+interface AuthRequest {
   client_id: string;
   redirect_uri: string;
   response_type: "code";
@@ -19,16 +14,16 @@ type AuthRequest = {
   scope: string;
   prompt: "consent";
   state: string;
-};
+}
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#exchange-authorization-code
-type TokenRequest = {
+interface TokenRequest {
   code: string;
   client_id: string;
   client_secret: string;
   redirect_uri: string;
   grant_type: "authorization_code";
-};
+}
 
 const TokenResponseSchema = z.object({
   access_token: z.string(),
@@ -63,7 +58,9 @@ function openBrowser(url: string) {
 async function exchangeCodeForToken(code: string, clientId: string, clientSecret: string) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
     body: new URLSearchParams({
       code,
       client_id: clientId,
@@ -112,7 +109,11 @@ function getTokenStepLabel(step: Step) {
 }
 
 function StatusLine({ step, label }: { step: Step; label: string }) {
-  return <Text>{getSymbol(step)} {label}</Text>;
+  return (
+    <Text>
+      {getSymbol(step)} {label}
+    </Text>
+  );
 }
 
 interface AppProps {
@@ -122,12 +123,7 @@ interface AppProps {
   onError: (error: Error) => void;
 }
 
-function App({
-  clientId,
-  clientSecret,
-  onSuccess,
-  onError
-}: AppProps) {
+function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
   const { exit } = useApp();
   const [step, setStep] = useState<Step>(Step.Waiting);
   const [errorMessage, setErrorMessage] = useState("");
@@ -214,7 +210,9 @@ function App({
 
   return (
     <Box flexDirection="column">
-      <Text bold color="cyan">Chrome Web Store - Refresh Token</Text>
+      <Text bold color="cyan">
+        Chrome Web Store - Refresh Token
+      </Text>
       <Newline />
 
       <StatusLine
@@ -223,21 +221,19 @@ function App({
       />
 
       {(step === Step.Exchanging || step === Step.Success || step === Step.Error) && (
-        <StatusLine
-          step={step === Step.Exchanging ? Step.Waiting : step}
-          label={getTokenStepLabel(step)}
-        />
+        <StatusLine step={step === Step.Exchanging ? Step.Waiting : step} label={getTokenStepLabel(step)} />
       )}
 
       <Newline />
 
       {step === Step.Waiting && (
-        <Text dimColor>If the browser didn't open, visit:{"\n"}{authUrl}</Text>
+        <Text dimColor>
+          If the browser didn't open, visit:{"\n"}
+          {authUrl}
+        </Text>
       )}
 
-      {step === Step.Error && (
-        <Text color="red">{errorMessage}</Text>
-      )}
+      {step === Step.Error && <Text color="red">{errorMessage}</Text>}
     </Box>
   );
 }

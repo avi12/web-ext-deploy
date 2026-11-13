@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 
 export enum StoreStatus {
   Pending = "pending",
@@ -7,21 +7,21 @@ export enum StoreStatus {
   Error = "error"
 }
 
-export type StoreLogger = {
+export interface StoreLogger {
   info: (message: string) => void;
   warning: (message: string) => void;
   error: (message: string) => void;
   countdown?: (seconds: number, getMessage: (remaining: number) => string) => Promise<void>;
-};
+}
 
 type CredentialRefreshCallback = () => Promise<Record<string, string>>;
 
-export type DeployContext = {
+export interface DeployContext {
   logger?: StoreLogger;
   onCredentialsExpired?: CredentialRefreshCallback;
   setStatus?: (status: StoreStatus, message?: string) => void;
   setExtensionName?: (name: string) => void;
-};
+}
 
 export enum StoreName {
   Chrome = "chrome",
@@ -37,11 +37,11 @@ export type Arguments = {
   _: string[];
 } & Record<string, unknown>;
 
-export type StoreDefinition<
+export interface StoreDefinition<
   Name extends StoreName = StoreName,
   Schema extends z.ZodTypeAny = z.ZodTypeAny,
   CredentialFields extends readonly string[] = readonly string[]
-> = {
+> {
   name: Name;
   schema: Schema;
   deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
@@ -49,7 +49,7 @@ export type StoreDefinition<
   fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>>;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
-};
+}
 
 export function defineStore<
   Schema extends z.ZodTypeAny,

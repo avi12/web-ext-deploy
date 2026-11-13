@@ -1,5 +1,6 @@
-import { camelCase, kebabCase, capitalCase } from "@/utils/case-conversion.js";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
+import { camelCase, capitalCase, kebabCase } from "@/utils/case-conversion.js";
 
 describe("camelCase", () => {
   it("converts kebab-case", () => {

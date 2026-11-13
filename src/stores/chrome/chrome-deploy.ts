@@ -1,9 +1,15 @@
+import fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
+
+import { z } from "zod";
+
 import { createHttpClient } from "@/http/client.js";
 import { type DeployContext, StoreStatus } from "@/types.js";
 import { storeError } from "@/ui/logging.js";
 import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "@/utils/retry.js";
 import { getExtJson } from "@/utils/zip.js";
-import { ChromeOptions } from "./chrome-input.js";
+
+import type { ChromeOptions } from "./chrome-input.js";
 import {
   FetchStatusSchema,
   ItemState,
@@ -11,21 +17,18 @@ import {
   UploadResponseSchema,
   UploadState
 } from "./chrome-types.js";
-import fs from "node:fs";
-import { setTimeout } from "node:timers/promises";
-import { z } from "zod";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
 // https://developers.google.com/identity/protocols/oauth2/web-server#refreshing-an-expired-access-token
-type RefreshTokenRequest = {
+interface RefreshTokenRequest {
   client_id: string;
   client_secret: string;
   refresh_token: string;
   grant_type: "refresh_token";
-};
+}
 
 const AccessTokenResponseSchema = z.object({
   access_token: z.string(),
@@ -35,7 +38,9 @@ const AccessTokenResponseSchema = z.object({
 async function exchangeRefreshTokenForAccessToken(clientId: string, clientSecret: string, refreshToken: string) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
     body: new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
@@ -64,7 +69,9 @@ async function exchangeRefreshTokenForAccessToken(clientId: string, clientSecret
     }
 
     const statusText = response.statusText ? ` ${response.statusText}` : "";
-    throw new Error(storeError(`Failed to exchange refresh token for access token (${response.status}${statusText})${detail}`));
+    throw new Error(
+      storeError(`Failed to exchange refresh token for access token (${response.status}${statusText})${detail}`)
+    );
   }
 
   const result = AccessTokenResponseSchema.safeParse(parsedBody);
@@ -117,7 +124,11 @@ async function cancelSubmissionIfPending({
   logger?: DeployContext["logger"];
   onRateLimit?: RateLimitHandler;
 }) {
-  const status = await fetchStatus({ extId, publisherId, onRateLimit });
+  const status = await fetchStatus({
+    extId,
+    publisherId,
+    onRateLimit
+  });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const isNotPendingReview = !submittedState || !PENDING_REVIEW_STATES.includes(submittedState);
   if (isNotPendingReview) {
@@ -191,11 +202,12 @@ async function uploadZip({
   onRateLimit?: RateLimitHandler;
 }) {
   const data = await requestWithRetry({
-    sendRequest: () => httpClient.post(
-      `upload/v2/publishers/${publisherId}/items/${extId}:upload`,
-      fs.createReadStream(zip),
-      { headers: { "Content-Type": "application/zip" } }
-    ),
+    sendRequest: () =>
+      httpClient.post(`upload/v2/publishers/${publisherId}/items/${extId}:upload`, fs.createReadStream(zip), {
+        headers: {
+          "Content-Type": "application/zip"
+        }
+      }),
     parseResponse(response) {
       const result = UploadResponseSchema.safeParse(response.data);
       if (!result.success) {
@@ -213,13 +225,22 @@ async function uploadZip({
   }
 
   if (data.uploadState === UploadState.IN_PROGRESS) {
-    return waitForUpload({ extId, publisherId, onRateLimit });
+    return waitForUpload({
+      extId,
+      publisherId,
+      onRateLimit
+    });
   }
 
   throw new Error(storeError(`Upload failed with state: ${data.uploadState}`));
 }
 
-const PUBLISH_SUCCESS_STATES: readonly string[] = [ItemState.PENDING_REVIEW, ItemState.STAGED, ItemState.PUBLISHED, ItemState.PUBLISHED_TO_TESTERS];
+const PUBLISH_SUCCESS_STATES: readonly string[] = [
+  ItemState.PENDING_REVIEW,
+  ItemState.STAGED,
+  ItemState.PUBLISHED,
+  ItemState.PUBLISHED_TO_TESTERS
+];
 
 /** @see https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/publish */
 async function publishExtension({
@@ -236,16 +257,25 @@ async function publishExtension({
   onRateLimit?: RateLimitHandler;
 }) {
   const body = {
-    ...skipReview && { skipReview: true },
-    ...deployPercentage !== undefined && { deployInfos: [{ deployPercentage }] }
+    ...(skipReview && {
+      skipReview: true
+    }),
+    ...(deployPercentage !== undefined && {
+      deployInfos: [
+        {
+          deployPercentage
+        }
+      ]
+    })
   };
 
   const data = await requestWithRetry({
-    sendRequest: () => httpClient.post(
-      `v2/publishers/${publisherId}/items/${extId}:publish`,
-      JSON.stringify(body),
-      { headers: { "Content-Type": "application/json" } }
-    ),
+    sendRequest: () =>
+      httpClient.post(`v2/publishers/${publisherId}/items/${extId}:publish`, JSON.stringify(body), {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }),
     parseResponse(response) {
       const result = PublishResponseSchema.safeParse(response.data);
       if (!result.success) {
@@ -281,7 +311,8 @@ async function verifySubmission({
   });
   const submittedState = status.submittedItemRevisionStatus?.state;
   const publishedState = status.publishedItemRevisionStatus?.state;
-  const isAlreadyPublished = publishedState === ItemState.PUBLISHED || publishedState === ItemState.PUBLISHED_TO_TESTERS;
+  const isAlreadyPublished =
+    publishedState === ItemState.PUBLISHED || publishedState === ItemState.PUBLISHED_TO_TESTERS;
   if (isAlreadyPublished) {
     return;
   }
@@ -296,12 +327,8 @@ async function verifySubmission({
 }
 
 export async function deployToChrome(
-  {
-    extId, publisherId, clientId, clientSecret, refreshToken, zip, skipReview, deployPercentage
-  }: ChromeOptions,
-  {
-    logger, setStatus, setExtensionName
-  }: DeployContext = {}
+  { extId, publisherId, clientId, clientSecret, refreshToken, zip, skipReview, deployPercentage }: ChromeOptions,
+  { logger, setStatus, setExtensionName }: DeployContext = {}
 ) {
   const { name } = await getExtJson(zip);
   setExtensionName?.(name);
@@ -315,7 +342,10 @@ export async function deployToChrome(
   });
 
   await cancelSubmissionIfPending({
-    extId, publisherId, logger, onRateLimit
+    extId,
+    publisherId,
+    logger,
+    onRateLimit
   });
 
   logger?.info("Uploading ZIP");
@@ -328,11 +358,19 @@ export async function deployToChrome(
 
   logger?.info("Publishing");
   await publishExtension({
-    extId, publisherId, skipReview, deployPercentage, onRateLimit
+    extId,
+    publisherId,
+    skipReview,
+    deployPercentage,
+    onRateLimit
   });
 
   logger?.info("Verifying submission");
-  await verifySubmission({ extId, publisherId, onRateLimit });
+  await verifySubmission({
+    extId,
+    publisherId,
+    onRateLimit
+  });
 
   setStatus?.(StoreStatus.Success);
   return true;

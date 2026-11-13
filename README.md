@@ -82,39 +82,38 @@ web-ext-deploy env
 
 **Global:**
 
-| Flag | Description |
-|------|-------------|
-| `--publish-only <stores...>` | Only deploy to specific stores (e.g. `--publish-only chrome firefox`) |
-| `--auto-fetch-credentials` | Automatically fetch missing or expired credentials. Opera: fetches `sessionid`/`csrftoken` via Playwright (auto-installed if needed). Chrome: fetches `REFRESH_TOKEN` via OAuth. In `env` mode, saves fetched credentials to the store's `.env` file |
-| `--dry-run` | Validate inputs without deploying |
-| `--verbose` | Log each deployment step |
-
+| Flag                         | Description                                                                                                                                                                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--publish-only <stores...>` | Only deploy to specific stores (e.g. `--publish-only chrome firefox`)                                                                                                                                                                                |
+| `--auto-fetch-credentials`   | Automatically fetch missing or expired credentials. Opera: fetches `sessionid`/`csrftoken` via Playwright (auto-installed if needed). Chrome: fetches `REFRESH_TOKEN` via OAuth. In `env` mode, saves fetched credentials to the store's `.env` file |
+| `--dry-run`                  | Validate inputs without deploying                                                                                                                                                                                                                    |
+| `--verbose`                  | Log each deployment step                                                                                                                                                                                                                             |
 
 **Chrome overrides:**
 
-| Flag | Description |
-|------|-------------|
-| `--chrome-skip-review` | Publish without waiting for a review |
-| `--chrome-deploy-percentage <number>` | Staged rollout percentage (1-100) |
+| Flag                                  | Description                          |
+| ------------------------------------- | ------------------------------------ |
+| `--chrome-skip-review`                | Publish without waiting for a review |
+| `--chrome-deploy-percentage <number>` | Staged rollout percentage (1-100)    |
 
 **Firefox overrides:**
 
-| Flag | Description                                                                            |
-|------|----------------------------------------------------------------------------------------|
-| `--firefox-changelog <text>` | Changelog for Firefox users. Supports `\n` for new lines                               |
+| Flag                              | Description                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--firefox-changelog <text>`      | Changelog for Firefox users. Supports `\n` for new lines                                                                                         |
 | `--firefox-changelog-lang <code>` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: `en-US`) |
-| `--firefox-dev-changelog <text>` | Changelog for Firefox Add-ons reviewers only. Supports `\n` for new lines              |
+| `--firefox-dev-changelog <text>`  | Changelog for Firefox Add-ons reviewers only. Supports `\n` for new lines                                                                        |
 
 **Edge overrides:**
 
-| Flag | Description |
-|------|-------------|
+| Flag                          | Description                                                            |
+| ----------------------------- | ---------------------------------------------------------------------- |
 | `--edge-dev-changelog <text>` | Changelog for Edge Add-ons reviewers only. Supports `\n` for new lines |
 
 **Opera overrides:**
 
-| Flag | Description |
-|------|-------------|
+| Flag                       | Description                                            |
+| -------------------------- | ------------------------------------------------------ |
 | `--opera-changelog <text>` | Changelog for Opera users. Supports `\n` for new lines |
 
 ### Notes:
@@ -208,24 +207,24 @@ Stores:
 
 Options:
 
-| Flag | Description |
-|------|-------------|
+| Flag                       | Description                                                                                                                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--auto-fetch-credentials` | Automatically fetch missing or expired credentials. Opera: fetches `sessionid`/`csrftoken` via Playwright (auto-installed if needed). Chrome: fetches `REFRESH_TOKEN` via OAuth. In `env` mode, saves fetched credentials to the store's `.env` file |
-| `--dry-run` | Validate inputs without deploying |
-| `--verbose` | Log each deployment step |
+| `--dry-run`                | Validate inputs without deploying                                                                                                                                                                                                                    |
+| `--verbose`                | Log each deployment step                                                                                                                                                                                                                             |
 
 #### Chrome Web Store CLI
 
-| Flag | Description |
-|------|-------------|
-| `--chrome-ext-id <id>` | Extension ID from `https://chromewebstore.google.com/detail/EXT_ID` |
-| `--chrome-publisher-id <id>` | Publisher ID from the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/) > Account |
-| `--chrome-client-id <id>` | OAuth client ID (required for `--auto-fetch-credentials`) |
-| `--chrome-client-secret <secret>` | OAuth client secret (required for `--auto-fetch-credentials`) |
-| `--chrome-refresh-token <token>` | OAuth refresh token. Can be omitted if `--auto-fetch-credentials` is set ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)) |
-| `--chrome-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
-| `[--chrome-skip-review]` | Publish without waiting for a review |
-| `[--chrome-deploy-percentage <n>]` | Staged rollout percentage (1-100) |
+| Flag                               | Description                                                                                                                                                            |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--chrome-ext-id <id>`             | Extension ID from `https://chromewebstore.google.com/detail/EXT_ID`                                                                                                    |
+| `--chrome-publisher-id <id>`       | Publisher ID from the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/) > Account                                                                  |
+| `--chrome-client-id <id>`          | OAuth client ID (required for `--auto-fetch-credentials`)                                                                                                              |
+| `--chrome-client-secret <secret>`  | OAuth client secret (required for `--auto-fetch-credentials`)                                                                                                          |
+| `--chrome-refresh-token <token>`   | OAuth refresh token. Can be omitted if `--auto-fetch-credentials` is set ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/CHROME_WEB_STORE_API.md)) |
+| `--chrome-zip <path>`              | Path to the ZIP. Supports `{version}` placeholder                                                                                                                      |
+| `[--chrome-skip-review]`           | Publish without waiting for a review                                                                                                                                   |
+| `[--chrome-deploy-percentage <n>]` | Staged rollout percentage (1-100)                                                                                                                                      |
 
 Example:
 
@@ -241,16 +240,16 @@ web-ext-deploy cli --auto-fetch-credentials --chrome-ext-id="ExtensionID" --chro
 
 #### Firefox Add-ons CLI
 
-| Flag | Description |
-|------|-------------|
-| `--firefox-ext-id <id>` | Extension ID from `https://addons.mozilla.org/addon/EXT_ID` |
-| `--firefox-jwt-issuer <issuer>` | JWT issuer from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/) |
-| `--firefox-jwt-secret <secret>` | JWT secret from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/) |
-| `--firefox-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
-| `[--firefox-zip-source <path>]` | Path to the source code ZIP. Supports `{version}` placeholder |
-| `[--firefox-changelog <text>]` | Changelog for Firefox users. Supports `\n` for new lines |
+| Flag                                | Description                                                                                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--firefox-ext-id <id>`             | Extension ID from `https://addons.mozilla.org/addon/EXT_ID`                                                                                      |
+| `--firefox-jwt-issuer <issuer>`     | JWT issuer from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/)                                                        |
+| `--firefox-jwt-secret <secret>`     | JWT secret from the [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/)                                                        |
+| `--firefox-zip <path>`              | Path to the ZIP. Supports `{version}` placeholder                                                                                                |
+| `[--firefox-zip-source <path>]`     | Path to the source code ZIP. Supports `{version}` placeholder                                                                                    |
+| `[--firefox-changelog <text>]`      | Changelog for Firefox users. Supports `\n` for new lines                                                                                         |
 | `[--firefox-changelog-lang <code>]` | Language of the changelog. [Full list](https://github.com/mozilla/addons-server/blob/master/src/olympia/core/languages.py#L3) (default: `en-US`) |
-| `[--firefox-dev-changelog <text>]` | Changelog for reviewers only. Supports `\n` for new lines |
+| `[--firefox-dev-changelog <text>]`  | Changelog for reviewers only. Supports `\n` for new lines                                                                                        |
 
 Example:
 
@@ -260,13 +259,13 @@ web-ext-deploy cli --firefox-ext-id="ExtensionID" --firefox-jwt-issuer="JwtIssue
 
 #### Edge Add-ons CLI
 
-| Flag | Description |
-|------|-------------|
-| `--edge-product-id <id>` | Product ID from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID` |
-| `--edge-client-id <id>` | Client ID ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)) |
-| `--edge-api-key <key>` | API key ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)) |
-| `--edge-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
-| `[--edge-dev-changelog <text>]` | Changelog for reviewers only. Supports `\n` for new lines |
+| Flag                            | Description                                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `--edge-product-id <id>`        | Product ID from `https://partner.microsoft.com/en-us/dashboard/microsoftedge/PRODUCT_ID`            |
+| `--edge-client-id <id>`         | Client ID ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md)) |
+| `--edge-api-key <key>`          | API key ([how to get one](https://github.com/avi12/web-ext-deploy/blob/main/EDGE_PUBLISH_API.md))   |
+| `--edge-zip <path>`             | Path to the ZIP. Supports `{version}` placeholder                                                   |
+| `[--edge-dev-changelog <text>]` | Changelog for reviewers only. Supports `\n` for new lines                                           |
 
 Example:
 
@@ -280,13 +279,13 @@ Therefore, if you publish after you had just published/canceled, expect to wait 
 
 #### Opera Add-ons CLI
 
-| Flag | Description |
-|------|-------------|
-| `--opera-package-id <id>` | Package ID from `https://addons.opera.com/developer/package/PACKAGE_ID` |
-| `--opera-sessionid <value>` | Session cookie. Use `--auto-fetch-credentials` to obtain automatically |
-| `--opera-csrftoken <value>` | CSRF cookie. Use `--auto-fetch-credentials` to obtain automatically |
-| `--opera-zip <path>` | Path to the ZIP. Supports `{version}` placeholder |
-| `[--opera-changelog <text>]` | Changelog for Opera users. Supports `\n` for new lines |
+| Flag                         | Description                                                             |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `--opera-package-id <id>`    | Package ID from `https://addons.opera.com/developer/package/PACKAGE_ID` |
+| `--opera-sessionid <value>`  | Session cookie. Use `--auto-fetch-credentials` to obtain automatically  |
+| `--opera-csrftoken <value>`  | CSRF cookie. Use `--auto-fetch-credentials` to obtain automatically     |
+| `--opera-zip <path>`         | Path to the ZIP. Supports `{version}` placeholder                       |
+| `[--opera-changelog <text>]` | Changelog for Opera users. Supports `\n` for new lines                  |
 
 Example:
 

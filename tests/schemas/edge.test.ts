@@ -1,7 +1,9 @@
-import { EdgeOptionsPublishApiSchema } from "@/stores/edge/edge-input.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
+
+import { describe, expect, it } from "vitest";
+
+import { EdgeOptionsPublishApiSchema } from "@/stores/edge/edge-input.js";
 
 const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../fixtures/test.zip");
 
@@ -18,19 +20,39 @@ describe("EdgeOptionsPublishApiSchema", () => {
   });
 
   it("rejects missing productId", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, productId: "" })).toThrow();
+    expect(() =>
+      EdgeOptionsPublishApiSchema.parse({
+        ...validInput,
+        productId: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing clientId", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, clientId: "" })).toThrow();
+    expect(() =>
+      EdgeOptionsPublishApiSchema.parse({
+        ...validInput,
+        clientId: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing apiKey", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, apiKey: "" })).toThrow();
+    expect(() =>
+      EdgeOptionsPublishApiSchema.parse({
+        ...validInput,
+        apiKey: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing zip", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, zip: "" })).toThrow();
+    expect(() =>
+      EdgeOptionsPublishApiSchema.parse({
+        ...validInput,
+        zip: ""
+      })
+    ).toThrow();
   });
 
   it("devChangelog is optional", () => {
@@ -38,8 +60,11 @@ describe("EdgeOptionsPublishApiSchema", () => {
   });
 
   it("rejects non-existent zip", () => {
-    expect(() => EdgeOptionsPublishApiSchema.parse({ ...validInput, zip: "nonexistent.zip" })).toThrow(
-      "Zip doesn't exist"
-    );
+    expect(() =>
+      EdgeOptionsPublishApiSchema.parse({
+        ...validInput,
+        zip: "nonexistent.zip"
+      })
+    ).toThrow("Zip doesn't exist");
   });
 });

@@ -23,40 +23,47 @@ export const FirefoxUploadDetailSchema = z.object({
 });
 
 // https://mozilla.github.io/addons-server/topics/api/addons.html#version-create
-export const FirefoxCreateNewVersionSchema = z
-  .looseObject({
+export const FirefoxCreateNewVersionSchema = z.looseObject({
+  id: z.number(),
+  approval_notes: z.string().nullable(),
+  channel: z.enum(["listed", "unlisted"]),
+  compatibility: z.record(
+    z.string(),
+    z.object({
+      min: z.string(),
+      max: z.string()
+    })
+  ),
+  edit_url: z.string(),
+  file: z.object({
     id: z.number(),
-    approval_notes: z.string().nullable(),
-    channel: z.enum(["listed", "unlisted"]),
-    compatibility: z.record(z.string(), z.object({ min: z.string(), max: z.string() })),
-    edit_url: z.string(),
-    file: z.object({
-      id: z.number(),
-      created: z.string(),
-      hash: z.string(),
-      is_mozilla_signed_extension: z.boolean(),
-      size: z.number(),
-      status: z.string(),
-      url: z.string(),
-      permissions: z.array(z.string()),
-      optional_permissions: z.array(z.string()),
-      host_permissions: z.array(z.string())
-    }),
-    is_disabled: z.boolean(),
-    is_strict_compatibility_enabled: z.boolean(),
-    license: z.object({
+    created: z.string(),
+    hash: z.string(),
+    is_mozilla_signed_extension: z.boolean(),
+    size: z.number(),
+    status: z.string(),
+    url: z.string(),
+    permissions: z.array(z.string()),
+    optional_permissions: z.array(z.string()),
+    host_permissions: z.array(z.string())
+  }),
+  is_disabled: z.boolean(),
+  is_strict_compatibility_enabled: z.boolean(),
+  license: z
+    .object({
       id: z.number(),
       is_custom: z.boolean(),
       name: z.record(z.string(), z.string()).nullable(),
       slug: z.string().nullable(),
       text: z.record(z.string(), z.string()).nullable().optional(),
       url: z.string().nullable()
-    }).nullable(),
-    release_notes: z.record(z.string(), z.string()).nullable(),
-    reviewed: z.string().nullable(),
-    source: z.string().nullable(),
-    version: z.string()
-  });
+    })
+    .nullable(),
+  release_notes: z.record(z.string(), z.string()).nullable(),
+  reviewed: z.string().nullable(),
+  source: z.string().nullable(),
+  version: z.string()
+});
 
 // https://mozilla.github.io/addons-server/topics/api/addons.html#version-sources
 export const FirefoxUploadSourceSchema = FirefoxCreateNewVersionSchema;

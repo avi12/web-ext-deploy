@@ -1,9 +1,11 @@
+import { z } from "zod";
+
 import { StoreName } from "@/types.js";
+
 import { chrome } from "./chrome/index.js";
 import { edge } from "./edge/index.js";
 import { firefox } from "./firefox/index.js";
 import { opera } from "./opera/index.js";
-import { z } from "zod";
 
 // To add a new store: import it, add it to this array, and add its name to StoreName in types.ts.
 export const storeRegistry = [chrome, firefox, edge, opera] as const;

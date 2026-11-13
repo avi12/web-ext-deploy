@@ -1,7 +1,9 @@
-import { OperaOptionsSchema } from "@/stores/opera/opera-input.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
+
+import { describe, expect, it } from "vitest";
+
+import { OperaOptionsSchema } from "@/stores/opera/opera-input.js";
 
 const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../fixtures/test.zip");
 
@@ -18,40 +20,67 @@ describe("OperaOptionsSchema", () => {
   });
 
   it("rejects missing packageId", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, packageId: undefined })).toThrow();
+    expect(() =>
+      OperaOptionsSchema.parse({
+        ...validInput,
+        packageId: undefined
+      })
+    ).toThrow();
   });
 
   it("coerces string packageId to number", () => {
-    const result = OperaOptionsSchema.parse({ ...validInput, packageId: "12345" });
+    const result = OperaOptionsSchema.parse({
+      ...validInput,
+      packageId: "12345"
+    });
     expect(result.packageId).toBe(12345);
   });
 
   it("rejects missing zip", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, zip: "" })).toThrow();
+    expect(() =>
+      OperaOptionsSchema.parse({
+        ...validInput,
+        zip: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing sessionid", () => {
-    expect(() => OperaOptionsSchema.parse({
-      packageId: validInput.packageId,
-      csrftoken: validInput.csrftoken,
-      zip: validInput.zip
-    })).toThrow();
+    expect(() =>
+      OperaOptionsSchema.parse({
+        packageId: validInput.packageId,
+        csrftoken: validInput.csrftoken,
+        zip: validInput.zip
+      })
+    ).toThrow();
   });
 
   it("rejects empty sessionid", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, sessionid: "" })).toThrow();
+    expect(() =>
+      OperaOptionsSchema.parse({
+        ...validInput,
+        sessionid: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing csrftoken", () => {
-    expect(() => OperaOptionsSchema.parse({
-      packageId: validInput.packageId,
-      sessionid: validInput.sessionid,
-      zip: validInput.zip
-    })).toThrow();
+    expect(() =>
+      OperaOptionsSchema.parse({
+        packageId: validInput.packageId,
+        sessionid: validInput.sessionid,
+        zip: validInput.zip
+      })
+    ).toThrow();
   });
 
   it("rejects empty csrftoken", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, csrftoken: "" })).toThrow();
+    expect(() =>
+      OperaOptionsSchema.parse({
+        ...validInput,
+        csrftoken: ""
+      })
+    ).toThrow();
   });
 
   it("changelog is optional", () => {
@@ -59,6 +88,11 @@ describe("OperaOptionsSchema", () => {
   });
 
   it("rejects non-existent zip", () => {
-    expect(() => OperaOptionsSchema.parse({ ...validInput, zip: "nonexistent.zip" })).toThrow("Zip doesn't exist");
+    expect(() =>
+      OperaOptionsSchema.parse({
+        ...validInput,
+        zip: "nonexistent.zip"
+      })
+    ).toThrow("Zip doesn't exist");
   });
 });

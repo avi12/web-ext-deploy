@@ -1,3 +1,7 @@
+import fs from "node:fs";
+
+import { z } from "zod";
+
 import { createHttpClient } from "@/http/client.js";
 import { buildFormData } from "@/http/form-data.js";
 import { type DeployContext, StoreStatus } from "@/types.js";
@@ -10,7 +14,8 @@ import {
   requestWithRetry
 } from "@/utils/retry.js";
 import { getExtJson } from "@/utils/zip.js";
-import { OperaOptions } from "./opera-input.js";
+
+import type { OperaOptions } from "./opera-input.js";
 import {
   CancelChangesSchema,
   FileUploadResponseSchema,
@@ -21,8 +26,6 @@ import {
   type UploadResult,
   UploadResultSchema
 } from "./opera-types.js";
-import fs from "node:fs";
-import { z } from "zod";
 
 const UPLOAD_CHUNK_SIZE_BYTES = 1024 * 1024;
 
@@ -104,15 +107,39 @@ function createOperaHttpClient(
     return withCookieRefresh(() => client.get(endpoint, { headers: cookieHeaders() }));
   }
 
-  function post(endpoint: string, body?: BodyInit, options?: { headers?: Record<string, string>; params?: Record<string, string | number> }) {
-    return withCookieRefresh(() => client.post(endpoint, body, { ...options, headers: { ...cookieHeaders(), ...options?.headers } }));
+  function post(
+    endpoint: string,
+    body?: BodyInit,
+    options?: { headers?: Record<string, string>; params?: Record<string, string | number> }
+  ) {
+    return withCookieRefresh(() =>
+      client.post(endpoint, body, {
+        ...options,
+        headers: {
+          ...cookieHeaders(),
+          ...options?.headers
+        }
+      })
+    );
   }
 
   function patch(endpoint: string, body?: BodyInit, options?: { headers?: Record<string, string> }) {
-    return withCookieRefresh(() => client.patch(endpoint, body, { ...options, headers: { ...cookieHeaders(), ...options?.headers } }));
+    return withCookieRefresh(() =>
+      client.patch(endpoint, body, {
+        ...options,
+        headers: {
+          ...cookieHeaders(),
+          ...options?.headers
+        }
+      })
+    );
   }
 
-  return { get, post, patch };
+  return {
+    get,
+    post,
+    patch
+  };
 }
 
 function getVersionListingDetail({
@@ -159,7 +186,13 @@ async function verifySourceCodeExistence({
   // freshly uploaded version, so check both and accept either a public or a moderator source URL.
   const versionsToCheck = lastVersion && lastVersion !== version ? [version, lastVersion] : [version];
   const listingDetails = await Promise.all(
-    versionsToCheck.map(versionToCheck => getVersionListingDetail({ packageId, version: versionToCheck, onRateLimit }))
+    versionsToCheck.map(versionToCheck =>
+      getVersionListingDetail({
+        packageId,
+        version: versionToCheck,
+        onRateLimit
+      })
+    )
   );
 
   const isSourceCodeProvided = listingDetails.some(detail => detail.source_url || detail.source_for_moderators_url);
@@ -220,11 +253,16 @@ async function submitChanges({
 
   try {
     await requestWithRetry({
-      sendRequest: () => httpClient.post(
-        `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
-        JSON.stringify({ auto_moderation: isAutoModerationAvailable }),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+      sendRequest: () =>
+        httpClient.post(
+          `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
+          JSON.stringify({ auto_moderation: isAutoModerationAvailable }),
+          {
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        ),
       parseResponse(response) {
         const result = SubmitChangesSchema.safeParse(response.data);
         if (!result.success) {
@@ -273,7 +311,11 @@ function getFileMetadata(zipPath: string) {
   // character outside [0-9a-zA-Z_-] from the name - the server keys the reassembled file by this.
   const zipNameWithoutForbiddenCharacters = zipName.replace(/[^0-9a-zA-Z_-]/g, "");
   const fileId = `${sizeInBytes}-${zipNameWithoutForbiddenCharacters}`;
-  return { zipName, fileId, sizeInBytes };
+  return {
+    zipName,
+    fileId,
+    sizeInBytes
+  };
 }
 
 async function uploadChunk({
@@ -294,21 +336,53 @@ async function uploadChunk({
   onRateLimit?: RateLimitHandler;
 }) {
   const formData = buildFormData([
-    { name: "flowChunkNumber", value: String(chunkNumber) },
-    { name: "flowChunkSize", value: String(UPLOAD_CHUNK_SIZE_BYTES) },
-    { name: "flowCurrentChunkSize", value: String(chunk.length) },
-    { name: "flowTotalSize", value: String(totalSize) },
-    { name: "flowIdentifier", value: fileId },
-    { name: "flowFilename", value: zipName },
-    { name: "flowRelativePath", value: zipName },
-    { name: "flowTotalChunks", value: String(totalChunks) },
     {
-      name: "file", value: chunk, filename: zipName, contentType: "application/x-zip-compressed"
+      name: "flowChunkNumber",
+      value: String(chunkNumber)
+    },
+    {
+      name: "flowChunkSize",
+      value: String(UPLOAD_CHUNK_SIZE_BYTES)
+    },
+    {
+      name: "flowCurrentChunkSize",
+      value: String(chunk.length)
+    },
+    {
+      name: "flowTotalSize",
+      value: String(totalSize)
+    },
+    {
+      name: "flowIdentifier",
+      value: fileId
+    },
+    {
+      name: "flowFilename",
+      value: zipName
+    },
+    {
+      name: "flowRelativePath",
+      value: zipName
+    },
+    {
+      name: "flowTotalChunks",
+      value: String(totalChunks)
+    },
+    {
+      name: "file",
+      value: chunk,
+      filename: zipName,
+      contentType: "application/x-zip-compressed"
     }
   ]);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.post("file-upload/", formData.body, { headers: { "Content-Type": formData.headers["Content-Type"] } }),
+    sendRequest: () =>
+      httpClient.post("file-upload/", formData.body, {
+        headers: {
+          "Content-Type": formData.headers["Content-Type"]
+        }
+      }),
     parseResponse(response) {
       const result = FileUploadResponseSchema.safeParse(response.data);
       if (!result.success) {
@@ -327,13 +401,7 @@ async function uploadChunk({
 // with 413. Split the ZIP the way ng-flow does with forceChunkSize disabled: floor(size / chunkSize)
 // chunks where the final chunk absorbs the trailing remainder (so it can exceed one chunk size). The
 // server reassembles them by the shared flowIdentifier.
-async function uploadZip({
-  zip,
-  onRateLimit
-}: {
-  zip: string;
-  onRateLimit?: RateLimitHandler;
-}) {
+async function uploadZip({ zip, onRateLimit }: { zip: string; onRateLimit?: RateLimitHandler }) {
   const { zipName, fileId, sizeInBytes } = getFileMetadata(zip);
   const file = fs.readFileSync(zip);
   const totalChunks = Math.max(Math.floor(sizeInBytes / UPLOAD_CHUNK_SIZE_BYTES), 1);
@@ -369,18 +437,23 @@ async function verifyUploadSuccessful({
   const { zipName, fileId } = getFileMetadata(zipPath);
 
   const data = await requestWithRetry({
-    sendRequest: () => httpClient.post(
-      "developer/package-versions/",
-      JSON.stringify({
-        file_id: fileId,
-        file_name: zipName,
-        metadata_from: lastVersion
-      }),
-      {
-        params: { package_id: packageId },
-        headers: { "Content-Type": "application/json" }
-      }
-    ),
+    sendRequest: () =>
+      httpClient.post(
+        "developer/package-versions/",
+        JSON.stringify({
+          file_id: fileId,
+          file_name: zipName,
+          metadata_from: lastVersion
+        }),
+        {
+          params: {
+            package_id: packageId
+          },
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      ),
     parseResponse(response) {
       const result = UploadResultSchema.safeParse(response.data);
       if (!result.success) {
@@ -416,11 +489,22 @@ async function updateChangelog({
   const { version, default_locale = "en" } = await getExtJson(zip);
 
   return requestWithRetry({
-    sendRequest: () => httpClient.patch(
-      `developer/package-versions/${packageId}-${version}/`,
-      JSON.stringify({ translations: { [default_locale]: { changelog } } }),
-      { headers: { "Content-Type": "application/json" } }
-    ),
+    sendRequest: () =>
+      httpClient.patch(
+        `developer/package-versions/${packageId}-${version}/`,
+        JSON.stringify({
+          translations: {
+            [default_locale]: {
+              changelog
+            }
+          }
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      ),
     parseResponse(response) {
       const result = ListingDetailSchema.safeParse(response.data);
       if (!result.success) {
@@ -435,13 +519,7 @@ async function updateChangelog({
   });
 }
 
-function getVersions({
-  packageId,
-  onRateLimit
-}: {
-  packageId: number;
-  onRateLimit?: RateLimitHandler;
-}) {
+function getVersions({ packageId, onRateLimit }: { packageId: number; onRateLimit?: RateLimitHandler }) {
   return requestWithRetry({
     sendRequest: () => httpClient.get(`developer/packages/${packageId}/`),
     parseResponse(response) {
@@ -459,14 +537,17 @@ function getVersions({
 }
 
 export async function deployToOpera(
-  {
-    sessionid, csrftoken, packageId, zip, changelog = ""
-  }: OperaOptions,
-  {
-    logger, onCredentialsExpired, setStatus, setExtensionName
-  }: DeployContext = {}
+  { sessionid, csrftoken, packageId, zip, changelog = "" }: OperaOptions,
+  { logger, onCredentialsExpired, setStatus, setExtensionName }: DeployContext = {}
 ) {
-  httpClient = createOperaHttpClient({ sessionid, csrftoken }, logger, onCredentialsExpired);
+  httpClient = createOperaHttpClient(
+    {
+      sessionid,
+      csrftoken
+    },
+    logger,
+    onCredentialsExpired
+  );
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://addons.opera.com/developer/package/${packageId}/`,
@@ -482,7 +563,9 @@ export async function deployToOpera(
     packageId,
     onRateLimit
   });
-  const isVersionAlreadyDeployed = versionsData.versions.some(entry => entry.version === version && entry.submitted_for_moderation);
+  const isVersionAlreadyDeployed = versionsData.versions.some(
+    entry => entry.version === version && entry.submitted_for_moderation
+  );
   if (isVersionAlreadyDeployed) {
     throw new Error(storeError(`Version ${version} has already been deployed`));
   }

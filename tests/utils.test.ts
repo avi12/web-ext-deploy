@@ -1,7 +1,9 @@
-import { isObjectEmpty, headersToEnv } from "@/utils/helpers.js";
-import { getFullPath, getCorrectZip } from "@/utils/zip.js";
 import path from "node:path";
-import { describe, it, expect } from "vitest";
+
+import { describe, expect, it } from "vitest";
+
+import { headersToEnv, isObjectEmpty } from "@/utils/helpers.js";
+import { getCorrectZip, getFullPath } from "@/utils/zip.js";
 
 describe("getFullPath", () => {
   it("returns absolute path ending with the filename", () => {
@@ -38,6 +40,6 @@ describe("headersToEnv", () => {
       FOO: "bar",
       BAZ: 123
     });
-    expect(result).toBe("FOO=\"bar\"\nBAZ=\"123\"");
+    expect(result).toBe('FOO="bar"\nBAZ="123"');
   });
 });

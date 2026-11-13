@@ -1,11 +1,10 @@
-export type CamelToKebab<Str extends string> =
-  Str extends `${infer Head}${infer Tail}`
-    ? Head extends Uppercase<Head>
-      ? Head extends Lowercase<Head>
-        ? `${Head}${CamelToKebab<Tail>}`
-        : `-${Lowercase<Head>}${CamelToKebab<Tail>}`
-      : `${Head}${CamelToKebab<Tail>}`
-    : Str;
+export type CamelToKebab<Str extends string> = Str extends `${infer Head}${infer Tail}`
+  ? Head extends Uppercase<Head>
+    ? Head extends Lowercase<Head>
+      ? `${Head}${CamelToKebab<Tail>}`
+      : `-${Lowercase<Head>}${CamelToKebab<Tail>}`
+    : `${Head}${CamelToKebab<Tail>}`
+  : Str;
 
 export function camelCase(text: string) {
   return text

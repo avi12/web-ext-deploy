@@ -2,46 +2,42 @@
   "name": "web-ext-deploy",
   "version": "1.1.3",
   "description": "A tool for deploying WebExtensions to multiple stores.",
-  "type": "module",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "dist/*.d.ts"
-      ]
-    }
+  "keywords": [
+    "chrome-deploy",
+    "chrome-extension",
+    "chrome-publish",
+    "edge-deploy",
+    "edge-extension",
+    "edge-publish",
+    "edge-publish-api",
+    "firefox-addon",
+    "firefox-deploy",
+    "firefox-extension",
+    "firefox-publish",
+    "firefox-submission-api",
+    "opera-addon",
+    "opera-deploy",
+    "opera-extension",
+    "opera-publish",
+    "web-ext",
+    "web-ext-deploy",
+    "web-ext-publish"
+  ],
+  "homepage": "https://github.com/avi12/web-ext-deploy#readme",
+  "bugs": {
+    "url": "https://github.com/avi12/web-ext-deploy/issues",
+    "email": "avi6106@gmail.com"
   },
-  "bin": {
-    "web-ext-deploy": "dist/cli.js"
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "Avi",
+    "email": "avi6106@gmail.com",
+    "url": "https://avi12.com"
   },
-  "types": "./dist/cli.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/avi12/web-ext-deploy"
   },
-  "keywords": [
-    "web-ext",
-    "web-ext-deploy",
-    "web-ext-publish",
-    "chrome-deploy",
-    "chrome-publish",
-    "chrome-extension",
-    "firefox-deploy",
-    "firefox-publish",
-    "firefox-extension",
-    "firefox-addon",
-    "firefox-submission-api",
-    "opera-deploy",
-    "opera-publish",
-    "opera-extension",
-    "opera-addon",
-    "edge-deploy",
-    "edge-publish",
-    "edge-extension",
-    "edge-publish-api"
-  ],
-  "files": [
-    "dist/**/*"
-  ],
   "funding": [
     {
       "type": "PayPal",
@@ -52,17 +48,21 @@
       "url": "https://github.com/sponsors/avi12"
     }
   ],
-  "author": {
-    "name": "Avi",
-    "email": "avi6106@gmail.com",
-    "url": "https://avi12.com"
+  "bin": {
+    "web-ext-deploy": "dist/cli.js"
   },
-  "bugs": {
-    "email": "avi6106@gmail.com",
-    "url": "https://github.com/avi12/web-ext-deploy/issues"
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module",
+  "types": "./dist/cli.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/*.d.ts"
+      ]
+    }
   },
-  "license": "GPL-3.0-or-later",
-  "homepage": "https://github.com/avi12/web-ext-deploy#readme",
   "scripts": {
     "debug:dev": "nodemon --watch src --ext ts --exec \"pnpm build\"",
     "clean": "rimraf dist",
@@ -76,6 +76,13 @@
     "reinstall-locally": "pnpm unlink -g && pnpm i && pnpm link -g",
     "lint": "avi12-lint",
     "lint:fix": "avi12-lint --fix"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "ink": "^7.0.5",
+    "playwright": "^1.60.0",
+    "react": "^19.2.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
@@ -94,12 +101,5 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
-  },
-  "dependencies": {
-    "fflate": "^0.8.3",
-    "ink": "^7.0.5",
-    "playwright": "^1.60.0",
-    "react": "^19.2.7",
-    "zod": "^4.4.3"
   }
 }

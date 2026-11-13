@@ -1,4 +1,5 @@
 import { defineStore, StoreName } from "@/types.js";
+
 import { fetchOperaCredentials } from "./opera-credentials.js";
 import { deployToOpera } from "./opera-deploy.js";
 import { OperaOptionsSchema } from "./opera-input.js";

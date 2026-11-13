@@ -12,7 +12,7 @@ body:
     attributes:
       label: What method is it related to?
       options:
-        - `.env` files
+        - ".env files"
         - CLI API
         - Node.js API
         - Other

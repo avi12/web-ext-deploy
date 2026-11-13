@@ -1,7 +1,9 @@
-import { ChromeOptionsSchema } from "@/stores/chrome/chrome-input.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
+
+import { describe, expect, it } from "vitest";
+
+import { ChromeOptionsSchema } from "@/stores/chrome/chrome-input.js";
 
 const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../fixtures/test.zip");
 
@@ -20,23 +22,48 @@ describe("ChromeOptionsSchema", () => {
   });
 
   it("rejects missing extId", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, extId: "" })).toThrow();
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        extId: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing publisherId", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, publisherId: "" })).toThrow();
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        publisherId: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing refreshToken", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, refreshToken: "" })).toThrow();
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        refreshToken: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing zip", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, zip: "" })).toThrow();
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        zip: ""
+      })
+    ).toThrow();
   });
 
   it("rejects non-existent zip path", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, zip: "nonexistent.zip" })).toThrow("Zip doesn't exist");
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        zip: "nonexistent.zip"
+      })
+    ).toThrow("Zip doesn't exist");
   });
 
   it("skipReview defaults to false", () => {
@@ -45,7 +72,10 @@ describe("ChromeOptionsSchema", () => {
   });
 
   it("accepts skipReview as boolean", () => {
-    const result = ChromeOptionsSchema.parse({ ...validInput, skipReview: true });
+    const result = ChromeOptionsSchema.parse({
+      ...validInput,
+      skipReview: true
+    });
     expect(result.skipReview).toBe(true);
   });
 
@@ -55,19 +85,37 @@ describe("ChromeOptionsSchema", () => {
   });
 
   it("accepts valid deployPercentage", () => {
-    const result = ChromeOptionsSchema.parse({ ...validInput, deployPercentage: 50 });
+    const result = ChromeOptionsSchema.parse({
+      ...validInput,
+      deployPercentage: 50
+    });
     expect(result.deployPercentage).toBe(50);
   });
 
   it("rejects deployPercentage below 1", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, deployPercentage: 0 })).toThrow();
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        deployPercentage: 0
+      })
+    ).toThrow();
   });
 
   it("rejects deployPercentage above 100", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, deployPercentage: 101 })).toThrow();
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        deployPercentage: 101
+      })
+    ).toThrow();
   });
 
   it("rejects non-integer deployPercentage", () => {
-    expect(() => ChromeOptionsSchema.parse({ ...validInput, deployPercentage: 50.5 })).toThrow();
+    expect(() =>
+      ChromeOptionsSchema.parse({
+        ...validInput,
+        deployPercentage: 50.5
+      })
+    ).toThrow();
   });
 });

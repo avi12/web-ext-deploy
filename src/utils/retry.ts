@@ -1,6 +1,8 @@
-import type { StoreLogger } from "@/types.js";
 import { setTimeout } from "node:timers/promises";
+
 import { z, ZodError } from "zod";
+
+import type { StoreLogger } from "@/types.js";
 
 export function getBackoffDelayMs(attempt: number, maxMs = 5_000) {
   return Math.min(2 ** attempt * 1000, maxMs);
@@ -17,13 +19,13 @@ export class CookieAuthError extends Error {
   }
 }
 
-export type HttpLikeResponse = {
+export interface HttpLikeResponse {
   data: unknown;
   status: number;
   statusText: string;
   headers?: Record<string, string>;
   setCookies?: string[];
-};
+}
 
 export type RateLimitHandler = (response: HttpLikeResponse) => Promise<void>;
 
@@ -47,8 +49,9 @@ export function createRateLimitHandler({
     }
 
     if (logger?.countdown) {
-      await logger.countdown(secondsToWait, remaining =>
-        `Too many requests. Retrying in ${remaining}s\nOr, you can deploy manually: ${manualDeployUrl}`
+      await logger.countdown(
+        secondsToWait,
+        remaining => `Too many requests. Retrying in ${remaining}s\nOr, you can deploy manually: ${manualDeployUrl}`
       );
     } else {
       await setTimeout(secondsToWait * 1000);
@@ -73,8 +76,8 @@ function extractApiMessage(data: unknown, statusText: string) {
     return asString;
   }
 
-  const violations = GoogleViolationsSchema.safeParse(data).data?.error.details
-    .flatMap(detail => detail.fieldViolations ?? [])
+  const violations = GoogleViolationsSchema.safeParse(data)
+    .data?.error.details.flatMap(detail => detail.fieldViolations ?? [])
     .map(violation => violation.description);
   if (violations?.length) {
     return violations.join("\n");
@@ -173,9 +176,8 @@ export async function requestWithRetry<T>({
       return attempt(count + 1);
     }
 
-    const isClientError = response.status >= 400
-      && response.status < 500
-      && !acceptedClientErrorStatuses.includes(response.status);
+    const isClientError =
+      response.status >= 400 && response.status < 500 && !acceptedClientErrorStatuses.includes(response.status);
     if (isClientError) {
       throw new Error(formatError(`${errorContext}: ${extractApiMessage(response.data, response.statusText)}`));
     }

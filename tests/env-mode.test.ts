@@ -1,13 +1,15 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { afterEach, describe, expect, it } from "vitest";
+
 import { ChromeOptionsSchema } from "@/stores/chrome/chrome-input.js";
 import { EdgeOptionsPublishApiSchema } from "@/stores/edge/edge-input.js";
 import { FirefoxOptionsSubmissionApiSchema } from "@/stores/firefox/firefox-input.js";
 import { OperaOptionsSchema } from "@/stores/opera/opera-input.js";
 import { config } from "@/utils/dotenv.js";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, it, expect, afterEach } from "vitest";
 
 const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/test.zip");
 
@@ -35,7 +37,9 @@ describe("Env mode - .env parsing + validation", () => {
 
   describe("chrome", () => {
     it("valid chrome.env passes schema", () => {
-      const parsed = writeEnv(`extId=abc123\npublisherId=pub-456\nclientId=client-id\nclientSecret=client-secret\nrefreshToken=token-xyz\nzip=${FIXTURE_ZIP}`);
+      const parsed = writeEnv(
+        `extId=abc123\npublisherId=pub-456\nclientId=client-id\nclientSecret=client-secret\nrefreshToken=token-xyz\nzip=${FIXTURE_ZIP}`
+      );
       expect(() => ChromeOptionsSchema.parse(parsed)).not.toThrow();
     });
 
@@ -52,9 +56,7 @@ describe("Env mode - .env parsing + validation", () => {
 
   describe("firefox", () => {
     it("valid firefox.env passes schema", () => {
-      const parsed = writeEnv(
-        `extId=addon-id\njwtIssuer=issuer-id\njwtSecret=secret-val\nzip=${FIXTURE_ZIP}`
-      );
+      const parsed = writeEnv(`extId=addon-id\njwtIssuer=issuer-id\njwtSecret=secret-val\nzip=${FIXTURE_ZIP}`);
       expect(() => FirefoxOptionsSubmissionApiSchema.parse(parsed)).not.toThrow();
     });
 
@@ -94,16 +96,12 @@ describe("Env mode - .env parsing + validation", () => {
 
   describe("opera", () => {
     it("valid opera.env passes schema", () => {
-      const parsed = writeEnv(
-        `packageId=100\nsessionid=sess-abc\ncsrftoken=csrf-xyz\nzip=${FIXTURE_ZIP}`
-      );
+      const parsed = writeEnv(`packageId=100\nsessionid=sess-abc\ncsrftoken=csrf-xyz\nzip=${FIXTURE_ZIP}`);
       expect(() => OperaOptionsSchema.parse(parsed)).not.toThrow();
     });
 
     it("packageId as string in .env is coerced to number", () => {
-      const parsed = writeEnv(
-        `packageId=42\nsessionid=sess-abc\ncsrftoken=csrf-xyz\nzip=${FIXTURE_ZIP}`
-      );
+      const parsed = writeEnv(`packageId=42\nsessionid=sess-abc\ncsrftoken=csrf-xyz\nzip=${FIXTURE_ZIP}`);
       const result = OperaOptionsSchema.parse(parsed);
       expect(result.packageId).toBe(42);
     });

@@ -33,9 +33,10 @@ export function buildFormData(entries: FormDataEntry[]) {
 
   for (const entry of entries) {
     const disposition = `Content-Disposition: form-data; name="${entry.name}"`;
-    const fileHeader = entry.filename !== undefined
-      ? `${disposition}; filename="${entry.filename}"\r\nContent-Type: ${entry.contentType ?? "application/octet-stream"}`
-      : disposition;
+    const fileHeader =
+      entry.filename !== undefined
+        ? `${disposition}; filename="${entry.filename}"\r\nContent-Type: ${entry.contentType ?? "application/octet-stream"}`
+        : disposition;
 
     chunks.push(Buffer.from(`--${boundary}\r\n${fileHeader}\r\n\r\n`));
     chunks.push(readValue(entry.value));
@@ -44,7 +45,9 @@ export function buildFormData(entries: FormDataEntry[]) {
   chunks.push(Buffer.from(`--${boundary}--\r\n`));
 
   return {
-    headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
+    headers: {
+      "Content-Type": `multipart/form-data; boundary=${boundary}`
+    },
     body: Buffer.concat(chunks)
   };
 }

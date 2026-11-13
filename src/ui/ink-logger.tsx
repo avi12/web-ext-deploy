@@ -1,17 +1,13 @@
-import { getStoreDisplayName } from "@/stores/registry.js";
-import { type StoreLogger, StoreStatus, type StoreName } from "@/types.js";
-import { kebabCase, screamingSnakeCase } from "@/utils/case-conversion.js";
-import {
-  getZodBaseType,
-  getZodDefaultValue,
-  getZodDescription,
-  isZodOptional,
-  unwrapZod
-} from "@/utils/zod.js";
-import { Box, Newline, render, Text } from "ink";
 import { setTimeout as setTimeoutPromise } from "node:timers/promises";
+
+import { Box, Newline, render, Text } from "ink";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
+
+import { getStoreDisplayName } from "@/stores/registry.js";
+import { type StoreLogger, type StoreName, StoreStatus } from "@/types.js";
+import { kebabCase, screamingSnakeCase } from "@/utils/case-conversion.js";
+import { getZodBaseType, getZodDefaultValue, getZodDescription, isZodOptional, unwrapZod } from "@/utils/zod.js";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const RENDER_INTERVAL_MS = 80;
@@ -25,12 +21,12 @@ enum LogLevel {
 
 type LogSource = StoreName | "System";
 
-export type LogEntry = {
+export interface LogEntry {
   store: LogSource;
   level: "info" | "success" | "warning" | "error";
   message: string;
   timestamp: Date;
-};
+}
 
 const statusIcons = {
   pending: "○",
@@ -63,10 +59,23 @@ function stripAnsi(str: string) {
   return str.replace(/\u001b\[[0-9;]*m/g, "");
 }
 
-export type HelpField = { name: string; type: string; isRequired: boolean; isMissing?: boolean; defaultValue: string; description: string };
-export type HelpTableData = { title: string; fields: HelpField[] };
+export interface HelpField {
+  name: string;
+  type: string;
+  isRequired: boolean;
+  isMissing?: boolean;
+  defaultValue: string;
+  description: string;
+}
+export interface HelpTableData {
+  title: string;
+  fields: HelpField[];
+}
 
-type WrapAccumulator = { lines: string[]; current: string };
+interface WrapAccumulator {
+  lines: string[];
+  current: string;
+}
 
 // An over-long word (e.g. a URL) is kept whole on its own line rather than split.
 function flushLongWord(accumulator: WrapAccumulator, word: string) {
@@ -101,7 +110,10 @@ function placeWord(accumulator: WrapAccumulator, word: string, width: number) {
 // Word-wrap to `width`, keeping any single over-long word (e.g. a URL) intact on its
 // own line rather than splitting it, even if that line overflows `width`.
 function wrapText(text: string, width: number) {
-  const accumulator: WrapAccumulator = { lines: [], current: "" };
+  const accumulator: WrapAccumulator = {
+    lines: [],
+    current: ""
+  };
   for (const word of text.split(/\s+/).filter(Boolean)) {
     placeWord(accumulator, word, width);
   }
@@ -114,13 +126,16 @@ function wrapText(text: string, width: number) {
 }
 
 export class MissingArgsError extends Error {
-  constructor(public readonly tables: HelpTableData[]) {
+  constructor(readonly tables: HelpTableData[]) {
     super("Missing required arguments");
   }
 }
 
 export class NoStoresError extends Error {
-  constructor(message: string, public readonly tables: HelpTableData[] = []) {
+  constructor(
+    message: string,
+    readonly tables: HelpTableData[] = []
+  ) {
     super(message);
   }
 }
@@ -142,8 +157,17 @@ function HelpTable({ data }: { data: HelpTableData }) {
     <Box flexDirection="column">
       <Newline />
       <Text color="yellow">{title}:</Text>
-      <Text>{"  "}{"Argument".padEnd(nameWidth)}{"Type".padEnd(typeWidth)}{"Required".padEnd(requiredWidth)}{"Default".padEnd(defaultWidth)}Description</Text>
-      <Text>{"  "}{"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + 20)}</Text>
+      <Text>
+        {"  "}
+        {"Argument".padEnd(nameWidth)}
+        {"Type".padEnd(typeWidth)}
+        {"Required".padEnd(requiredWidth)}
+        {"Default".padEnd(defaultWidth)}Description
+      </Text>
+      <Text>
+        {"  "}
+        {"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + 20)}
+      </Text>
       {fields.map(field => {
         const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
         const requiredPad = " ".repeat(field.isRequired ? requiredWidth - 1 : requiredWidth);
@@ -186,7 +210,11 @@ export function unwrapZodType(zodValue: z.ZodTypeAny) {
 
   const description = defaultMatch ? rawDescription.slice(0, defaultMatch.index) : rawDescription;
 
-  return { type, defaultValue, description };
+  return {
+    type,
+    defaultValue,
+    description
+  };
 }
 
 export function buildHelpTableData(
@@ -251,14 +279,13 @@ export function buildHelpTableData(
   }
 
   const title = mode === "env" ? `${storeName}.env` : getStoreDisplayName(storeName);
-  return { title, fields };
+  return {
+    title,
+    fields
+  };
 }
 
-export function buildGlobalHelpTableData(
-  schema: z.ZodType,
-  missingArgs: string[],
-  mode?: "cli" | "env"
-) {
+export function buildGlobalHelpTableData(schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
   const hasNoArgs = missingArgs.length === 0;
   const isNotObjectSchema = !(schema instanceof z.ZodObject);
   if (hasNoArgs || isNotObjectSchema) {
@@ -284,7 +311,7 @@ export function buildGlobalHelpTableData(
       continue;
     }
 
-    const zodValue = (schema.shape)[key];
+    const zodValue = schema.shape[key];
     const { type, defaultValue, description } = unwrapZodType(zodValue);
 
     fields.push({
@@ -301,7 +328,10 @@ export function buildGlobalHelpTableData(
     return null;
   }
 
-  return { title: "Global Arguments", fields };
+  return {
+    title: "Global Arguments",
+    fields
+  };
 }
 
 export function createPreDeployUI() {
@@ -328,7 +358,9 @@ export function createPreDeployUI() {
     return (
       <Box flexDirection="column">
         {messages.map((message, i) => (
-          <Text key={i}>{SPINNER_FRAMES[spinnerFrame]} {message}</Text>
+          <Text key={i}>
+            {SPINNER_FRAMES[spinnerFrame]} {message}
+          </Text>
         ))}
       </Box>
     );
@@ -390,7 +422,9 @@ export async function renderApplicationError(error: Error) {
     if (isHelpableError) {
       return (
         <Box flexDirection="column">
-          <Text><Text color="red">✖</Text> {error.message}</Text>
+          <Text>
+            <Text color="red">✖</Text> {error.message}
+          </Text>
           {error.tables.map((table, i) => (
             <HelpTable key={i} data={table} />
           ))}
@@ -400,7 +434,9 @@ export async function renderApplicationError(error: Error) {
 
     return (
       <Box>
-        <Text><Text color="red">✖</Text> {error.message}</Text>
+        <Text>
+          <Text color="red">✖</Text> {error.message}
+        </Text>
       </Box>
     );
   }
@@ -459,35 +495,50 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
     const successFilled = Math.round((successCount / totalCount) * barWidth);
     const errorFilled = Math.round((errorCount / totalCount) * barWidth);
 
-    type SummaryPart = { text: string; color: string };
+    interface SummaryPart {
+      text: string;
+      color: string;
+    }
     const summaryParts: SummaryPart[] = [];
     if (successCount > 0) {
-      summaryParts.push({ text: `✔ ${successCount} succeeded`, color: statusColors.success });
+      summaryParts.push({
+        text: `✔ ${successCount} succeeded`,
+        color: statusColors.success
+      });
     }
 
     if (errorCount > 0) {
-      summaryParts.push({ text: `✖ ${errorCount} failed`, color: statusColors.error });
+      summaryParts.push({
+        text: `✖ ${errorCount} failed`,
+        color: statusColors.error
+      });
     }
 
     if (runningCount > 0) {
-      summaryParts.push({ text: `${SPINNER_FRAMES[spinnerFrame]} ${runningCount} ${isDryRun ? "validating" : "deploying"}`, color: statusColors.running });
+      summaryParts.push({
+        text: `${SPINNER_FRAMES[spinnerFrame]} ${runningCount} ${isDryRun ? "validating" : "deploying"}`,
+        color: statusColors.running
+      });
     }
 
     if (pendingCount > 0) {
-      summaryParts.push({ text: `○ ${pendingCount} waiting`, color: statusColors.pending });
+      summaryParts.push({
+        text: `○ ${pendingCount} waiting`,
+        color: statusColors.pending
+      });
     }
 
     const allComplete = completedCount === totalCount;
 
     return (
       <Box flexDirection="column">
-        <Text bold color="cyan">Web Extension Deployment</Text>
+        <Text bold color="cyan">
+          Web Extension Deployment
+        </Text>
         <Newline />
         {storeNames.map(store => {
           const status = sharedStatuses[store] ?? StoreStatus.Pending;
-          const icon = status === StoreStatus.Running
-            ? SPINNER_FRAMES[spinnerFrame]
-            : (statusIcons[status] ?? "?");
+          const icon = status === StoreStatus.Running ? SPINNER_FRAMES[spinnerFrame] : (statusIcons[status] ?? "?");
           const storeEntries = sharedEntries.filter(entry => entry.store === store);
           const latestEntry = storeEntries[storeEntries.length - 1];
           const firstErrorEntry = storeEntries.find(entry => entry.level === LogLevel.Error);
@@ -502,8 +553,8 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
           const extensionName = sharedExtensionNames[store];
           return (
             <Text key={store}>
-              <Text color={statusColors[status]}>{icon}</Text>
-              {" "}{getStoreDisplayName(store)}{extensionName ? ` (${extensionName})` : ""}: <Text color={statusColors[status]}>{statusText}</Text>
+              <Text color={statusColors[status]}>{icon}</Text> {getStoreDisplayName(store)}
+              {extensionName ? ` (${extensionName})` : ""}: <Text color={statusColors[status]}>{statusText}</Text>
             </Text>
           );
         })}
@@ -576,12 +627,15 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
       });
     },
     error(store: LogSource, message: string) {
-      addLogEntry({
-        store,
-        level: LogLevel.Error,
-        message,
-        timestamp: new Date()
-      }, StoreStatus.Error);
+      addLogEntry(
+        {
+          store,
+          level: LogLevel.Error,
+          message,
+          timestamp: new Date()
+        },
+        StoreStatus.Error
+      );
     }
   };
 
@@ -618,30 +672,31 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
     ready,
     logger,
     monitor,
-    forStore: (store: StoreName) => ({
-      info: message => logger.info(store, message),
-      warning: message => logger.warning(store, message),
-      error: message => logger.error(store, message),
-      async countdown(seconds, getMessage) {
-        const entry: LogEntry = {
-          store,
-          level: LogLevel.Warning,
-          message: getMessage(seconds),
-          timestamp: new Date()
-        };
-        if (sharedStatuses[store] === StoreStatus.Pending) {
-          sharedStatuses[store] = StoreStatus.Running;
-        }
+    forStore: (store: StoreName) =>
+      ({
+        info: message => logger.info(store, message),
+        warning: message => logger.warning(store, message),
+        error: message => logger.error(store, message),
+        async countdown(seconds, getMessage) {
+          const entry: LogEntry = {
+            store,
+            level: LogLevel.Warning,
+            message: getMessage(seconds),
+            timestamp: new Date()
+          };
+          if (sharedStatuses[store] === StoreStatus.Pending) {
+            sharedStatuses[store] = StoreStatus.Running;
+          }
 
-        sharedEntries.push(entry);
-        triggerRender?.();
-        for (let remaining = seconds - 1; remaining > 0; remaining--) {
-          await setTimeoutPromise(1000);
-          entry.message = getMessage(remaining);
+          sharedEntries.push(entry);
           triggerRender?.();
+          for (let remaining = seconds - 1; remaining > 0; remaining--) {
+            await setTimeoutPromise(1000);
+            entry.message = getMessage(remaining);
+            triggerRender?.();
+          }
         }
-      }
-    } satisfies StoreLogger),
+      }) satisfies StoreLogger,
     waitForRender() {
       return new Promise<void>(resolve => {
         notifyAfterRender = resolve;

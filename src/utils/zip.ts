@@ -1,7 +1,8 @@
-import { inflateSync } from "fflate";
 import fs from "node:fs";
-import { open, type FileHandle } from "node:fs/promises";
+import { type FileHandle, open } from "node:fs/promises";
 import path from "node:path";
+
+import { inflateSync } from "fflate";
 import { z } from "zod";
 
 const ExtensionManifestSchema = z.object({
@@ -164,7 +165,9 @@ export async function getExtJson(zip: string) {
     try {
       parsed = JSON.parse(manifestContent);
     } catch (error) {
-      throw new Error(`Failed to parse manifest.json: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+      throw new Error(`Failed to parse manifest.json: ${error instanceof Error ? error.message : String(error)}`, {
+        cause: error
+      });
     }
 
     const manifest = ExtensionManifestSchema.safeParse(parsed);

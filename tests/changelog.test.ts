@@ -1,9 +1,11 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
 import { EdgeOptionsPublishApiSchema } from "@/stores/edge/edge-input.js";
 import { FirefoxOptionsSubmissionApiSchema } from "@/stores/firefox/firefox-input.js";
 import { OperaOptionsSchema } from "@/stores/opera/opera-input.js";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
 
 const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/test.zip");
 

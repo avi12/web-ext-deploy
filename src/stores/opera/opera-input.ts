@@ -1,5 +1,6 @@
-import { changelogField, requiredZipField } from "@/stores/shared-fields.js";
 import { z } from "zod";
+
+import { changelogField, requiredZipField } from "@/stores/shared-fields.js";
 
 export const OperaOptionsSchema = z.object({
   packageId: z.coerce.number().describe("Get it from https://addons.opera.com/developer/package/PACKAGE_ID"),

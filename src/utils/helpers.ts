@@ -1,6 +1,8 @@
-import type { StoreName } from "@/types.js";
-import { camelCase } from "./case-conversion.js";
 import fs from "node:fs";
+
+import type { StoreName } from "@/types.js";
+
+import { camelCase } from "./case-conversion.js";
 
 export function isObjectEmpty(object: object) {
   return Object.keys(object).length === 0;
@@ -14,7 +16,8 @@ export function createGitIgnoreIfNeeded(stores: StoreName[]) {
   }
 
   const gitIgnoreCurrent = fs.readFileSync(filename, "utf8");
-  const trailingNewline = gitIgnoreCurrent.endsWith("\n") ? "" : "\n";  if (!gitIgnoreCurrent.includes(".env")) {
+  const trailingNewline = gitIgnoreCurrent.endsWith("\n") ? "" : "\n";
+  if (!gitIgnoreCurrent.includes(".env")) {
     fs.appendFileSync(filename, `${trailingNewline}*.env${"\n"}`);
     return;
   }

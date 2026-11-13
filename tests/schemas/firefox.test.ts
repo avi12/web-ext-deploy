@@ -1,8 +1,10 @@
-import { FirefoxOptionsSubmissionApiSchema } from "@/stores/firefox/firefox-input.js";
-import { FirefoxCreateNewVersionSchema } from "@/stores/firefox/firefox-types.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
+
+import { describe, expect, it } from "vitest";
+
+import { FirefoxOptionsSubmissionApiSchema } from "@/stores/firefox/firefox-input.js";
+import { FirefoxCreateNewVersionSchema } from "@/stores/firefox/firefox-types.js";
 
 const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../fixtures/test.zip");
 
@@ -17,7 +19,12 @@ const validVersionResponse = {
   id: 123,
   approval_notes: null,
   channel: "listed",
-  compatibility: { firefox: { min: "109.0", max: "*" } },
+  compatibility: {
+    firefox: {
+      min: "109.0",
+      max: "*"
+    }
+  },
   edit_url: "https://addons.mozilla.org/developers/addon/example/versions/123",
   file: {
     id: 456,
@@ -36,12 +43,18 @@ const validVersionResponse = {
   license: {
     id: 13,
     is_custom: false,
-    name: { "en-US": "MIT License" },
+    name: {
+      "en-US": "MIT License"
+    },
     slug: "MIT",
-    text: { "en-US": "Permission is hereby granted..." },
+    text: {
+      "en-US": "Permission is hereby granted..."
+    },
     url: "https://opensource.org/license/mit"
   },
-  release_notes: { "en-US": "Release notes" },
+  release_notes: {
+    "en-US": "Release notes"
+  },
   reviewed: null,
   source: null,
   version: "4.0.1"
@@ -53,19 +66,39 @@ describe("FirefoxOptionsSubmissionApiSchema", () => {
   });
 
   it("rejects missing extId", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, extId: "" })).toThrow();
+    expect(() =>
+      FirefoxOptionsSubmissionApiSchema.parse({
+        ...validInput,
+        extId: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing jwtIssuer", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, jwtIssuer: "" })).toThrow();
+    expect(() =>
+      FirefoxOptionsSubmissionApiSchema.parse({
+        ...validInput,
+        jwtIssuer: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing jwtSecret", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, jwtSecret: "" })).toThrow();
+    expect(() =>
+      FirefoxOptionsSubmissionApiSchema.parse({
+        ...validInput,
+        jwtSecret: ""
+      })
+    ).toThrow();
   });
 
   it("rejects missing zip", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, zip: "" })).toThrow();
+    expect(() =>
+      FirefoxOptionsSubmissionApiSchema.parse({
+        ...validInput,
+        zip: ""
+      })
+    ).toThrow();
   });
 
   it("defaults changelogLang to en-US", () => {
@@ -78,14 +111,20 @@ describe("FirefoxOptionsSubmissionApiSchema", () => {
   });
 
   it("rejects non-existent zip", () => {
-    expect(() => FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, zip: "nonexistent.zip" })).toThrow(
-      "Zip doesn't exist"
-    );
+    expect(() =>
+      FirefoxOptionsSubmissionApiSchema.parse({
+        ...validInput,
+        zip: "nonexistent.zip"
+      })
+    ).toThrow("Zip doesn't exist");
   });
 
   it("rejects non-existent zipSource", () => {
     expect(() =>
-      FirefoxOptionsSubmissionApiSchema.parse({ ...validInput, zipSource: "nonexistent-source.zip" })
+      FirefoxOptionsSubmissionApiSchema.parse({
+        ...validInput,
+        zipSource: "nonexistent-source.zip"
+      })
     ).toThrow("Source zip doesn't exist");
   });
 });
@@ -107,7 +146,12 @@ describe("FirefoxCreateNewVersionSchema", () => {
   });
 
   it("accepts a null license", () => {
-    expect(FirefoxCreateNewVersionSchema.parse({ ...validVersionResponse, license: null }).license).toBeNull();
+    expect(
+      FirefoxCreateNewVersionSchema.parse({
+        ...validVersionResponse,
+        license: null
+      }).license
+    ).toBeNull();
   });
 
   it("accepts populated localized license fields", () => {
@@ -122,14 +166,29 @@ describe("FirefoxCreateNewVersionSchema", () => {
       slug: validVersionResponse.license.slug,
       url: validVersionResponse.license.url
     };
-    expect(FirefoxCreateNewVersionSchema.parse({ ...validVersionResponse, license }).license).toEqual(license);
+    expect(
+      FirefoxCreateNewVersionSchema.parse({
+        ...validVersionResponse,
+        license
+      }).license
+    ).toEqual(license);
   });
 
   it("rejects an invalid deployment version", () => {
-    expect(() => FirefoxCreateNewVersionSchema.parse({ ...validVersionResponse, version: 401 })).toThrow();
+    expect(() =>
+      FirefoxCreateNewVersionSchema.parse({
+        ...validVersionResponse,
+        version: 401
+      })
+    ).toThrow();
   });
 
   it("rejects an invalid source URL", () => {
-    expect(() => FirefoxCreateNewVersionSchema.parse({ ...validVersionResponse, source: false })).toThrow();
+    expect(() =>
+      FirefoxCreateNewVersionSchema.parse({
+        ...validVersionResponse,
+        source: false
+      })
+    ).toThrow();
   });
 });

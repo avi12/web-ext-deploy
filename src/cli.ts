@@ -1,11 +1,16 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
+import { parseArgs } from "node:util";
+
+import { z } from "zod";
+
 import { runDeploy } from "./deploy-all-stores.js";
 import { BaseOptionsSchema, EnvOptionsSchema } from "./store-argument-parser.js";
 import { storeRegistry } from "./stores/registry.js";
 import type { Arguments, StoreName } from "./types.js";
 import {
-  type HelpTableData,
   buildHelpTableData,
+  type HelpTableData,
   renderApplicationError,
   renderHelpTables,
   unwrapZodType
@@ -13,9 +18,6 @@ import {
 import { camelCase, kebabCase } from "./utils/case-conversion.js";
 import { toError } from "./utils/retry.js";
 import { getZodBaseType, isZodOptional, unwrapZod, zodObjectEntries } from "./utils/zod.js";
-import { createRequire } from "node:module";
-import { parseArgs } from "node:util";
-import { z } from "zod";
 
 type Command = "cli" | "env";
 type CliOptionType = "boolean" | "number" | "string" | "array";
@@ -23,15 +25,23 @@ type CliOptionSpecs = Record<string, CliOptionType>;
 
 const PUBLISH_ONLY_FLAG = "publish-only";
 
-const COMMANDS: Record<Command, { summary: string; epilogue: string }> = {
+const COMMANDS: Record<
+  Command,
+  {
+    summary: string;
+    epilogue: string;
+  }
+> = {
   env: {
     summary: "Read configuration from .env files",
-    epilogue: "Create a .env file for each store you want to deploy to (e.g. chrome.env, firefox.env)\n" +
+    epilogue:
+      "Create a .env file for each store you want to deploy to (e.g. chrome.env, firefox.env)\n" +
       "Required fields go in the .env file; dynamic fields are passed as CLI arguments"
   },
   cli: {
     summary: "Pass configuration directly as CLI arguments",
-    epilogue: "Choose which stores to deploy to by supplying their options\n" +
+    epilogue:
+      "Choose which stores to deploy to by supplying their options\n" +
       "Only stores with at least one argument will be included\n" +
       "For each included store, all [required] options must be provided"
   }
@@ -62,7 +72,7 @@ function schemaToSpecs(scope: StoreName | "base", schema: z.ZodObject<z.ZodRawSh
   return specs;
 }
 
-function pickEnvOverridableSpecs(store: typeof storeRegistry[number], storeSpecs: CliOptionSpecs) {
+function pickEnvOverridableSpecs(store: (typeof storeRegistry)[number], storeSpecs: CliOptionSpecs) {
   const overridable = new Set([
     ...(store.dynamicFields ?? []).map(field => optionName(store.name, field)),
     ...(store.cliOverridableFields ?? []).map(field => optionName(store.name, field))
@@ -82,8 +92,15 @@ for (const store of storeRegistry) {
 // Valid options differ per command: `cli` accepts every store flag, while `env`
 // reads required fields from .env files and only accepts the global flags plus
 // the dynamic/overridable store flags.
-const cliCommandSpecs: CliOptionSpecs = { ...baseSpecs, ...allStoreSpecs };
-const envCommandSpecs: CliOptionSpecs = { ...baseSpecs, [PUBLISH_ONLY_FLAG]: "array", ...envOverridableSpecs };
+const cliCommandSpecs: CliOptionSpecs = {
+  ...baseSpecs,
+  ...allStoreSpecs
+};
+const envCommandSpecs: CliOptionSpecs = {
+  ...baseSpecs,
+  [PUBLISH_ONLY_FLAG]: "array",
+  ...envOverridableSpecs
+};
 
 function isChangelogField(fieldName: string) {
   return fieldName.toLowerCase().endsWith("changelog");
@@ -151,11 +168,19 @@ function expandGreedyFlags(args: string[]) {
 }
 
 function toParseArgsOptions(specs: CliOptionSpecs) {
-  const options: Record<string, { type: "boolean" | "string"; multiple?: boolean }> = {};
+  const options: Record<
+    string,
+    {
+      type: "boolean" | "string";
+      multiple?: boolean;
+    }
+  > = {};
   for (const [name, type] of Object.entries(specs)) {
     options[name] = {
       type: type === "boolean" ? "boolean" : "string",
-      ...(type === "array" && { multiple: true })
+      ...(type === "array" && {
+        multiple: true
+      })
     };
   }
   return options;
@@ -202,13 +227,23 @@ function buildGlobalHelpTable(command: Command): HelpTableData {
       description
     };
   });
-  return { title: "Global Options", fields };
+  return {
+    title: "Global Options",
+    fields
+  };
 }
 
 async function renderCommandHelp(command: Command) {
   console.log(`Usage: web-ext-deploy ${command} [options]\n\n${COMMANDS[command].summary}`);
   const storeTables = storeRegistry.flatMap(store => {
-    const table = buildHelpTableData(store.name, store.schema, command, undefined, store.dynamicFields, store.cliOverridableFields);
+    const table = buildHelpTableData(
+      store.name,
+      store.schema,
+      command,
+      undefined,
+      store.dynamicFields,
+      store.cliOverridableFields
+    );
     return table ? [table] : [];
   });
   await renderHelpTables([...storeTables, buildGlobalHelpTable(command)]);
@@ -249,13 +284,26 @@ function unknownCommandMessage(command: string) {
 type Invocation =
   | { kind: "top-help" }
   | { kind: "version" }
-  | { kind: "error"; message: string }
-  | { kind: "run"; command: Command; commandArgs: string[] };
+  | {
+      kind: "error";
+      message: string;
+    }
+  | {
+      kind: "run";
+      command: Command;
+      commandArgs: string[];
+    };
 
 const topLevelFlagInvocations: Record<string, Invocation> = {
-  "--help": { kind: "top-help" },
-  "-h": { kind: "top-help" },
-  "--version": { kind: "version" }
+  "--help": {
+    kind: "top-help"
+  },
+  "-h": {
+    kind: "top-help"
+  },
+  "--version": {
+    kind: "version"
+  }
 };
 
 function resolveInvocation(args: string[]): Invocation {
@@ -266,10 +314,17 @@ function resolveInvocation(args: string[]): Invocation {
   }
 
   if (!isKnownCommand(command)) {
-    return { kind: "error", message: unknownCommandMessage(command) };
+    return {
+      kind: "error",
+      message: unknownCommandMessage(command)
+    };
   }
 
-  return { kind: "run", command, commandArgs: args.slice(1) };
+  return {
+    kind: "run",
+    command,
+    commandArgs: args.slice(1)
+  };
 }
 
 async function runCommand(command: Command, commandArgs: string[]) {

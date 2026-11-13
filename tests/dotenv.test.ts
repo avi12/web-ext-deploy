@@ -1,8 +1,10 @@
-import { parse, config } from "@/utils/dotenv.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, expect } from "vitest";
+
+import { describe, expect, it } from "vitest";
+
+import { config, parse } from "@/utils/dotenv.js";
 
 describe("parse", () => {
   it("returns empty object for empty string", () => {
@@ -14,7 +16,7 @@ describe("parse", () => {
   });
 
   it("parses double-quoted values", () => {
-    expect(parse("KEY=\"value\"")).toEqual({ KEY: "value" });
+    expect(parse('KEY="value"')).toEqual({ KEY: "value" });
   });
 
   it("parses single-quoted values", () => {
@@ -38,7 +40,11 @@ describe("parse", () => {
   });
 
   it("parses multiple entries", () => {
-    expect(parse("FOO=1\nBAR=2\nBAZ=3")).toEqual({ FOO: "1", BAR: "2", BAZ: "3" });
+    expect(parse("FOO=1\nBAR=2\nBAZ=3")).toEqual({
+      FOO: "1",
+      BAR: "2",
+      BAZ: "3"
+    });
   });
 });
 
@@ -49,11 +55,16 @@ describe("config", () => {
 
   it("returns parsed content from a valid file", () => {
     const tmpFile = path.join(os.tmpdir(), `dotenv-test-${Date.now()}.env`);
-    fs.writeFileSync(tmpFile, "FOO=\"bar\"\nBAZ=qux");
+    fs.writeFileSync(tmpFile, 'FOO="bar"\nBAZ=qux');
 
     try {
       const result = config({ path: tmpFile });
-      expect(result).toEqual({ parsed: { FOO: "bar", BAZ: "qux" } });
+      expect(result).toEqual({
+        parsed: {
+          FOO: "bar",
+          BAZ: "qux"
+        }
+      });
     } finally {
       fs.unlinkSync(tmpFile);
     }
