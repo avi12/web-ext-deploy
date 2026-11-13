@@ -40,7 +40,8 @@ async function captureCookiesFromBrowser(page: Page) {
         return;
       }
 
-      const hasAllCookies = COOKIE_NAMES.every(name => new RegExp(`(^|; )${name}=`).test(cookie!));
+      const presentCookie = cookie;
+      const hasAllCookies = COOKIE_NAMES.every(name => new RegExp(`(^|; )${name}=`).test(presentCookie));
       const isOperaDomain = new URL(request.url()).hostname === new URL(DEVELOPER_URL).hostname;
       if (hasAllCookies && isOperaDomain) {
         isDone = true;
@@ -76,7 +77,7 @@ function installChromium() {
   execSync(`node "${playwrightCli}" install chromium`, { stdio: "inherit" });
 }
 
-export async function fetchOperaCredentials(shouldSaveToEnv: boolean): Promise<Record<string, string>> {
+export async function fetchOperaCredentials(shouldSaveToEnv: boolean) {
   const width = 1280;
   const height = 720;
   const launchOptions = {

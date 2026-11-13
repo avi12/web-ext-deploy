@@ -63,7 +63,7 @@ export function defineStore<
   fetchCredentials?: (config: Record<string, unknown>, shouldSaveToEnv: boolean) => Promise<Record<string, string>>;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
-}): StoreDefinition<Name, Schema, CredentialFields> {
+}) {
   return {
     name: config.name,
     schema: config.schema,

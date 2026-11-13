@@ -1,9 +1,12 @@
 import { createHmac, randomBytes } from "node:crypto";
 
+const SECONDS_PER_MINUTE = 60;
+const DEFAULT_JWT_LIFETIME_MINUTES = 3;
+
 export function generateJwt({
   jwtIssuer,
   jwtSecret,
-  expiresInSeconds = 60 * 3
+  expiresInSeconds = SECONDS_PER_MINUTE * DEFAULT_JWT_LIFETIME_MINUTES
 }: {
   jwtIssuer: string;
   jwtSecret: string;

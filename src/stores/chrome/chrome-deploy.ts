@@ -18,6 +18,9 @@ import {
   UploadState
 } from "./chrome-types.js";
 
+const ERROR_DETAIL_MAX_LENGTH = 200;
+const CANCEL_SETTLE_DELAY_MS = 60_000;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
@@ -73,7 +76,7 @@ async function exchangeRefreshTokenForAccessToken({
         detail = `: ${message}`;
       }
     } else if (rawBody) {
-      detail = `: ${rawBody.slice(0, 200)}`;
+      detail = `: ${rawBody.slice(0, ERROR_DETAIL_MAX_LENGTH)}`;
     }
 
     const statusText = response.statusText ? ` ${response.statusText}` : "";
@@ -145,14 +148,16 @@ async function cancelSubmissionIfPending({
 
   logger?.info(`Canceling pending submission (state: ${submittedState})`);
 
-  await requestWithRetry({
+  await requestWithRetry<void>({
     sendRequest: () => httpClient.post(`v2/publishers/${publisherId}/items/${extId}:cancelSubmission`),
-    parseResponse: (): undefined => undefined,
+    parseResponse() {
+      return;
+    },
     formatError: storeError,
     errorContext: "Cancel submission failed",
     onRateLimit
   });
-  await setTimeout(60_000);
+  await setTimeout(CANCEL_SETTLE_DELAY_MS);
 }
 
 /** @see https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/fetchStatus */

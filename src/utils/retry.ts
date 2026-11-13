@@ -4,8 +4,12 @@ import { z, ZodError } from "zod";
 
 import type { StoreLogger } from "@/types.js";
 
-export function getBackoffDelayMs({ attempt, maxMs = 5_000 }: { attempt: number; maxMs?: number }) {
-  return Math.min(2 ** attempt * 1000, maxMs);
+const DEFAULT_MAX_BACKOFF_MS = 5_000;
+const MS_PER_SECOND = 1000;
+const DEFAULT_MAX_WAIT_SECONDS = 60;
+
+export function getBackoffDelayMs({ attempt, maxMs = DEFAULT_MAX_BACKOFF_MS }: { attempt: number; maxMs?: number }) {
+  return Math.min(2 ** attempt * MS_PER_SECOND, maxMs);
 }
 
 export function toError(value: unknown) {
@@ -33,8 +37,8 @@ export function createRateLimitHandler({
   manualDeployUrl,
   formatError,
   logger,
-  maxWaitSeconds = 60,
-  getWaitSeconds = () => 60
+  maxWaitSeconds = DEFAULT_MAX_WAIT_SECONDS,
+  getWaitSeconds = () => DEFAULT_MAX_WAIT_SECONDS
 }: {
   manualDeployUrl: string;
   formatError: (message: string) => string;
@@ -54,7 +58,7 @@ export function createRateLimitHandler({
         remaining => `Too many requests. Retrying in ${remaining}s\nOr, you can deploy manually: ${manualDeployUrl}`
       );
     } else {
-      await setTimeout(secondsToWait * 1000);
+      await setTimeout(secondsToWait * MS_PER_SECOND);
     }
   }) satisfies RateLimitHandler;
 }
@@ -140,7 +144,7 @@ export async function requestWithRetry<T>({
   onRateLimit,
   acceptedClientErrorStatuses = [],
   maxRetries = DEFAULT_MAX_RETRIES,
-  maxBackoffMs = 5_000
+  maxBackoffMs = DEFAULT_MAX_BACKOFF_MS
 }: {
   sendRequest: () => Promise<HttpLikeResponse>;
   parseResponse: (response: HttpLikeResponse) => T;

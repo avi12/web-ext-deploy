@@ -19,6 +19,8 @@ import {
   FirefoxUploadSourceSchema
 } from "./firefox-types.js";
 
+const HTTP_NOT_FOUND = 404;
+
 let httpClient: ReturnType<typeof createHttpClient>;
 
 function authHeader({ jwtIssuer, jwtSecret }: { jwtIssuer: string; jwtSecret: string }) {
@@ -181,7 +183,7 @@ function getVersionIfExists({
     formatError: storeError,
     errorContext: "Version lookup failed",
     onRateLimit,
-    acceptedClientErrorStatuses: [404]
+    acceptedClientErrorStatuses: [HTTP_NOT_FOUND]
   });
 }
 

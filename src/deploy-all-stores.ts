@@ -21,10 +21,7 @@ async function runStoreDeploy({
   isDryRun?: boolean;
   isAutoFetchCredentials?: boolean;
   mode?: "cli" | "env";
-}): Promise<{
-  store: StoreName;
-  helpTables: HelpTableData[];
-} | null> {
+}) {
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);

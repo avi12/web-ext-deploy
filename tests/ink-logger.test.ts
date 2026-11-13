@@ -3,15 +3,7 @@ import { describe, expect, it } from "vitest";
 import { StoreName } from "@/types.js";
 import { type LogEntry } from "@/ui/ink-logger.js";
 
-function makeEntry({
-  store,
-  level,
-  message
-}: {
-  store: StoreName;
-  level: LogEntry["level"];
-  message: string;
-}): LogEntry {
+function makeEntry({ store, level, message }: { store: StoreName; level: LogEntry["level"]; message: string }) {
   return {
     store,
     level,

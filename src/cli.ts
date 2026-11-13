@@ -8,13 +8,7 @@ import { runDeploy } from "./deploy-all-stores.js";
 import { BaseOptionsSchema, EnvOptionsSchema } from "./store-argument-parser.js";
 import { storeRegistry } from "./stores/registry.js";
 import type { Arguments, StoreName } from "./types.js";
-import {
-  buildHelpTableData,
-  type HelpTableData,
-  renderApplicationError,
-  renderHelpTables,
-  unwrapZodType
-} from "./ui/ink-logger.js";
+import { buildHelpTableData, renderApplicationError, renderHelpTables, unwrapZodType } from "./ui/ink-logger.js";
 import { camelCase, kebabCase } from "./utils/case-conversion.js";
 import { toError } from "./utils/retry.js";
 import { getZodBaseType, isZodOptional, unwrapZod, zodObjectEntries } from "./utils/zod.js";
@@ -247,7 +241,7 @@ function buildArguments({
   command: Command;
   values: Record<string, unknown>;
   specs: CliOptionSpecs;
-}): Arguments {
+}) {
   const argv: Arguments = { _: [command] };
   for (const [name, rawValue] of Object.entries(values)) {
     const value = coerceOptionValue({
@@ -275,7 +269,7 @@ function parseCommandArgs({ command, args }: { command: Command; args: string[] 
   });
 }
 
-function buildGlobalHelpTable(command: Command): HelpTableData {
+function buildGlobalHelpTable(command: Command) {
   const schema: z.ZodObject<z.ZodRawShape> = command === "env" ? EnvOptionsSchema : BaseOptionsSchema;
   const fields = zodObjectEntries(schema).map(([key, value]) => {
     const { type, defaultValue, description } = unwrapZodType(value);
@@ -334,7 +328,8 @@ function isKnownCommand(value: string): value is Command {
 }
 
 function unknownCommandMessage(command: string) {
-  if (!command || command.startsWith("-")) {
+  const isMissingOrFlag = !command || command.startsWith("-");
+  if (isMissingOrFlag) {
     return "You need at least one command before moving on";
   }
 
@@ -366,7 +361,7 @@ const topLevelFlagInvocations: Record<string, Invocation> = {
   }
 };
 
-function resolveInvocation(args: string[]): Invocation {
+function resolveInvocation(args: string[]) {
   const [command = ""] = args;
   const topLevelFlag = topLevelFlagInvocations[command];
   if (topLevelFlag) {
@@ -377,14 +372,14 @@ function resolveInvocation(args: string[]): Invocation {
     return {
       kind: "error",
       message: unknownCommandMessage(command)
-    };
+    } satisfies Invocation;
   }
 
   return {
     kind: "run",
     command,
     commandArgs: args.slice(1)
-  };
+  } satisfies Invocation;
 }
 
 async function runCommand({ command, commandArgs }: { command: Command; commandArgs: string[] }) {

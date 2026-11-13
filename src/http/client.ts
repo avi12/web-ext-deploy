@@ -31,8 +31,8 @@ async function fetchResponse({ url, options }: { url: string; options: RequestIn
       signal: controller.signal
     });
     const contentType = response.headers.get("content-type");
-    const data: unknown =
-      contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+    const isJson = contentType && contentType.includes("application/json");
+    const data: unknown = isJson ? await response.json() : await response.text();
 
     return {
       data,
@@ -91,7 +91,7 @@ export function createHttpClient({
     post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
       if (body instanceof ReadStream) {
         // new ReadableStream(underlyingSource) is typed as ReadableStream<any>, which is
-        // part of BodyInit — no type assertion needed. duplex: "half" tells fetch to keep
+        // part of BodyInit - no type assertion needed. duplex: "half" tells fetch to keep
         // the connection open for sending while waiting for the response.
         return fetchResponse({
           url: buildUrl({ endpoint }),

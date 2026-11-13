@@ -36,7 +36,7 @@ const validInputs: Record<string, Record<string, unknown>> = {
   }
 };
 
-function tryDeployStore({ options, store }: { options: unknown; store: string }): Promise<boolean> {
+function tryDeployStore({ options, store }: { options: unknown; store: string }) {
   try {
     return deployStore({
       options,

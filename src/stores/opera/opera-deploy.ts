@@ -23,7 +23,6 @@ import {
   type ListVersions,
   ListVersionsSchema,
   SubmitChangesSchema,
-  type UploadResult,
   UploadResultSchema
 } from "./opera-types.js";
 
@@ -74,7 +73,7 @@ function createOperaHttpClient({
     [stickySessionCookie] = setCookie.split(";");
   }
 
-  async function withCookieRefresh(sendRequest: () => Promise<HttpLikeResponse>): Promise<HttpLikeResponse> {
+  async function withCookieRefresh(sendRequest: () => Promise<HttpLikeResponse>) {
     const response = await sendRequest();
     absorbSetCookies(response);
     const isAuthFailure = response.status === 401 || response.status === 403;
@@ -209,7 +208,8 @@ async function verifySourceCodeExistence({
 
   // The public source URL lives on the previously submitted version and is not always reflected on the
   // freshly uploaded version, so check both and accept either a public or a moderator source URL.
-  const versionsToCheck = lastVersion && lastVersion !== version ? [version, lastVersion] : [version];
+  const hasOtherLastVersion = lastVersion && lastVersion !== version;
+  const versionsToCheck = hasOtherLastVersion ? [version, lastVersion] : [version];
   const listingDetails = await Promise.all(
     versionsToCheck.map(versionToCheck =>
       getVersionListingDetail({
@@ -463,7 +463,7 @@ async function verifyUploadSuccessful({
   packageId: number;
   lastVersion: string;
   onRateLimit?: RateLimitHandler;
-}): Promise<UploadResult> {
+}) {
   const { zipName, fileId } = getFileMetadata(zipPath);
 
   const data = await requestWithRetry({

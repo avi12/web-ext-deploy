@@ -5,6 +5,12 @@ import path from "node:path";
 import { inflateSync } from "fflate";
 import { z } from "zod";
 
+const EOCD_CENTRAL_DIRECTORY_SIZE_OFFSET = 12;
+const EOCD_CENTRAL_DIRECTORY_START_OFFSET = 16;
+const CENTRAL_ENTRY_COMPRESSION_METHOD_OFFSET = 10;
+const CENTRAL_ENTRY_COMPRESSED_SIZE_OFFSET = 20;
+const CENTRAL_ENTRY_LOCAL_HEADER_OFFSET = 42;
+
 const ExtensionManifestSchema = z.object({
   name: z.string(),
   version: z.string(),
@@ -30,7 +36,7 @@ interface CentralDirectoryEntry {
 }
 
 // Issues a single targeted fs read for the given byte range, so the whole ZIP
-// is never loaded — only the end-of-central-directory record, the central
+// is never loaded - only the end-of-central-directory record, the central
 // directory, and the bytes of the specific entry being extracted.
 async function readRange({
   fileHandle,
@@ -70,21 +76,15 @@ async function findCentralDirectoryLocation({ fileHandle, fileSize }: { fileHand
     }
 
     return {
-      offset: view.getUint32(offset + 16, true),
-      size: view.getUint32(offset + 12, true)
+      offset: view.getUint32(offset + EOCD_CENTRAL_DIRECTORY_START_OFFSET, true),
+      size: view.getUint32(offset + EOCD_CENTRAL_DIRECTORY_SIZE_OFFSET, true)
     };
   }
 
   throw new Error("End of central directory record not found in zip");
 }
 
-function findCentralDirectoryEntry({
-  centralDirectory,
-  filename
-}: {
-  centralDirectory: Uint8Array;
-  filename: string;
-}): CentralDirectoryEntry | undefined {
+function findCentralDirectoryEntry({ centralDirectory, filename }: { centralDirectory: Uint8Array; filename: string }) {
   const view = toDataView(centralDirectory);
   const decoder = new TextDecoder();
 
@@ -101,9 +101,9 @@ function findCentralDirectoryEntry({
     const entryName = decoder.decode(centralDirectory.subarray(nameStart, nameStart + fileNameLength));
     if (entryName === filename) {
       return {
-        compressionMethod: view.getUint16(offset + 10, true),
-        compressedSize: view.getUint32(offset + 20, true),
-        localHeaderOffset: view.getUint32(offset + 42, true)
+        compressionMethod: view.getUint16(offset + CENTRAL_ENTRY_COMPRESSION_METHOD_OFFSET, true),
+        compressedSize: view.getUint32(offset + CENTRAL_ENTRY_COMPRESSED_SIZE_OFFSET, true),
+        localHeaderOffset: view.getUint32(offset + CENTRAL_ENTRY_LOCAL_HEADER_OFFSET, true)
       };
     }
 

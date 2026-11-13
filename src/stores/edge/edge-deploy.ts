@@ -200,8 +200,7 @@ async function pollPublishStatus({
 
     await setTimeout(
       getBackoffDelayMs({
-        attempt: attempt++,
-        maxMs: 5_000
+        attempt: attempt++
       })
     );
   }

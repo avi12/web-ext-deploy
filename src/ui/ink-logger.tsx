@@ -9,6 +9,10 @@ import { type StoreLogger, type StoreName, StoreStatus } from "@/types.js";
 import { kebabCase, screamingSnakeCase } from "@/utils/case-conversion.js";
 import { getZodBaseType, getZodDefaultValue, getZodDescription, isZodOptional, unwrapZod } from "@/utils/zod.js";
 
+const HELP_TABLE_RULE_PADDING = 20;
+const ESCAPE_CODE = 27;
+const COUNTDOWN_TICK_MS = 1000;
+
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const RENDER_INTERVAL_MS = 80;
 
@@ -55,8 +59,10 @@ const dryRunStatusTexts = {
   [StoreStatus.ERROR]: "Invalid"
 } as const;
 
+const ANSI_ESCAPE_PATTERN = new RegExp(String.raw`${String.fromCharCode(ESCAPE_CODE)}\[[0-9;]*m`, "g");
+
 function stripAnsi(str: string) {
-  return str.replace(/\u001b\[[0-9;]*m/g, "");
+  return str.replace(ANSI_ESCAPE_PATTERN, "");
 }
 
 export interface HelpField {
@@ -173,7 +179,7 @@ function HelpTable({ data }: { data: HelpTableData }) {
       </Text>
       <Text>
         {"  "}
-        {"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + 20)}
+        {"-".repeat(nameWidth + typeWidth + requiredWidth + defaultWidth + HELP_TABLE_RULE_PADDING)}
       </Text>
       {fields.map(field => {
         const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
@@ -269,7 +275,7 @@ export function buildHelpTableData({
 
   const fields: HelpField[] = [];
 
-  for (const key in schema.shape) {
+  for (const key of Object.keys(schema.shape)) {
     // verbose is a global flag, not per-store
     const isVerboseInStoreContext = key === "verbose" && Boolean(mode);
     if (isVerboseInStoreContext) {
@@ -331,7 +337,7 @@ export function buildGlobalHelpTableData({
 
   const fields: HelpField[] = [];
 
-  for (const key in schema.shape) {
+  for (const key of Object.keys(schema.shape)) {
     if (!missingArgs.includes(key)) {
       continue;
     }
@@ -722,7 +728,7 @@ export function createInkLogger({ storeNames, isDryRun }: { storeNames: StoreNam
           sharedEntries.push(entry);
           triggerRender?.();
           for (let remaining = seconds - 1; remaining > 0; remaining--) {
-            await setTimeoutPromise(1000);
+            await setTimeoutPromise(COUNTDOWN_TICK_MS);
             entry.message = getMessage(remaining);
             triggerRender?.();
           }

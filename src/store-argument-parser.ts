@@ -37,7 +37,8 @@ function getJsonsFromArgs({ store, argv }: { store: StoreName; argv: Arguments }
 function getJsons({ command, argv }: { command: string; argv: Arguments }) {
   if (command === "env") {
     const publishOnly = z.array(z.string()).safeParse(argv.publishOnly).data;
-    const stores = (publishOnly && publishOnly.length > 0 ? publishOnly : storeNames).filter(isSupportedStore);
+    const hasPublishOnly = publishOnly && publishOnly.length > 0;
+    const stores = (hasPublishOnly ? publishOnly : storeNames).filter(isSupportedStore);
     const result: StoreConfigMap = {};
     for (const store of stores) {
       const { parsed: rawParsed = {} } = config({ path: `${store}.env` });
@@ -104,6 +105,26 @@ function readCredentialsFromEnv({
   return result;
 }
 
+function fillMissingFields({
+  storeConfig,
+  envCredentials,
+  fields
+}: {
+  storeConfig: StoreConfig;
+  envCredentials: Record<string, string>;
+  fields: readonly string[];
+}) {
+  for (const field of fields) {
+    const isAlreadySet = Boolean(storeConfig[field]);
+    const hasEnvValue = Boolean(envCredentials[field]);
+    if (isAlreadySet || !hasEnvValue) {
+      continue;
+    }
+
+    storeConfig[field] = envCredentials[field];
+  }
+}
+
 async function fetchMissingCredentials({
   jsonStoresRaw,
   log,
@@ -130,15 +151,11 @@ async function fetchMissingCredentials({
         storeName: store.name,
         credentialFields: fields
       });
-      for (const field of fields) {
-        const isAlreadySet = Boolean(storeConfig[field]);
-        const hasEnvValue = Boolean(envCredentials[field]);
-        if (isAlreadySet || !hasEnvValue) {
-          continue;
-        }
-
-        storeConfig[field] = envCredentials[field];
-      }
+      fillMissingFields({
+        storeConfig,
+        envCredentials,
+        fields
+      });
     }
 
     const missingFields = fields.filter(field => !storeConfig[field]);

@@ -250,13 +250,7 @@ function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
   );
 }
 
-export async function getChromeRefreshToken({
-  clientId,
-  clientSecret
-}: {
-  clientId: string;
-  clientSecret: string;
-}): Promise<string> {
+export async function getChromeRefreshToken({ clientId, clientSecret }: { clientId: string; clientSecret: string }) {
   let tokenResult = "";
   let errorResult: Error | undefined;
 
