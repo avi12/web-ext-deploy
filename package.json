@@ -55,14 +55,6 @@
     "dist/**/*"
   ],
   "type": "module",
-  "types": "./dist/cli.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "dist/*.d.ts"
-      ]
-    }
-  },
   "scripts": {
     "debug:dev": "nodemon --watch src --ext ts --exec \"pnpm build\"",
     "clean": "rimraf dist",
