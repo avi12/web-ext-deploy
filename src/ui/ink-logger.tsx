@@ -575,7 +575,8 @@ export function createInkLogger({ storeNames, isDryRun }: { storeNames: StoreNam
           const firstErrorEntry = storeEntries.find(entry => entry.level === LogLevel.ERROR);
           const defaultStatusText = isDryRun ? dryRunStatusTexts[status] : deployStatusTexts[status];
           let statusText: string = defaultStatusText;
-          if (status === StoreStatus.RUNNING && latestEntry) {
+          const isRunningWithEntry = status === StoreStatus.RUNNING && latestEntry;
+          if (isRunningWithEntry) {
             statusText = stripAnsi(latestEntry.message).split("\n")[0];
           } else if (status === StoreStatus.ERROR && firstErrorEntry) {
             statusText = stripAnsi(firstErrorEntry.message).split("\n")[0];
