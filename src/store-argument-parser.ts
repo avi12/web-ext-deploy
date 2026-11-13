@@ -17,10 +17,10 @@ export const BaseOptionsSchema = z.object({
   dryRun: z.boolean().optional().default(false).describe("Validate inputs without deploying")
 });
 
-const publishOnlyDescription = `Only publish to specific stores: ${storeNames.join(", ")}`;
+const PUBLISH_ONLY_DESCRIPTION = `Only publish to specific stores: ${storeNames.join(", ")}`;
 
 export const EnvOptionsSchema = z.object({
-  publishOnly: z.array(z.string()).optional().describe(publishOnlyDescription),
+  publishOnly: z.array(z.string()).optional().describe(PUBLISH_ONLY_DESCRIPTION),
   ...BaseOptionsSchema.shape
 });
 
@@ -28,7 +28,10 @@ type StoreConfig = Record<string, unknown>;
 type StoreConfigMap = Partial<Record<StoreName, StoreConfig>>;
 
 function getJsonsFromArgs({ store, argv }: { store: StoreName; argv: Arguments }) {
-  return mapStoreArgs({ rawArgs: Object.fromEntries(Object.entries(argv)), store });
+  return mapStoreArgs({
+    rawArgs: Object.fromEntries(Object.entries(argv)),
+    store
+  });
 }
 
 function getJsons({ command, argv }: { command: string; argv: Arguments }) {
@@ -51,7 +54,10 @@ function getJsons({ command, argv }: { command: string; argv: Arguments }) {
       const envValues = dynamicFields.length
         ? Object.fromEntries(Object.entries(parsed).filter(([key]) => !dynamicFields.includes(key)))
         : parsed;
-      const cliOverrides = getJsonsFromArgs({ store, argv });
+      const cliOverrides = getJsonsFromArgs({
+        store,
+        argv
+      });
       const allowedOverrides = Object.fromEntries(
         Object.entries(cliOverrides).filter(([key, value]) => cliOverridableFields.has(key) && value !== undefined)
       );
@@ -65,7 +71,10 @@ function getJsons({ command, argv }: { command: string; argv: Arguments }) {
 
   const result: StoreConfigMap = {};
   for (const store of storeNames) {
-    const jsonStore = getJsonsFromArgs({ store, argv });
+    const jsonStore = getJsonsFromArgs({
+      store,
+      argv
+    });
     if (!isObjectEmpty(jsonStore)) {
       result[store] = jsonStore;
     }
@@ -95,11 +104,15 @@ function readCredentialsFromEnv({
   return result;
 }
 
-async function fetchMissingCredentials(
-  jsonStoresRaw: StoreConfigMap,
-  log?: (message: string) => void,
-  saveToEnv = true
-) {
+async function fetchMissingCredentials({
+  jsonStoresRaw,
+  log,
+  shouldSaveToEnv = true
+}: {
+  jsonStoresRaw: StoreConfigMap;
+  log?: (message: string) => void;
+  shouldSaveToEnv?: boolean;
+}) {
   for (const store of storeRegistry) {
     const fields = store.credentialFields;
     const hasNoCredentialFields = !fields || fields.length === 0;
@@ -112,8 +125,11 @@ async function fetchMissingCredentials(
       continue;
     }
 
-    if (saveToEnv) {
-      const envCredentials = readCredentialsFromEnv({ storeName: store.name, credentialFields: fields });
+    if (shouldSaveToEnv) {
+      const envCredentials = readCredentialsFromEnv({
+        storeName: store.name,
+        credentialFields: fields
+      });
       for (const field of fields) {
         const isAlreadySet = Boolean(storeConfig[field]);
         const hasEnvValue = Boolean(envCredentials[field]);
@@ -134,7 +150,7 @@ async function fetchMissingCredentials(
     log?.(`${getStoreDisplayName(store.name)}: Fetching credentials...`);
     let fetchedCredentials: Record<string, string>;
     try {
-      fetchedCredentials = await store.fetchCredentials(storeConfig, saveToEnv);
+      fetchedCredentials = await store.fetchCredentials(storeConfig, shouldSaveToEnv);
     } catch (error) {
       throw new Error(`Failed to fetch credentials: ${error}`, { cause: error });
     }
@@ -208,9 +224,20 @@ function buildEnvHelpTables() {
     .filter(key => hasCookieStores || key !== "autoFetchCredentials");
   return [
     ...storeRegistry.map(store =>
-      buildHelpTableData({ storeName: store.name, schema: store.schema, mode: "env", missingFields: undefined, dynamicFields: store.dynamicFields, cliOverridableFields: store.cliOverridableFields })
+      buildHelpTableData({
+        storeName: store.name,
+        schema: store.schema,
+        mode: "env",
+        missingFields: undefined,
+        dynamicFields: store.dynamicFields,
+        cliOverridableFields: store.cliOverridableFields
+      })
     ),
-    buildGlobalHelpTableData({ schema: EnvOptionsSchema, missingArgs: globalKeys, mode: "cli" })
+    buildGlobalHelpTableData({
+      schema: EnvOptionsSchema,
+      missingArgs: globalKeys,
+      mode: "cli"
+    })
   ].flatMap(data => (data ? [data] : []));
 }
 
@@ -222,7 +249,10 @@ function collectMissingGlobalArgs(argv: Arguments) {
 
 export async function getJsonStoresFromCli({ argv, log }: { argv: Arguments; log?: (message: string) => void }) {
   const command = z.string().safeParse(argv._[0]).data ?? "";
-  const jsonStoresRaw = getJsons({ command, argv });
+  const jsonStoresRaw = getJsons({
+    command,
+    argv
+  });
   if (isObjectEmpty(jsonStoresRaw)) {
     if (command === "env") {
       throw new NoStoresError(
@@ -235,12 +265,19 @@ export async function getJsonStoresFromCli({ argv, log }: { argv: Arguments; log
   }
 
   const isAutoFetchCredentials = z.boolean().safeParse(argv.autoFetchCredentials).data;
-  const saveToEnv = command === "env";
+  const shouldSaveToEnv = command === "env";
   if (isAutoFetchCredentials) {
-    await fetchMissingCredentials(jsonStoresRaw, log, saveToEnv);
+    await fetchMissingCredentials({
+      jsonStoresRaw,
+      log,
+      shouldSaveToEnv
+    });
   }
 
-  const missingArgs = collectMissingArgs({ jsonStoresRaw, isAutoFetchCredentials });
+  const missingArgs = collectMissingArgs({
+    jsonStoresRaw,
+    isAutoFetchCredentials
+  });
   if (isObjectEmpty(missingArgs)) {
     return jsonStoresRaw;
   }
@@ -261,19 +298,33 @@ export async function getJsonStoresFromCli({ argv, log }: { argv: Arguments; log
     }
 
     const { required, optional = [] } = missingEntry;
-    const tableData = buildHelpTableData({ storeName: store.name, schema: store.schema, mode, missingFields: [...required, ...optional], dynamicFields: store.dynamicFields, cliOverridableFields: store.cliOverridableFields });
+    const tableData = buildHelpTableData({
+      storeName: store.name,
+      schema: store.schema,
+      mode,
+      missingFields: [...required, ...optional],
+      dynamicFields: store.dynamicFields,
+      cliOverridableFields: store.cliOverridableFields
+    });
     return tableData ? [tableData] : [];
   });
-  const globalTable = buildGlobalHelpTableData({ schema: globalSchema, missingArgs: missingGlobalArgs, mode: "cli" });
+  const globalTable = buildGlobalHelpTableData({
+    schema: globalSchema,
+    missingArgs: missingGlobalArgs,
+    mode: "cli"
+  });
   const tables = globalTable ? [...storeTables, globalTable] : storeTables;
   throw new MissingArgsError(tables);
 }
 
-export function createCredentialRefreshCallback(
+export function createCredentialRefreshCallback({
+  storeDef,
+  shouldSaveToEnv = true
+}: {
   storeDef: {
-    fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>>;
-  },
-  saveToEnv = true
-) {
-  return () => storeDef.fetchCredentials?.({}, saveToEnv) ?? Promise.resolve({});
+    fetchCredentials?: (config: Record<string, unknown>, shouldSaveToEnv: boolean) => Promise<Record<string, string>>;
+  };
+  shouldSaveToEnv?: boolean;
+}) {
+  return () => storeDef.fetchCredentials?.({}, shouldSaveToEnv) ?? Promise.resolve({});
 }

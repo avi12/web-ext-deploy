@@ -44,9 +44,9 @@ export interface StoreDefinition<
 > {
   name: Name;
   schema: Schema;
-  deploy: (options: unknown, context?: DeployContext) => Promise<boolean>;
+  deploy: ({ options, context }: { options: unknown; context?: DeployContext }) => Promise<boolean>;
   credentialFields?: CredentialFields;
-  fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>>;
+  fetchCredentials?: (config: Record<string, unknown>, shouldSaveToEnv: boolean) => Promise<Record<string, string>>;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
 }
@@ -58,22 +58,25 @@ export function defineStore<
 >(config: {
   name: Name;
   schema: Schema;
-  deploy: (options: z.infer<Schema>, context?: DeployContext) => Promise<boolean>;
+  deploy: ({ options, context }: { options: z.infer<Schema>; context?: DeployContext }) => Promise<boolean>;
   credentialFields?: CredentialFields;
-  fetchCredentials?: (config: Record<string, unknown>, saveToEnv: boolean) => Promise<Record<string, string>>;
+  fetchCredentials?: (config: Record<string, unknown>, shouldSaveToEnv: boolean) => Promise<Record<string, string>>;
   dynamicFields?: string[];
   cliOverridableFields?: string[];
 }): StoreDefinition<Name, Schema, CredentialFields> {
   return {
     name: config.name,
     schema: config.schema,
-    deploy(options: unknown, context?: DeployContext) {
+    deploy({ options, context }: { options: unknown; context?: DeployContext }) {
       const result = config.schema.safeParse(options);
       if (!result.success) {
         throw result.error;
       }
 
-      return config.deploy(result.data, context);
+      return config.deploy({
+        options: result.data,
+        context
+      });
     },
     credentialFields: config.credentialFields,
     fetchCredentials: config.fetchCredentials,

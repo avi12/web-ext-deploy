@@ -254,18 +254,18 @@ const PUBLISH_SUCCESS_STATES: readonly string[] = [
 async function publishExtension({
   extId,
   publisherId,
-  skipReview,
+  shouldSkipReview,
   deployPercentage,
   onRateLimit
 }: {
   extId: string;
   publisherId: string;
-  skipReview?: boolean;
+  shouldSkipReview?: boolean;
   deployPercentage?: number;
   onRateLimit?: RateLimitHandler;
 }) {
   const body = {
-    ...(skipReview && {
+    ...(shouldSkipReview && {
       skipReview: true
     }),
     ...(deployPercentage !== undefined && {
@@ -334,14 +334,26 @@ async function verifySubmission({
   throw new Error(storeError(`Submission verification failed (state: ${state})`));
 }
 
-export async function deployToChrome(
-  { extId, publisherId, clientId, clientSecret, refreshToken, zip, skipReview, deployPercentage }: ChromeOptions,
-  { logger, setStatus, setExtensionName }: DeployContext = {}
-) {
+export async function deployToChrome({
+  options: { extId, publisherId, clientId, clientSecret, refreshToken, zip, skipReview, deployPercentage },
+  context: { logger, setStatus, setExtensionName } = {}
+}: {
+  options: ChromeOptions;
+  context?: DeployContext;
+}) {
   const { name } = await getExtJson(zip);
   setExtensionName?.(name);
-  const accessToken = await exchangeRefreshTokenForAccessToken({ clientId, clientSecret, refreshToken });
-  httpClient = createHttpClient("https://chromewebstore.googleapis.com", { Authorization: `Bearer ${accessToken}` });
+  const accessToken = await exchangeRefreshTokenForAccessToken({
+    clientId,
+    clientSecret,
+    refreshToken
+  });
+  httpClient = createHttpClient({
+    baseURL: "https://chromewebstore.googleapis.com",
+    defaultHeaders: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://chrome.google.com/webstore/devconsole/${publisherId}/${extId}/edit/package`,
@@ -368,7 +380,7 @@ export async function deployToChrome(
   await publishExtension({
     extId,
     publisherId,
-    skipReview,
+    shouldSkipReview: skipReview,
     deployPercentage,
     onRateLimit
   });

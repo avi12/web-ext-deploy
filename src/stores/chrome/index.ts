@@ -13,7 +13,7 @@ export const chrome = defineStore({
   schema: ChromeOptionsSchema,
   deploy: deployToChrome,
   credentialFields: ["refreshToken"],
-  async fetchCredentials(storeConfig, saveToEnv) {
+  async fetchCredentials(storeConfig, shouldSaveToEnv) {
     const clientId = String(storeConfig.clientId ?? "");
     const clientSecret = String(storeConfig.clientSecret ?? "");
 
@@ -22,8 +22,11 @@ export const chrome = defineStore({
       throw new Error("Chrome credentials auto-fetch requires both 'clientId' and 'clientSecret'");
     }
 
-    const refreshToken = await getChromeRefreshToken({ clientId, clientSecret });
-    if (saveToEnv) {
+    const refreshToken = await getChromeRefreshToken({
+      clientId,
+      clientSecret
+    });
+    if (shouldSaveToEnv) {
       const envFile = "chrome.env";
       const { parsed: envCurrent = {} } = config({ path: envFile });
       fs.writeFileSync(

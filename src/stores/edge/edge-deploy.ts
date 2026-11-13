@@ -198,17 +198,28 @@ async function pollPublishStatus({
       return;
     }
 
-    await setTimeout(getBackoffDelayMs(attempt++, 5_000));
+    await setTimeout(
+      getBackoffDelayMs({
+        attempt: attempt++,
+        maxMs: 5_000
+      })
+    );
   }
 }
 
-export async function deployToEdgePublishApi(
-  { productId, clientId, apiKey, zip, devChangelog }: EdgeOptionsPublishApi,
-  { logger, setStatus, setExtensionName }: DeployContext = {}
-) {
-  httpClient = createHttpClient("https://api.addons.microsoftedge.microsoft.com/v1", {
-    Authorization: `ApiKey ${apiKey}`,
-    "X-ClientID": clientId
+export async function deployToEdgePublishApi({
+  options: { productId, clientId, apiKey, zip, devChangelog },
+  context: { logger, setStatus, setExtensionName } = {}
+}: {
+  options: EdgeOptionsPublishApi;
+  context?: DeployContext;
+}) {
+  httpClient = createHttpClient({
+    baseURL: "https://api.addons.microsoftedge.microsoft.com/v1",
+    defaultHeaders: {
+      Authorization: `ApiKey ${apiKey}`,
+      "X-ClientID": clientId
+    }
   });
 
   const onRateLimit = createRateLimitHandler({

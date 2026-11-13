@@ -46,7 +46,13 @@ async function fetchResponse({ url, options }: { url: string; options: RequestIn
   }
 }
 
-export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
+export function createHttpClient({
+  baseURL,
+  defaultHeaders = {}
+}: {
+  baseURL: string;
+  defaultHeaders?: Record<string, string>;
+}) {
   function buildUrl({ endpoint, params }: { endpoint: string; params?: Record<string, string | number> }) {
     const base = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
     return params ? `${base}?${stringifyParams(params)}` : base;
@@ -72,7 +78,13 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
       })
     };
 
-    return fetchResponse({ url: buildUrl({ endpoint, params: options.params }), options: fetchOptions });
+    return fetchResponse({
+      url: buildUrl({
+        endpoint,
+        params: options.params
+      }),
+      options: fetchOptions
+    });
   }
 
   return {
@@ -114,7 +126,11 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
       });
     },
     get(endpoint: string, options: FetchOptions = {}) {
-      return request({ method: "GET", endpoint, options });
+      return request({
+        method: "GET",
+        endpoint,
+        options
+      });
     },
     patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
       return request({

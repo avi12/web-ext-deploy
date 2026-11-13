@@ -31,14 +31,24 @@ const UPLOAD_CHUNK_SIZE_BYTES = 1024 * 1024;
 
 let httpClient: ReturnType<typeof createOperaHttpClient>;
 
-function createOperaHttpClient(
-  cookies: { sessionid: string; csrftoken: string },
-  logger?: DeployContext["logger"],
-  onCredentialsExpired?: DeployContext["onCredentialsExpired"]
-) {
-  const client = createHttpClient("https://addons.opera.com/api/", {
-    Accept: "application/json; version=1.0",
-    Referer: "https://addons.opera.com"
+function createOperaHttpClient({
+  cookies,
+  logger,
+  onCredentialsExpired
+}: {
+  cookies: {
+    sessionid: string;
+    csrftoken: string;
+  };
+  logger?: DeployContext["logger"];
+  onCredentialsExpired?: DeployContext["onCredentialsExpired"];
+}) {
+  const client = createHttpClient({
+    baseURL: "https://addons.opera.com/api/",
+    defaultHeaders: {
+      Accept: "application/json; version=1.0",
+      Referer: "https://addons.opera.com"
+    }
   });
 
   let { csrftoken, sessionid } = cookies;
@@ -114,7 +124,10 @@ function createOperaHttpClient(
   }: {
     endpoint: string;
     body?: BodyInit;
-    options?: { headers?: Record<string, string>; params?: Record<string, string | number> };
+    options?: {
+      headers?: Record<string, string>;
+      params?: Record<string, string | number>;
+    };
   }) {
     return withCookieRefresh(() =>
       client.post(endpoint, body, {
@@ -190,8 +203,8 @@ async function verifySourceCodeExistence({
   lastVersion: string;
   onRateLimit?: RateLimitHandler;
 }) {
-  const { version, default_locale = "en" } = await getExtJson(zip);
-  const queryParameters = new URLSearchParams({ language: default_locale });
+  const { version, default_locale: defaultLocale = "en" } = await getExtJson(zip);
+  const queryParameters = new URLSearchParams({ language: defaultLocale });
   const url = `https://addons.opera.com/developer/package/${packageId}/version/${version}?${queryParameters}`;
 
   // The public source URL lives on the previously submitted version and is not always reflected on the
@@ -457,7 +470,11 @@ async function verifyUploadSuccessful({
     sendRequest: () =>
       httpClient.post({
         endpoint: "developer/package-versions/",
-        body: JSON.stringify({ file_id: fileId, file_name: zipName, metadata_from: lastVersion }),
+        body: JSON.stringify({
+          file_id: fileId,
+          file_name: zipName,
+          metadata_from: lastVersion
+        }),
         options: {
           params: {
             package_id: packageId
@@ -499,13 +516,19 @@ async function updateChangelog({
   changelog: string;
   onRateLimit?: RateLimitHandler;
 }) {
-  const { version, default_locale = "en" } = await getExtJson(zip);
+  const { version, default_locale: defaultLocale = "en" } = await getExtJson(zip);
 
   return requestWithRetry({
     sendRequest: () =>
       httpClient.patch({
         endpoint: `developer/package-versions/${packageId}-${version}/`,
-        body: JSON.stringify({ translations: { [default_locale]: { changelog } } }),
+        body: JSON.stringify({
+          translations: {
+            [defaultLocale]: {
+              changelog
+            }
+          }
+        }),
         options: {
           headers: {
             "Content-Type": "application/json"
@@ -543,18 +566,21 @@ function getVersions({ packageId, onRateLimit }: { packageId: number; onRateLimi
   });
 }
 
-export async function deployToOpera(
-  { sessionid, csrftoken, packageId, zip, changelog = "" }: OperaOptions,
-  { logger, onCredentialsExpired, setStatus, setExtensionName }: DeployContext = {}
-) {
-  httpClient = createOperaHttpClient(
-    {
+export async function deployToOpera({
+  options: { sessionid, csrftoken, packageId, zip, changelog = "" },
+  context: { logger, onCredentialsExpired, setStatus, setExtensionName } = {}
+}: {
+  options: OperaOptions;
+  context?: DeployContext;
+}) {
+  httpClient = createOperaHttpClient({
+    cookies: {
       sessionid,
       csrftoken
     },
     logger,
     onCredentialsExpired
-  );
+  });
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://addons.opera.com/developer/package/${packageId}/`,

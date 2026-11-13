@@ -19,7 +19,12 @@ describe("CLI mode - arg mapping + validation", () => {
         "chrome-publisher-id": "pub-456",
         "chrome-refresh-token": "token-xyz"
       };
-      expect(mapStoreArgs({ rawArgs, store: "chrome" })).toEqual({
+      expect(
+        mapStoreArgs({
+          rawArgs,
+          store: "chrome"
+        })
+      ).toEqual({
         extId: "abc123",
         publisherId: "pub-456",
         refreshToken: "token-xyz"
@@ -35,7 +40,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "chrome-refresh-token": "token-xyz",
         "chrome-zip": FIXTURE_ZIP
       };
-      expect(() => ChromeOptionsSchema.parse(mapStoreArgs({ rawArgs, store: "chrome" }))).not.toThrow();
+      expect(() =>
+        ChromeOptionsSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "chrome"
+          })
+        )
+      ).not.toThrow();
     });
 
     it("empty ext-id fails", () => {
@@ -45,7 +57,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "chrome-refresh-token": "token-xyz",
         "chrome-zip": FIXTURE_ZIP
       };
-      expect(() => ChromeOptionsSchema.parse(mapStoreArgs({ rawArgs, store: "chrome" }))).toThrow();
+      expect(() =>
+        ChromeOptionsSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "chrome"
+          })
+        )
+      ).toThrow();
     });
 
     it("missing refresh-token fails", () => {
@@ -54,7 +73,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "chrome-publisher-id": "pub-456",
         "chrome-zip": FIXTURE_ZIP
       };
-      expect(() => ChromeOptionsSchema.parse(mapStoreArgs({ rawArgs, store: "chrome" }))).toThrow();
+      expect(() =>
+        ChromeOptionsSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "chrome"
+          })
+        )
+      ).toThrow();
     });
   });
 
@@ -65,7 +91,12 @@ describe("CLI mode - arg mapping + validation", () => {
         "firefox-jwt-secret": "secret-val",
         "firefox-ext-id": "addon-id"
       };
-      expect(mapStoreArgs({ rawArgs, store: "firefox" })).toEqual({
+      expect(
+        mapStoreArgs({
+          rawArgs,
+          store: "firefox"
+        })
+      ).toEqual({
         jwtIssuer: "issuer-id",
         jwtSecret: "secret-val",
         extId: "addon-id"
@@ -79,7 +110,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "firefox-jwt-secret": "secret-val",
         "firefox-zip": FIXTURE_ZIP
       };
-      expect(() => FirefoxOptionsSubmissionApiSchema.parse(mapStoreArgs({ rawArgs, store: "firefox" }))).not.toThrow();
+      expect(() =>
+        FirefoxOptionsSubmissionApiSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "firefox"
+          })
+        )
+      ).not.toThrow();
     });
 
     it("empty jwt-issuer fails", () => {
@@ -89,7 +127,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "firefox-jwt-secret": "secret-val",
         "firefox-zip": FIXTURE_ZIP
       };
-      expect(() => FirefoxOptionsSubmissionApiSchema.parse(mapStoreArgs({ rawArgs, store: "firefox" }))).toThrow();
+      expect(() =>
+        FirefoxOptionsSubmissionApiSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "firefox"
+          })
+        )
+      ).toThrow();
     });
 
     it("missing jwt-secret fails", () => {
@@ -98,7 +143,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "firefox-jwt-issuer": "issuer-id",
         "firefox-zip": FIXTURE_ZIP
       };
-      expect(() => FirefoxOptionsSubmissionApiSchema.parse(mapStoreArgs({ rawArgs, store: "firefox" }))).toThrow();
+      expect(() =>
+        FirefoxOptionsSubmissionApiSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "firefox"
+          })
+        )
+      ).toThrow();
     });
   });
 
@@ -109,7 +161,12 @@ describe("CLI mode - arg mapping + validation", () => {
         "edge-client-id": "client-456",
         "edge-api-key": "key-789"
       };
-      expect(mapStoreArgs({ rawArgs, store: "edge" })).toEqual({
+      expect(
+        mapStoreArgs({
+          rawArgs,
+          store: "edge"
+        })
+      ).toEqual({
         productId: "prod-123",
         clientId: "client-456",
         apiKey: "key-789"
@@ -123,7 +180,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "edge-api-key": "key-789",
         "edge-zip": FIXTURE_ZIP
       };
-      expect(() => EdgeOptionsPublishApiSchema.parse(mapStoreArgs({ rawArgs, store: "edge" }))).not.toThrow();
+      expect(() =>
+        EdgeOptionsPublishApiSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "edge"
+          })
+        )
+      ).not.toThrow();
     });
 
     it("empty api-key fails", () => {
@@ -133,7 +197,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "edge-api-key": "",
         "edge-zip": FIXTURE_ZIP
       };
-      expect(() => EdgeOptionsPublishApiSchema.parse(mapStoreArgs({ rawArgs, store: "edge" }))).toThrow();
+      expect(() =>
+        EdgeOptionsPublishApiSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "edge"
+          })
+        )
+      ).toThrow();
     });
 
     it("missing product-id fails", () => {
@@ -142,7 +213,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "edge-api-key": "key-789",
         "edge-zip": FIXTURE_ZIP
       };
-      expect(() => EdgeOptionsPublishApiSchema.parse(mapStoreArgs({ rawArgs, store: "edge" }))).toThrow();
+      expect(() =>
+        EdgeOptionsPublishApiSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "edge"
+          })
+        )
+      ).toThrow();
     });
   });
 
@@ -153,7 +231,12 @@ describe("CLI mode - arg mapping + validation", () => {
         "opera-sessionid": "sess-abc",
         "opera-csrftoken": "csrf-xyz"
       };
-      expect(mapStoreArgs({ rawArgs, store: "opera" })).toEqual({
+      expect(
+        mapStoreArgs({
+          rawArgs,
+          store: "opera"
+        })
+      ).toEqual({
         packageId: "100",
         sessionid: "sess-abc",
         csrftoken: "csrf-xyz"
@@ -167,7 +250,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "opera-csrftoken": "csrf-xyz",
         "opera-zip": FIXTURE_ZIP
       };
-      expect(() => OperaOptionsSchema.parse(mapStoreArgs({ rawArgs, store: "opera" }))).not.toThrow();
+      expect(() =>
+        OperaOptionsSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "opera"
+          })
+        )
+      ).not.toThrow();
     });
 
     it("string package-id coerced to number after mapping", () => {
@@ -177,7 +267,12 @@ describe("CLI mode - arg mapping + validation", () => {
         "opera-csrftoken": "csrf-xyz",
         "opera-zip": FIXTURE_ZIP
       };
-      const result = OperaOptionsSchema.parse(mapStoreArgs({ rawArgs, store: "opera" }));
+      const result = OperaOptionsSchema.parse(
+        mapStoreArgs({
+          rawArgs,
+          store: "opera"
+        })
+      );
       expect(result.packageId).toBe(42);
     });
 
@@ -188,7 +283,14 @@ describe("CLI mode - arg mapping + validation", () => {
         "opera-csrftoken": "csrf-xyz",
         "opera-zip": FIXTURE_ZIP
       };
-      expect(() => OperaOptionsSchema.parse(mapStoreArgs({ rawArgs, store: "opera" }))).toThrow();
+      expect(() =>
+        OperaOptionsSchema.parse(
+          mapStoreArgs({
+            rawArgs,
+            store: "opera"
+          })
+        )
+      ).toThrow();
     });
   });
 });

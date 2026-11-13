@@ -21,7 +21,7 @@ beforeAll(() => {
   }
 }, 60000);
 
-function runCli(args: string[], cwd = ROOT) {
+function runCli({ args, cwd = ROOT }: { args: string[]; cwd?: string }) {
   return spawnSync(process.execPath, [BINARY, ...args], {
     cwd,
     encoding: "utf8",
@@ -31,13 +31,13 @@ function runCli(args: string[], cwd = ROOT) {
 
 describe("binary", () => {
   it("exits non-zero with no command", () => {
-    const { status, stdout, stderr } = runCli([]);
+    const { status, stdout, stderr } = runCli({ args: [] });
     expect(status).not.toBe(0);
     expect(stdout + stderr).toContain("You need at least one command");
   });
 
   it("--help exits 0 and shows env and cli commands", () => {
-    const { status, stdout } = runCli(["--help"]);
+    const { status, stdout } = runCli({ args: ["--help"] });
     expect(status).toBe(0);
     expect(stdout).toContain("env");
     expect(stdout).toContain("cli");
@@ -45,24 +45,27 @@ describe("binary", () => {
   });
 
   it("chrome-token is not a valid command", () => {
-    const { status } = runCli(["chrome-token"]);
+    const { status } = runCli({ args: ["chrome-token"] });
     expect(status).not.toBe(0);
   });
 
   it("cli with no store args exits non-zero", () => {
-    const { status, stdout } = runCli(["cli"]);
+    const { status, stdout } = runCli({ args: ["cli"] });
     expect(status).not.toBe(0);
     expect(stdout).toContain("Supply arguments for at least one store");
   });
 
   it("env with no .env files exits non-zero", () => {
-    const { status, stdout } = runCli(["env"], EMPTY_DIR);
+    const { status, stdout } = runCli({
+      args: ["env"],
+      cwd: EMPTY_DIR
+    });
     expect(status).not.toBe(0);
     expect(stdout).toContain("No .env files found");
   });
 
   it("env --help exits 0 and shows store tables", () => {
-    const { status, stdout } = runCli(["env", "--help"]);
+    const { status, stdout } = runCli({ args: ["env", "--help"] });
     expect(status).toBe(0);
     expect(stdout).toContain("chrome.env");
     expect(stdout).toContain("firefox.env");
@@ -71,28 +74,30 @@ describe("binary", () => {
   });
 
   it("cli --help shows --auto-fetch-credentials flag", () => {
-    const { status, stdout } = runCli(["cli", "--help"]);
+    const { status, stdout } = runCli({ args: ["cli", "--help"] });
     expect(status).toBe(0);
     expect(stdout).toContain("--auto-fetch-credentials");
     expect(stdout).not.toContain("--auto-fetch-cookies");
   });
 
   it("cli --dry-run with valid chrome args exits 0", () => {
-    const { status } = runCli([
-      "cli",
-      "--dry-run",
-      "--chrome-ext-id",
-      "abc123",
-      "--chrome-publisher-id",
-      "pub-456",
-      "--chrome-client-id",
-      "client-id",
-      "--chrome-client-secret",
-      "client-secret",
-      "--chrome-refresh-token",
-      "token-xyz",
-      `--chrome-zip=${FIXTURE_ZIP}`
-    ]);
+    const { status } = runCli({
+      args: [
+        "cli",
+        "--dry-run",
+        "--chrome-ext-id",
+        "abc123",
+        "--chrome-publisher-id",
+        "pub-456",
+        "--chrome-client-id",
+        "client-id",
+        "--chrome-client-secret",
+        "client-secret",
+        "--chrome-refresh-token",
+        "token-xyz",
+        `--chrome-zip=${FIXTURE_ZIP}`
+      ]
+    });
     expect(status).toBe(0);
   });
 });

@@ -4,7 +4,7 @@ import { z, ZodError } from "zod";
 
 import type { StoreLogger } from "@/types.js";
 
-export function getBackoffDelayMs(attempt: number, maxMs = 5_000) {
+export function getBackoffDelayMs({ attempt, maxMs = 5_000 }: { attempt: number; maxMs?: number }) {
   return Math.min(2 ** attempt * 1000, maxMs);
 }
 
@@ -166,13 +166,25 @@ export async function requestWithRetry<T>({
     }
 
     if (!response) {
-      await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
+      await setTimeout(
+        getBackoffDelayMs({
+          attempt: count,
+          maxMs: maxBackoffMs
+        })
+      );
       return attempt(count + 1);
     }
 
     const isTooManyRequests = response.status === 429;
     if (isTooManyRequests) {
-      await (onRateLimit ? onRateLimit(response) : setTimeout(getBackoffDelayMs(count, maxBackoffMs)));
+      await (onRateLimit
+        ? onRateLimit(response)
+        : setTimeout(
+            getBackoffDelayMs({
+              attempt: count,
+              maxMs: maxBackoffMs
+            })
+          ));
       return attempt(count + 1);
     }
 
@@ -180,13 +192,23 @@ export async function requestWithRetry<T>({
       response.status >= 400 && response.status < 500 && !acceptedClientErrorStatuses.includes(response.status);
     if (isClientError) {
       throw new Error(
-        formatError(`${errorContext}: ${extractApiMessage({ data: response.data, statusText: response.statusText })}`)
+        formatError(
+          `${errorContext}: ${extractApiMessage({
+            data: response.data,
+            statusText: response.statusText
+          })}`
+        )
       );
     }
 
     const isServerError = response.status >= 500;
     if (isServerError) {
-      await setTimeout(getBackoffDelayMs(count, maxBackoffMs));
+      await setTimeout(
+        getBackoffDelayMs({
+          attempt: count,
+          maxMs: maxBackoffMs
+        })
+      );
       return attempt(count + 1);
     }
 

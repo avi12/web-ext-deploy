@@ -89,7 +89,10 @@ function flushLongWord({ accumulator, word }: { accumulator: WrapAccumulator; wo
 
 function placeWord({ accumulator, word, width }: { accumulator: WrapAccumulator; word: string; width: number }) {
   if (word.length > width) {
-    flushLongWord({ accumulator, word });
+    flushLongWord({
+      accumulator,
+      word
+    });
     return;
   }
 
@@ -115,7 +118,11 @@ function wrapText({ text, width }: { text: string; width: number }) {
     current: ""
   };
   for (const word of text.split(/\s+/).filter(Boolean)) {
-    placeWord({ accumulator, word, width });
+    placeWord({
+      accumulator,
+      word,
+      width
+    });
   }
 
   if (accumulator.current) {
@@ -171,7 +178,10 @@ function HelpTable({ data }: { data: HelpTableData }) {
       {fields.map(field => {
         const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
         const requiredPad = " ".repeat(field.isRequired ? requiredWidth - 1 : requiredWidth);
-        const [firstLine = "", ...continuationLines] = wrapText({ text: field.description, width: descriptionWidth });
+        const [firstLine = "", ...continuationLines] = wrapText({
+          text: field.description,
+          width: descriptionWidth
+        });
         return (
           <React.Fragment key={field.name}>
             <Text>
@@ -461,7 +471,7 @@ export async function renderApplicationError(error: Error) {
   inkInstance.unmount();
 }
 
-export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
+export function createInkLogger({ storeNames, isDryRun }: { storeNames: StoreName[]; isDryRun?: boolean }) {
   const sharedStatuses: Partial<Record<StoreName, StoreStatus>> = {};
   for (const store of storeNames) {
     sharedStatuses[store] = StoreStatus.PENDING;
@@ -543,7 +553,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
       });
     }
 
-    const allComplete = completedCount === totalCount;
+    const isAllComplete = completedCount === totalCount;
 
     return (
       <Box flexDirection="column">
@@ -589,7 +599,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
             </React.Fragment>
           ))}
         </Box>
-        {allComplete && sharedHelpTables.length > 0 && (
+        {isAllComplete && sharedHelpTables.length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             {sharedHelpTables.map((tableData, i) => (
               <HelpTable key={i} data={tableData} />

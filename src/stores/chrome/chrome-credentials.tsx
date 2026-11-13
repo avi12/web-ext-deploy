@@ -176,7 +176,11 @@ function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
       }
 
       setStep(Step.EXCHANGING);
-      const data = await exchangeCodeForToken({ code, clientId, clientSecret });
+      const data = await exchangeCodeForToken({
+        code,
+        clientId,
+        clientSecret
+      });
       response.writeHead(HTTP_OK, { "Content-Type": "text/html" });
 
       if ("error" in data) {

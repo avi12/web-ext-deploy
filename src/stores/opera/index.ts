@@ -9,6 +9,6 @@ export const opera = defineStore({
   schema: OperaOptionsSchema,
   deploy: deployToOpera,
   credentialFields: ["sessionid", "csrftoken"],
-  fetchCredentials: (_config, saveToEnv) => fetchOperaCredentials(saveToEnv),
+  fetchCredentials: (_config, shouldSaveToEnv) => fetchOperaCredentials(shouldSaveToEnv),
   dynamicFields: ["changelog"]
 });

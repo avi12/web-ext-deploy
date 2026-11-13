@@ -76,7 +76,7 @@ function installChromium() {
   execSync(`node "${playwrightCli}" install chromium`, { stdio: "inherit" });
 }
 
-export async function fetchOperaCredentials(saveToEnv: boolean): Promise<Record<string, string>> {
+export async function fetchOperaCredentials(shouldSaveToEnv: boolean): Promise<Record<string, string>> {
   const width = 1280;
   const height = 720;
   const launchOptions = {
@@ -104,7 +104,7 @@ export async function fetchOperaCredentials(saveToEnv: boolean): Promise<Record<
   const cookiesRaw = await captureCookiesFromBrowser(page);
   await browser.close();
 
-  if (saveToEnv) {
+  if (shouldSaveToEnv) {
     saveToEnvFile(cookiesRaw);
     createGitIgnoreIfNeeded([StoreName.OPERA]);
   }

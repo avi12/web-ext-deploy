@@ -106,14 +106,16 @@ describe("deployToFirefox", () => {
 
     await expect(
       deployToFirefox({
-        extId: "example-extension",
-        jwtIssuer: "sanitized-issuer",
-        jwtSecret: "sanitized-secret",
-        zip: FIXTURE_ZIP,
-        zipSource: FIXTURE_ZIP,
-        changelog: "",
-        changelogLang: "en-US",
-        devChangelog: ""
+        options: {
+          extId: "example-extension",
+          jwtIssuer: "sanitized-issuer",
+          jwtSecret: "sanitized-secret",
+          zip: FIXTURE_ZIP,
+          zipSource: FIXTURE_ZIP,
+          changelog: "",
+          changelogLang: "en-US",
+          devChangelog: ""
+        }
       })
     ).resolves.toBe(true);
 
@@ -170,8 +172,8 @@ describe("deployToFirefox", () => {
     const setStatus = vi.fn();
 
     await expect(
-      deployToFirefox(
-        {
+      deployToFirefox({
+        options: {
           extId: "example-extension",
           jwtIssuer: "sanitized-issuer",
           jwtSecret: "sanitized-secret",
@@ -181,8 +183,10 @@ describe("deployToFirefox", () => {
           changelogLang: "en-US",
           devChangelog: ""
         },
-        { setStatus }
-      )
+        context: {
+          setStatus
+        }
+      })
     ).resolves.toBe(true);
 
     expect(httpClient.post).toHaveBeenCalledTimes(2);

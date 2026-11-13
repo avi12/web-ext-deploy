@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { StoreName } from "@/types.js";
 import { type LogEntry } from "@/ui/ink-logger.js";
 
-function makeEntry(store: StoreName, level: LogEntry["level"], message: string): LogEntry {
+function makeEntry({
+  store,
+  level,
+  message
+}: {
+  store: StoreName;
+  level: LogEntry["level"];
+  message: string;
+}): LogEntry {
   return {
     store,
     level,
@@ -15,9 +23,21 @@ function makeEntry(store: StoreName, level: LogEntry["level"], message: string):
 describe("per-store status display", () => {
   it("latestEntry is last entry in store's entries", () => {
     const entries: LogEntry[] = [
-      makeEntry(StoreName.CHROME, "info", "Uploading zip"),
-      makeEntry(StoreName.CHROME, "info", "Verifying upload"),
-      makeEntry(StoreName.FIREFOX, "info", "Uploading zip")
+      makeEntry({
+        store: StoreName.CHROME,
+        level: "info",
+        message: "Uploading zip"
+      }),
+      makeEntry({
+        store: StoreName.CHROME,
+        level: "info",
+        message: "Verifying upload"
+      }),
+      makeEntry({
+        store: StoreName.FIREFOX,
+        level: "info",
+        message: "Uploading zip"
+      })
     ];
 
     const chromeEntries = entries.filter(entry => entry.store === StoreName.CHROME);
@@ -27,9 +47,21 @@ describe("per-store status display", () => {
 
   it("firstErrorEntry is the first error-level entry in store's entries", () => {
     const entries: LogEntry[] = [
-      makeEntry(StoreName.CHROME, "info", "Uploading zip"),
-      makeEntry(StoreName.CHROME, "error", "Upload failed: 400 Bad Request"),
-      makeEntry(StoreName.CHROME, "error", "Second error line")
+      makeEntry({
+        store: StoreName.CHROME,
+        level: "info",
+        message: "Uploading zip"
+      }),
+      makeEntry({
+        store: StoreName.CHROME,
+        level: "error",
+        message: "Upload failed: 400 Bad Request"
+      }),
+      makeEntry({
+        store: StoreName.CHROME,
+        level: "error",
+        message: "Second error line"
+      })
     ];
 
     const chromeEntries = entries.filter(entry => entry.store === StoreName.CHROME);

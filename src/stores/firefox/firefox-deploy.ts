@@ -59,7 +59,10 @@ function uploadZip({
       httpClient.post("upload/", formData.body, {
         headers: {
           ...formData.headers,
-          ...authHeader({ jwtIssuer, jwtSecret })
+          ...authHeader({
+            jwtIssuer,
+            jwtSecret
+          })
         }
       }),
     parseResponse(response) {
@@ -124,7 +127,10 @@ async function createNewVersion({
         {
           headers: {
             "Content-Type": "application/json",
-            ...authHeader({ jwtIssuer, jwtSecret })
+            ...authHeader({
+              jwtIssuer,
+              jwtSecret
+            })
           }
         }
       ),
@@ -159,7 +165,10 @@ function getVersionIfExists({
   return requestWithRetry({
     sendRequest: () =>
       httpClient.get(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, {
-        headers: authHeader({ jwtIssuer, jwtSecret })
+        headers: authHeader({
+          jwtIssuer,
+          jwtSecret
+        })
       }),
     parseResponse(response) {
       const result = FirefoxCreateNewVersionSchema.nullable().safeParse(response.status === 404 ? null : response.data);
@@ -193,7 +202,13 @@ async function validateUpload({
 
   while (true) {
     data = await requestWithRetry({
-      sendRequest: () => httpClient.get(`upload/${uuid}/`, { headers: authHeader({ jwtIssuer, jwtSecret }) }),
+      sendRequest: () =>
+        httpClient.get(`upload/${uuid}/`, {
+          headers: authHeader({
+            jwtIssuer,
+            jwtSecret
+          })
+        }),
       parseResponse(response) {
         const result = FirefoxUploadDetailSchema.safeParse(response.data);
         if (!result.success) {
@@ -253,7 +268,10 @@ function uploadSourceCodeIfNeeded({
       httpClient.patch(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, formData.body, {
         headers: {
           ...formData.headers,
-          ...authHeader({ jwtIssuer, jwtSecret })
+          ...authHeader({
+            jwtIssuer,
+            jwtSecret
+          })
         }
       }),
     parseResponse(response) {
@@ -270,20 +288,14 @@ function uploadSourceCodeIfNeeded({
   });
 }
 
-export async function deployToFirefox(
-  {
-    extId,
-    jwtIssuer,
-    jwtSecret,
-    zip,
-    zipSource = "",
-    changelog = "",
-    changelogLang,
-    devChangelog = ""
-  }: FirefoxOptionsSubmissionApi,
-  { logger, setStatus, setExtensionName }: DeployContext = {}
-) {
-  httpClient = createHttpClient("https://addons.mozilla.org/api/v5/addons/");
+export async function deployToFirefox({
+  options: { extId, jwtIssuer, jwtSecret, zip, zipSource = "", changelog = "", changelogLang, devChangelog = "" },
+  context: { logger, setStatus, setExtensionName } = {}
+}: {
+  options: FirefoxOptionsSubmissionApi;
+  context?: DeployContext;
+}) {
+  httpClient = createHttpClient({ baseURL: "https://addons.mozilla.org/api/v5/addons/" });
 
   const onRateLimit = createRateLimitHandler({
     manualDeployUrl: `https://addons.mozilla.org/developers/addon/${extId}/versions/submit/`,

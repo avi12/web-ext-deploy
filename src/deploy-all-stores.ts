@@ -28,10 +28,13 @@ async function runStoreDeploy({
   inkLogger.logger.info(store, isDryRun ? "Validating inputs" : "Starting deployment");
 
   const storeDef = getStore(store);
-  const saveToEnv = mode === "env";
+  const shouldSaveToEnv = mode === "env";
   const onCredentialsExpired =
     isAutoFetchCredentials && storeDef?.credentialFields
-      ? createCredentialRefreshCallback(storeDef, saveToEnv)
+      ? createCredentialRefreshCallback({
+          storeDef,
+          shouldSaveToEnv
+        })
       : undefined;
 
   try {
@@ -69,10 +72,13 @@ export async function runDeploy(argv: Arguments) {
   const preDeployUI = createPreDeployUI();
   let storeJsons;
   try {
-    storeJsons = await getJsonStoresFromCli({ argv, log: message => {
-              preDeployUI.log(message);
-              preDeployLogs.push(message);
-            } });
+    storeJsons = await getJsonStoresFromCli({
+      argv,
+      log(message) {
+        preDeployUI.log(message);
+        preDeployLogs.push(message);
+      }
+    });
   } catch (error) {
     preDeployUI.unmount();
     throw error;
@@ -95,10 +101,10 @@ export async function runDeploy(argv: Arguments) {
   const command = z.string().safeParse(argv._[0]).data;
   const mode = command === "cli" || command === "env" ? command : undefined;
   const isDryRun = z.boolean().safeParse(argv.dryRun).data;
-  const inkLogger = createInkLogger(
-    storeEntries.map(([store]) => store),
+  const inkLogger = createInkLogger({
+    storeNames: storeEntries.map(([store]) => store),
     isDryRun
-  );
+  });
   await inkLogger.ready;
   for (const message of preDeployLogs) {
     inkLogger.logger.info("System", message);
@@ -107,7 +113,14 @@ export async function runDeploy(argv: Arguments) {
 
   const results = await Promise.all(
     storeEntries.map(([store, json]) =>
-      runStoreDeploy({ store, json, inkLogger, isDryRun, isAutoFetchCredentials, mode })
+      runStoreDeploy({
+        store,
+        json,
+        inkLogger,
+        isDryRun,
+        isAutoFetchCredentials,
+        mode
+      })
     )
   );
 

@@ -43,7 +43,14 @@ export function deployStore({
         ...new Set(structuralIssues.map(issue => issue.path[0]).filter(path => typeof path === "string"))
       ];
       const missingFields = failedFields.length > 0 ? failedFields : undefined;
-      const helpTableData = buildHelpTableData({ storeName: store.name, schema: store.schema, mode: context?.mode, missingFields, dynamicFields: store.dynamicFields, cliOverridableFields: store.cliOverridableFields });
+      const helpTableData = buildHelpTableData({
+        storeName: store.name,
+        schema: store.schema,
+        mode: context?.mode,
+        missingFields,
+        dynamicFields: store.dynamicFields,
+        cliOverridableFields: store.cliOverridableFields
+      });
       throw new StoreValidationError(messages.join("\n"), helpTableData ? [helpTableData] : [], error);
     }
 
@@ -57,5 +64,8 @@ export function deployStore({
     return Promise.resolve(true);
   }
 
-  return store.deploy(prepared, context);
+  return store.deploy({
+    options: prepared,
+    context
+  });
 }
