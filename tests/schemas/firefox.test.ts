@@ -1,5 +1,5 @@
-import { FirefoxOptionsSubmissionApiSchema } from "../../src/stores/firefox/firefox-input.js";
-import { FirefoxCreateNewVersionSchema } from "../../src/stores/firefox/firefox-types.js";
+import { FirefoxOptionsSubmissionApiSchema } from "@/stores/firefox/firefox-input.js";
+import { FirefoxCreateNewVersionSchema } from "@/stores/firefox/firefox-types.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";

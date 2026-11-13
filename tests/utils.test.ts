@@ -1,5 +1,5 @@
-import { isObjectEmpty, headersToEnv } from "../src/utils/helpers.js";
-import { getFullPath, getCorrectZip } from "../src/utils/zip.js";
+import { isObjectEmpty, headersToEnv } from "@/utils/helpers.js";
+import { getFullPath, getCorrectZip } from "@/utils/zip.js";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
 

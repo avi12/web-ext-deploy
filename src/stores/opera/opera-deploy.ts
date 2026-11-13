@@ -1,15 +1,15 @@
-import { createHttpClient } from "../../http/client.js";
-import { buildFormData } from "../../http/form-data.js";
-import { type DeployContext, StoreStatus } from "../../types.js";
-import { storeError } from "../../ui/logging.js";
+import { createHttpClient } from "@/http/client.js";
+import { buildFormData } from "@/http/form-data.js";
+import { type DeployContext, StoreStatus } from "@/types.js";
+import { storeError } from "@/ui/logging.js";
 import {
   CookieAuthError,
   createRateLimitHandler,
   type HttpLikeResponse,
   type RateLimitHandler,
   requestWithRetry
-} from "../../utils/retry.js";
-import { getExtJson } from "../../utils/zip.js";
+} from "@/utils/retry.js";
+import { getExtJson } from "@/utils/zip.js";
 import { OperaOptions } from "./opera-input.js";
 import {
   CancelChangesSchema,

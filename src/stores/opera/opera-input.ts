@@ -1,4 +1,4 @@
-import { changelogField, requiredZipField } from "../shared-fields.js";
+import { changelogField, requiredZipField } from "@/stores/shared-fields.js";
 import { z } from "zod";
 
 export const OperaOptionsSchema = z.object({

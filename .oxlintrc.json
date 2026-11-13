@@ -1,0 +1,5 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": ["./node_modules/oxlint-config-avi12/oxlint.json", "./node_modules/oxlint-plugin-naming/preset.json"],
+  "ignorePatterns": ["node_modules/**", "dist/**", "dist-ext/**", "tests/fixtures/**"]
+}

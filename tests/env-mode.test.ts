@@ -1,8 +1,8 @@
-import { ChromeOptionsSchema } from "../src/stores/chrome/chrome-input.js";
-import { EdgeOptionsPublishApiSchema } from "../src/stores/edge/edge-input.js";
-import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
-import { OperaOptionsSchema } from "../src/stores/opera/opera-input.js";
-import { config } from "../src/utils/dotenv.js";
+import { ChromeOptionsSchema } from "@/stores/chrome/chrome-input.js";
+import { EdgeOptionsPublishApiSchema } from "@/stores/edge/edge-input.js";
+import { FirefoxOptionsSubmissionApiSchema } from "@/stores/firefox/firefox-input.js";
+import { OperaOptionsSchema } from "@/stores/opera/opera-input.js";
+import { config } from "@/utils/dotenv.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";

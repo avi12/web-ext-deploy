@@ -1,8 +1,8 @@
-import { ChromeOptionsSchema } from "../src/stores/chrome/chrome-input.js";
-import { EdgeOptionsPublishApiSchema } from "../src/stores/edge/edge-input.js";
-import { FirefoxOptionsSubmissionApiSchema } from "../src/stores/firefox/firefox-input.js";
-import { OperaOptionsSchema } from "../src/stores/opera/opera-input.js";
-import { mapStoreArgs } from "../src/utils/helpers.js";
+import { ChromeOptionsSchema } from "@/stores/chrome/chrome-input.js";
+import { EdgeOptionsPublishApiSchema } from "@/stores/edge/edge-input.js";
+import { FirefoxOptionsSubmissionApiSchema } from "@/stores/firefox/firefox-input.js";
+import { OperaOptionsSchema } from "@/stores/opera/opera-input.js";
+import { mapStoreArgs } from "@/utils/helpers.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";

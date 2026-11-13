@@ -1,4 +1,4 @@
-import { changelogField, optionalZipSourceField, requiredZipField } from "../shared-fields.js";
+import { changelogField, optionalZipSourceField, requiredZipField } from "@/stores/shared-fields.js";
 import { z } from "zod";
 
 // https://mozilla.github.io/addons-server/topics/api/addons.html

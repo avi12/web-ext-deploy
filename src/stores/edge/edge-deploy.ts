@@ -1,14 +1,14 @@
-import { createHttpClient } from "../../http/client.js";
-import { type DeployContext, StoreStatus } from "../../types.js";
-import { storeError } from "../../ui/logging.js";
+import { createHttpClient } from "@/http/client.js";
+import { type DeployContext, StoreStatus } from "@/types.js";
+import { storeError } from "@/ui/logging.js";
 import {
   createRateLimitHandler,
   getBackoffDelayMs,
   type HttpLikeResponse,
   type RateLimitHandler,
   requestWithRetry
-} from "../../utils/retry.js";
-import { getExtJson } from "../../utils/zip.js";
+} from "@/utils/retry.js";
+import { getExtJson } from "@/utils/zip.js";
 import { EdgeOptionsPublishApi } from "./edge-input.js";
 import { OperationStatus, PublishOperationStatusSchema, StatusPackageUploadSchema } from "./edge-types.js";
 import fs from "node:fs";

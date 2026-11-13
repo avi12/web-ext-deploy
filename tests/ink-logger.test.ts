@@ -1,5 +1,5 @@
-import { StoreName } from "../src/types.js";
-import { type LogEntry } from "../src/ui/ink-logger.js";
+import { StoreName } from "@/types.js";
+import { type LogEntry } from "@/ui/ink-logger.js";
 import { describe, expect, it } from "vitest";
 
 function makeEntry(store: StoreName, level: LogEntry["level"], message: string): LogEntry {

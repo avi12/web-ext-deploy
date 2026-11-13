@@ -1,5 +1,5 @@
-import { deployToFirefox } from "../src/stores/firefox/firefox-deploy.js";
-import { StoreStatus } from "../src/types.js";
+import { deployToFirefox } from "@/stores/firefox/firefox-deploy.js";
+import { StoreStatus } from "@/types.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -18,11 +18,11 @@ const { httpClient } = vi.hoisted(() => ({
   }
 }));
 
-vi.mock("../src/http/client.js", () => ({ createHttpClient: () => httpClient }));
+vi.mock("@/http/client.js", () => ({ createHttpClient: () => httpClient }));
 
-vi.mock("../src/http/jwt.js", () => ({ generateJwt: () => "sanitized-token" }));
+vi.mock("@/http/jwt.js", () => ({ generateJwt: () => "sanitized-token" }));
 
-vi.mock("../src/utils/zip.js", () => ({ getExtJson: () => Promise.resolve({ name: "Example extension", version: "4.0.1" }) }));
+vi.mock("@/utils/zip.js", () => ({ getExtJson: () => Promise.resolve({ name: "Example extension", version: "4.0.1" }) }));
 
 const FIXTURE_ZIP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/test.zip");
 

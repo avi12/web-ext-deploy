@@ -1,4 +1,4 @@
-import { changelogField, requiredZipField } from "../shared-fields.js";
+import { changelogField, requiredZipField } from "@/stores/shared-fields.js";
 import { z } from "zod";
 
 // https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/using-addons-api

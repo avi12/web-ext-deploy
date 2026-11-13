@@ -1,6 +1,6 @@
-import { StoreName } from "../../types.js";
-import { config, parse } from "../../utils/dotenv.js";
-import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
+import { StoreName } from "@/types.js";
+import { config, parse } from "@/utils/dotenv.js";
+import { createGitIgnoreIfNeeded, headersToEnv } from "@/utils/helpers.js";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";

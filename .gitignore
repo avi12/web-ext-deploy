@@ -13,3 +13,7 @@ dist-pack-ext
 .copilot/
 CLAUDE.md
 .claude/
+
+# Lint cache
+.verify/
+.fallow/

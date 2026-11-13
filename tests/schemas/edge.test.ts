@@ -1,4 +1,4 @@
-import { EdgeOptionsPublishApiSchema } from "../../src/stores/edge/edge-input.js";
+import { EdgeOptionsPublishApiSchema } from "@/stores/edge/edge-input.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";

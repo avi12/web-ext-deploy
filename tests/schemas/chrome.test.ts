@@ -1,4 +1,4 @@
-import { ChromeOptionsSchema } from "../../src/stores/chrome/chrome-input.js";
+import { ChromeOptionsSchema } from "@/stores/chrome/chrome-input.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";

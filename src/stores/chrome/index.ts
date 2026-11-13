@@ -1,6 +1,6 @@
-import { defineStore, StoreName } from "../../types.js";
-import { config } from "../../utils/dotenv.js";
-import { createGitIgnoreIfNeeded, headersToEnv } from "../../utils/helpers.js";
+import { defineStore, StoreName } from "@/types.js";
+import { config } from "@/utils/dotenv.js";
+import { createGitIgnoreIfNeeded, headersToEnv } from "@/utils/helpers.js";
 import { getChromeRefreshToken } from "./chrome-credentials.js";
 import { deployToChrome } from "./chrome-deploy.js";
 import { ChromeOptionsSchema } from "./chrome-input.js";

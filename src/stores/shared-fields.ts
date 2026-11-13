@@ -1,5 +1,5 @@
-import { storeError } from "../ui/logging.js";
-import { getCorrectZip, getFullPath, getIsFileExists } from "../utils/zip.js";
+import { storeError } from "@/ui/logging.js";
+import { getCorrectZip, getFullPath, getIsFileExists } from "@/utils/zip.js";
 import { z } from "zod";
 
 const ZIP_DEFAULT_DESCRIPTION = `Path to the ZIP file. Supports "{version}" which is retrieved from package.json`;

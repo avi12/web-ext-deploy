@@ -1,8 +1,8 @@
-import { createHttpClient } from "../../http/client.js";
-import { type DeployContext, StoreStatus } from "../../types.js";
-import { storeError } from "../../ui/logging.js";
-import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "../../utils/retry.js";
-import { getExtJson } from "../../utils/zip.js";
+import { createHttpClient } from "@/http/client.js";
+import { type DeployContext, StoreStatus } from "@/types.js";
+import { storeError } from "@/ui/logging.js";
+import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "@/utils/retry.js";
+import { getExtJson } from "@/utils/zip.js";
 import { ChromeOptions } from "./chrome-input.js";
 import {
   FetchStatusSchema,

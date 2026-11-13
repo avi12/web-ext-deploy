@@ -1,4 +1,4 @@
-import type { StoreName } from "../types.js";
+import type { StoreName } from "@/types.js";
 import { camelCase } from "./case-conversion.js";
 import fs from "node:fs";
 

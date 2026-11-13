@@ -1,4 +1,4 @@
-import { defineStore, StoreName } from "../../types.js";
+import { defineStore, StoreName } from "@/types.js";
 import { deployToEdgePublishApi } from "./edge-deploy.js";
 import { EdgeOptionsPublishApiSchema } from "./edge-input.js";
 

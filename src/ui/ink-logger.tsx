@@ -1,13 +1,13 @@
-import { getStoreDisplayName } from "../stores/registry.js";
-import { type StoreLogger, StoreStatus, type StoreName } from "../types.js";
-import { kebabCase, screamingSnakeCase } from "../utils/case-conversion.js";
+import { getStoreDisplayName } from "@/stores/registry.js";
+import { type StoreLogger, StoreStatus, type StoreName } from "@/types.js";
+import { kebabCase, screamingSnakeCase } from "@/utils/case-conversion.js";
 import {
   getZodBaseType,
   getZodDefaultValue,
   getZodDescription,
   isZodOptional,
   unwrapZod
-} from "../utils/zod.js";
+} from "@/utils/zod.js";
 import { Box, Newline, render, Text } from "ink";
 import { setTimeout as setTimeoutPromise } from "node:timers/promises";
 import React, { useEffect, useState } from "react";

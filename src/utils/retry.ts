@@ -1,4 +1,4 @@
-import type { StoreLogger } from "../types.js";
+import type { StoreLogger } from "@/types.js";
 import { setTimeout } from "node:timers/promises";
 import { z, ZodError } from "zod";
 

@@ -1,4 +1,4 @@
-import { requiredZipField } from "../shared-fields.js";
+import { requiredZipField } from "@/stores/shared-fields.js";
 import { z } from "zod";
 
 // https://developer.chrome.com/docs/webstore/api/reference/rest/v2/publishers.items/publish
