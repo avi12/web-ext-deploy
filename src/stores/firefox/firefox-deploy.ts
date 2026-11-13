@@ -21,7 +21,7 @@ import {
 
 let httpClient: ReturnType<typeof createHttpClient>;
 
-function authHeader(jwtIssuer: string, jwtSecret: string) {
+function authHeader({ jwtIssuer, jwtSecret }: { jwtIssuer: string; jwtSecret: string }) {
   return {
     Authorization: `JWT ${generateJwt({
       jwtIssuer,
@@ -59,7 +59,7 @@ function uploadZip({
       httpClient.post("upload/", formData.body, {
         headers: {
           ...formData.headers,
-          ...authHeader(jwtIssuer, jwtSecret)
+          ...authHeader({ jwtIssuer, jwtSecret })
         }
       }),
     parseResponse(response) {
@@ -124,7 +124,7 @@ async function createNewVersion({
         {
           headers: {
             "Content-Type": "application/json",
-            ...authHeader(jwtIssuer, jwtSecret)
+            ...authHeader({ jwtIssuer, jwtSecret })
           }
         }
       ),
@@ -159,7 +159,7 @@ function getVersionIfExists({
   return requestWithRetry({
     sendRequest: () =>
       httpClient.get(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, {
-        headers: authHeader(jwtIssuer, jwtSecret)
+        headers: authHeader({ jwtIssuer, jwtSecret })
       }),
     parseResponse(response) {
       const result = FirefoxCreateNewVersionSchema.nullable().safeParse(response.status === 404 ? null : response.data);
@@ -193,7 +193,7 @@ async function validateUpload({
 
   while (true) {
     data = await requestWithRetry({
-      sendRequest: () => httpClient.get(`upload/${uuid}/`, { headers: authHeader(jwtIssuer, jwtSecret) }),
+      sendRequest: () => httpClient.get(`upload/${uuid}/`, { headers: authHeader({ jwtIssuer, jwtSecret }) }),
       parseResponse(response) {
         const result = FirefoxUploadDetailSchema.safeParse(response.data);
         if (!result.success) {
@@ -253,7 +253,7 @@ function uploadSourceCodeIfNeeded({
       httpClient.patch(`addon/${slug}/versions/${encodeURIComponent(`v${version}`)}/`, formData.body, {
         headers: {
           ...formData.headers,
-          ...authHeader(jwtIssuer, jwtSecret)
+          ...authHeader({ jwtIssuer, jwtSecret })
         }
       }),
     parseResponse(response) {
@@ -365,6 +365,6 @@ export async function deployToFirefox(
     });
   }
 
-  setStatus?.(StoreStatus.Success);
+  setStatus?.(StoreStatus.SUCCESS);
   return true;
 }

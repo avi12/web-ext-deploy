@@ -5,7 +5,7 @@ import { deployToOpera } from "./opera-deploy.js";
 import { OperaOptionsSchema } from "./opera-input.js";
 
 export const opera = defineStore({
-  name: StoreName.Opera,
+  name: StoreName.OPERA,
   schema: OperaOptionsSchema,
   deploy: deployToOpera,
   credentialFields: ["sessionid", "csrftoken"],

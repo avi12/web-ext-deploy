@@ -35,7 +35,15 @@ const AccessTokenResponseSchema = z.object({
   token_type: z.literal("Bearer")
 });
 
-async function exchangeRefreshTokenForAccessToken(clientId: string, clientSecret: string, refreshToken: string) {
+async function exchangeRefreshTokenForAccessToken({
+  clientId,
+  clientSecret,
+  refreshToken
+}: {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+}) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: {
@@ -332,7 +340,7 @@ export async function deployToChrome(
 ) {
   const { name } = await getExtJson(zip);
   setExtensionName?.(name);
-  const accessToken = await exchangeRefreshTokenForAccessToken(clientId, clientSecret, refreshToken);
+  const accessToken = await exchangeRefreshTokenForAccessToken({ clientId, clientSecret, refreshToken });
   httpClient = createHttpClient("https://chromewebstore.googleapis.com", { Authorization: `Bearer ${accessToken}` });
 
   const onRateLimit = createRateLimitHandler({
@@ -372,6 +380,6 @@ export async function deployToChrome(
     onRateLimit
   });
 
-  setStatus?.(StoreStatus.Success);
+  setStatus?.(StoreStatus.SUCCESS);
   return true;
 }

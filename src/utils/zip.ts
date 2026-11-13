@@ -32,7 +32,15 @@ interface CentralDirectoryEntry {
 // Issues a single targeted fs read for the given byte range, so the whole ZIP
 // is never loaded — only the end-of-central-directory record, the central
 // directory, and the bytes of the specific entry being extracted.
-async function readRange(fileHandle: FileHandle, position: number, length: number) {
+async function readRange({
+  fileHandle,
+  position,
+  length
+}: {
+  fileHandle: FileHandle;
+  position: number;
+  length: number;
+}) {
   const buffer = new Uint8Array(length);
   if (length === 0) {
     return buffer;
@@ -46,10 +54,10 @@ function toDataView(buffer: Uint8Array) {
   return new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 }
 
-async function findCentralDirectoryLocation(fileHandle: FileHandle, fileSize: number) {
+async function findCentralDirectoryLocation({ fileHandle, fileSize }: { fileHandle: FileHandle; fileSize: number }) {
   const searchSize = Math.min(fileSize, END_OF_CENTRAL_DIRECTORY_SIZE + MAXIMUM_COMMENT_SIZE);
   const searchStart = fileSize - searchSize;
-  const buffer = await readRange(fileHandle, searchStart, searchSize);
+  const buffer = await readRange({ fileHandle, position: searchStart, length: searchSize });
   const view = toDataView(buffer);
 
   for (let offset = searchSize - END_OF_CENTRAL_DIRECTORY_SIZE; offset >= 0; offset--) {
@@ -66,7 +74,13 @@ async function findCentralDirectoryLocation(fileHandle: FileHandle, fileSize: nu
   throw new Error("End of central directory record not found in zip");
 }
 
-function findCentralDirectoryEntry(centralDirectory: Uint8Array, filename: string): CentralDirectoryEntry | undefined {
+function findCentralDirectoryEntry({
+  centralDirectory,
+  filename
+}: {
+  centralDirectory: Uint8Array;
+  filename: string;
+}): CentralDirectoryEntry | undefined {
   const view = toDataView(centralDirectory);
   const decoder = new TextDecoder();
 
@@ -95,8 +109,12 @@ function findCentralDirectoryEntry(centralDirectory: Uint8Array, filename: strin
   return undefined;
 }
 
-async function readEntryData(fileHandle: FileHandle, entry: CentralDirectoryEntry) {
-  const localHeader = await readRange(fileHandle, entry.localHeaderOffset, LOCAL_FILE_HEADER_SIZE);
+async function readEntryData({ fileHandle, entry }: { fileHandle: FileHandle; entry: CentralDirectoryEntry }) {
+  const localHeader = await readRange({
+    fileHandle,
+    position: entry.localHeaderOffset,
+    length: LOCAL_FILE_HEADER_SIZE
+  });
   const view = toDataView(localHeader);
   if (view.getUint32(0, true) !== LOCAL_FILE_HEADER_SIGNATURE) {
     throw new Error("Invalid local file header in zip");
@@ -108,10 +126,10 @@ async function readEntryData(fileHandle: FileHandle, entry: CentralDirectoryEntr
   const extraFieldLength = view.getUint16(28, true);
   const dataStart = entry.localHeaderOffset + LOCAL_FILE_HEADER_SIZE + fileNameLength + extraFieldLength;
 
-  return readRange(fileHandle, dataStart, entry.compressedSize);
+  return readRange({ fileHandle, position: dataStart, length: entry.compressedSize });
 }
 
-function decompressEntry(data: Uint8Array, compressionMethod: number) {
+function decompressEntry({ data, compressionMethod }: { data: Uint8Array; compressionMethod: number }) {
   if (compressionMethod === COMPRESSION_STORED) {
     return data;
   }
@@ -147,16 +165,18 @@ export async function getExtJson(zip: string) {
 
   try {
     const { size } = await fileHandle.stat();
-    const location = await findCentralDirectoryLocation(fileHandle, size);
-    const centralDirectory = await readRange(fileHandle, location.offset, location.size);
+    const location = await findCentralDirectoryLocation({ fileHandle, fileSize: size });
+    const centralDirectory = await readRange({ fileHandle, position: location.offset, length: location.size });
 
-    const entry = findCentralDirectoryEntry(centralDirectory, "manifest.json");
+    const entry = findCentralDirectoryEntry({ centralDirectory, filename: "manifest.json" });
     if (!entry) {
       throw new Error("manifest.json not found in zip");
     }
 
-    const compressedData = await readEntryData(fileHandle, entry);
-    const manifestContent = new TextDecoder().decode(decompressEntry(compressedData, entry.compressionMethod));
+    const compressedData = await readEntryData({ fileHandle, entry });
+    const manifestContent = new TextDecoder().decode(
+      decompressEntry({ data: compressedData, compressionMethod: entry.compressionMethod })
+    );
     if (!manifestContent) {
       throw new Error("manifest.json is empty");
     }

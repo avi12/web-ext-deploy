@@ -27,11 +27,11 @@ export const EnvOptionsSchema = z.object({
 type StoreConfig = Record<string, unknown>;
 type StoreConfigMap = Partial<Record<StoreName, StoreConfig>>;
 
-function getJsonsFromArgs(store: StoreName, argv: Arguments) {
-  return mapStoreArgs(Object.fromEntries(Object.entries(argv)), store);
+function getJsonsFromArgs({ store, argv }: { store: StoreName; argv: Arguments }) {
+  return mapStoreArgs({ rawArgs: Object.fromEntries(Object.entries(argv)), store });
 }
 
-function getJsons(command: string, argv: Arguments) {
+function getJsons({ command, argv }: { command: string; argv: Arguments }) {
   if (command === "env") {
     const publishOnly = z.array(z.string()).safeParse(argv.publishOnly).data;
     const stores = (publishOnly && publishOnly.length > 0 ? publishOnly : storeNames).filter(isSupportedStore);
@@ -51,7 +51,7 @@ function getJsons(command: string, argv: Arguments) {
       const envValues = dynamicFields.length
         ? Object.fromEntries(Object.entries(parsed).filter(([key]) => !dynamicFields.includes(key)))
         : parsed;
-      const cliOverrides = getJsonsFromArgs(store, argv);
+      const cliOverrides = getJsonsFromArgs({ store, argv });
       const allowedOverrides = Object.fromEntries(
         Object.entries(cliOverrides).filter(([key, value]) => cliOverridableFields.has(key) && value !== undefined)
       );
@@ -65,7 +65,7 @@ function getJsons(command: string, argv: Arguments) {
 
   const result: StoreConfigMap = {};
   for (const store of storeNames) {
-    const jsonStore = getJsonsFromArgs(store, argv);
+    const jsonStore = getJsonsFromArgs({ store, argv });
     if (!isObjectEmpty(jsonStore)) {
       result[store] = jsonStore;
     }
@@ -73,7 +73,13 @@ function getJsons(command: string, argv: Arguments) {
   return result;
 }
 
-function readCredentialsFromEnv(storeName: StoreName, credentialFields: readonly string[]) {
+function readCredentialsFromEnv({
+  storeName,
+  credentialFields
+}: {
+  storeName: StoreName;
+  credentialFields: readonly string[];
+}) {
   const { parsed: rawParsed = {} } = config({ path: `${storeName}.env` });
   const parsed = Object.fromEntries(
     Object.entries(rawParsed).map(([key, value]) => [camelCase(key.toLowerCase()), value])
@@ -107,7 +113,7 @@ async function fetchMissingCredentials(
     }
 
     if (saveToEnv) {
-      const envCredentials = readCredentialsFromEnv(store.name, fields);
+      const envCredentials = readCredentialsFromEnv({ storeName: store.name, credentialFields: fields });
       for (const field of fields) {
         const isAlreadySet = Boolean(storeConfig[field]);
         const hasEnvValue = Boolean(envCredentials[field]);
@@ -143,7 +149,13 @@ async function fetchMissingCredentials(
   }
 }
 
-function collectMissingArgs(jsonStoresRaw: StoreConfigMap, isAutoFetchCredentials?: boolean) {
+function collectMissingArgs({
+  jsonStoresRaw,
+  isAutoFetchCredentials
+}: {
+  jsonStoresRaw: StoreConfigMap;
+  isAutoFetchCredentials?: boolean;
+}) {
   const missingArgs: Partial<
     Record<
       StoreName,
@@ -196,9 +208,9 @@ function buildEnvHelpTables() {
     .filter(key => hasCookieStores || key !== "autoFetchCredentials");
   return [
     ...storeRegistry.map(store =>
-      buildHelpTableData(store.name, store.schema, "env", undefined, store.dynamicFields, store.cliOverridableFields)
+      buildHelpTableData({ storeName: store.name, schema: store.schema, mode: "env", missingFields: undefined, dynamicFields: store.dynamicFields, cliOverridableFields: store.cliOverridableFields })
     ),
-    buildGlobalHelpTableData(EnvOptionsSchema, globalKeys, "cli")
+    buildGlobalHelpTableData({ schema: EnvOptionsSchema, missingArgs: globalKeys, mode: "cli" })
   ].flatMap(data => (data ? [data] : []));
 }
 
@@ -208,9 +220,9 @@ function collectMissingGlobalArgs(argv: Arguments) {
     .map(([key]) => key);
 }
 
-export async function getJsonStoresFromCli(argv: Arguments, log?: (message: string) => void) {
+export async function getJsonStoresFromCli({ argv, log }: { argv: Arguments; log?: (message: string) => void }) {
   const command = z.string().safeParse(argv._[0]).data ?? "";
-  const jsonStoresRaw = getJsons(command, argv);
+  const jsonStoresRaw = getJsons({ command, argv });
   if (isObjectEmpty(jsonStoresRaw)) {
     if (command === "env") {
       throw new NoStoresError(
@@ -228,7 +240,7 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
     await fetchMissingCredentials(jsonStoresRaw, log, saveToEnv);
   }
 
-  const missingArgs = collectMissingArgs(jsonStoresRaw, isAutoFetchCredentials);
+  const missingArgs = collectMissingArgs({ jsonStoresRaw, isAutoFetchCredentials });
   if (isObjectEmpty(missingArgs)) {
     return jsonStoresRaw;
   }
@@ -249,17 +261,10 @@ export async function getJsonStoresFromCli(argv: Arguments, log?: (message: stri
     }
 
     const { required, optional = [] } = missingEntry;
-    const tableData = buildHelpTableData(
-      store.name,
-      store.schema,
-      mode,
-      [...required, ...optional],
-      store.dynamicFields,
-      store.cliOverridableFields
-    );
+    const tableData = buildHelpTableData({ storeName: store.name, schema: store.schema, mode, missingFields: [...required, ...optional], dynamicFields: store.dynamicFields, cliOverridableFields: store.cliOverridableFields });
     return tableData ? [tableData] : [];
   });
-  const globalTable = buildGlobalHelpTableData(globalSchema, missingGlobalArgs, "cli");
+  const globalTable = buildGlobalHelpTableData({ schema: globalSchema, missingArgs: missingGlobalArgs, mode: "cli" });
   const tables = globalTable ? [...storeTables, globalTable] : storeTables;
   throw new MissingArgsError(tables);
 }

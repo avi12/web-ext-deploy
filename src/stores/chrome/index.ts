@@ -9,7 +9,7 @@ import { deployToChrome } from "./chrome-deploy.js";
 import { ChromeOptionsSchema } from "./chrome-input.js";
 
 export const chrome = defineStore({
-  name: StoreName.Chrome,
+  name: StoreName.CHROME,
   schema: ChromeOptionsSchema,
   deploy: deployToChrome,
   credentialFields: ["refreshToken"],
@@ -22,7 +22,7 @@ export const chrome = defineStore({
       throw new Error("Chrome credentials auto-fetch requires both 'clientId' and 'clientSecret'");
     }
 
-    const refreshToken = await getChromeRefreshToken(clientId, clientSecret);
+    const refreshToken = await getChromeRefreshToken({ clientId, clientSecret });
     if (saveToEnv) {
       const envFile = "chrome.env";
       const { parsed: envCurrent = {} } = config({ path: envFile });
@@ -33,7 +33,7 @@ export const chrome = defineStore({
           REFRESH_TOKEN: refreshToken
         })
       );
-      createGitIgnoreIfNeeded([StoreName.Chrome]);
+      createGitIgnoreIfNeeded([StoreName.CHROME]);
     }
 
     return { refreshToken };

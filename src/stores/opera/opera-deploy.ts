@@ -107,11 +107,15 @@ function createOperaHttpClient(
     return withCookieRefresh(() => client.get(endpoint, { headers: cookieHeaders() }));
   }
 
-  function post(
-    endpoint: string,
-    body?: BodyInit,
-    options?: { headers?: Record<string, string>; params?: Record<string, string | number> }
-  ) {
+  function post({
+    endpoint,
+    body,
+    options
+  }: {
+    endpoint: string;
+    body?: BodyInit;
+    options?: { headers?: Record<string, string>; params?: Record<string, string | number> };
+  }) {
     return withCookieRefresh(() =>
       client.post(endpoint, body, {
         ...options,
@@ -123,7 +127,15 @@ function createOperaHttpClient(
     );
   }
 
-  function patch(endpoint: string, body?: BodyInit, options?: { headers?: Record<string, string> }) {
+  function patch({
+    endpoint,
+    body,
+    options
+  }: {
+    endpoint: string;
+    body?: BodyInit;
+    options?: { headers?: Record<string, string> };
+  }) {
     return withCookieRefresh(() =>
       client.patch(endpoint, body, {
         ...options,
@@ -222,7 +234,8 @@ async function cancelLatestVersionIfNotSubmitted({
   logger?.info(`Canceling unsubmitted version ${version}`);
 
   await requestWithRetry({
-    sendRequest: () => httpClient.post(`developer/package-versions/${packageId}-${version}/cancel_changes/`),
+    sendRequest: () =>
+      httpClient.post({ endpoint: `developer/package-versions/${packageId}-${version}/cancel_changes/` }),
     parseResponse(response) {
       const result = CancelChangesSchema.safeParse(response.data);
       if (!result.success) {
@@ -254,15 +267,15 @@ async function submitChanges({
   try {
     await requestWithRetry({
       sendRequest: () =>
-        httpClient.post(
-          `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
-          JSON.stringify({ auto_moderation: isAutoModerationAvailable }),
-          {
+        httpClient.post({
+          endpoint: `developer/package-versions/${packageId}-${version}/submit_for_moderation/`,
+          body: JSON.stringify({ auto_moderation: isAutoModerationAvailable }),
+          options: {
             headers: {
               "Content-Type": "application/json"
             }
           }
-        ),
+        }),
       parseResponse(response) {
         const result = SubmitChangesSchema.safeParse(response.data);
         if (!result.success) {
@@ -378,9 +391,13 @@ async function uploadChunk({
 
   return requestWithRetry({
     sendRequest: () =>
-      httpClient.post("file-upload/", formData.body, {
-        headers: {
-          "Content-Type": formData.headers["Content-Type"]
+      httpClient.post({
+        endpoint: "file-upload/",
+        body: formData.body,
+        options: {
+          headers: {
+            "Content-Type": formData.headers["Content-Type"]
+          }
         }
       }),
     parseResponse(response) {
@@ -438,14 +455,10 @@ async function verifyUploadSuccessful({
 
   const data = await requestWithRetry({
     sendRequest: () =>
-      httpClient.post(
-        "developer/package-versions/",
-        JSON.stringify({
-          file_id: fileId,
-          file_name: zipName,
-          metadata_from: lastVersion
-        }),
-        {
+      httpClient.post({
+        endpoint: "developer/package-versions/",
+        body: JSON.stringify({ file_id: fileId, file_name: zipName, metadata_from: lastVersion }),
+        options: {
           params: {
             package_id: packageId
           },
@@ -453,7 +466,7 @@ async function verifyUploadSuccessful({
             "Content-Type": "application/json"
           }
         }
-      ),
+      }),
     parseResponse(response) {
       const result = UploadResultSchema.safeParse(response.data);
       if (!result.success) {
@@ -490,21 +503,15 @@ async function updateChangelog({
 
   return requestWithRetry({
     sendRequest: () =>
-      httpClient.patch(
-        `developer/package-versions/${packageId}-${version}/`,
-        JSON.stringify({
-          translations: {
-            [default_locale]: {
-              changelog
-            }
-          }
-        }),
-        {
+      httpClient.patch({
+        endpoint: `developer/package-versions/${packageId}-${version}/`,
+        body: JSON.stringify({ translations: { [default_locale]: { changelog } } }),
+        options: {
           headers: {
             "Content-Type": "application/json"
           }
         }
-      ),
+      }),
     parseResponse(response) {
       const result = ListingDetailSchema.safeParse(response.data);
       if (!result.success) {
@@ -619,6 +626,6 @@ export async function deployToOpera(
     onRateLimit
   });
 
-  setStatus?.(StoreStatus.Success);
+  setStatus?.(StoreStatus.SUCCESS);
   return true;
 }

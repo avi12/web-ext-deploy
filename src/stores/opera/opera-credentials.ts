@@ -9,7 +9,7 @@ import { StoreName } from "@/types.js";
 import { config, parse } from "@/utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "@/utils/helpers.js";
 
-const CREDENTIALS_FILE = `${StoreName.Opera}.env`;
+const CREDENTIALS_FILE = `${StoreName.OPERA}.env`;
 const COOKIE_NAMES = ["sessionid", "csrftoken"] as const;
 const DEVELOPER_URL = "https://addons.opera.com/developer/";
 
@@ -106,7 +106,7 @@ export async function fetchOperaCredentials(saveToEnv: boolean): Promise<Record<
 
   if (saveToEnv) {
     saveToEnvFile(cookiesRaw);
-    createGitIgnoreIfNeeded([StoreName.Opera]);
+    createGitIgnoreIfNeeded([StoreName.OPERA]);
   }
 
   return parse(cookiesRaw);

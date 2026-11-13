@@ -16,14 +16,18 @@ export class StoreValidationError extends Error {
   }
 }
 
-export function deployStore(
-  options: unknown,
-  storeName: string,
+export function deployStore({
+  options,
+  storeName,
+  context
+}: {
+  options: unknown;
+  storeName: string;
   context?: DeployContext & {
     isDryRun?: boolean;
     mode?: "cli" | "env";
-  }
-) {
+  };
+}) {
   const store = storeRegistry.find(store => store.name === storeName);
   if (!store) {
     throw new Error(red(`Unknown store: ${storeName}`));
@@ -39,14 +43,7 @@ export function deployStore(
         ...new Set(structuralIssues.map(issue => issue.path[0]).filter(path => typeof path === "string"))
       ];
       const missingFields = failedFields.length > 0 ? failedFields : undefined;
-      const helpTableData = buildHelpTableData(
-        store.name,
-        store.schema,
-        context?.mode,
-        missingFields,
-        store.dynamicFields,
-        store.cliOverridableFields
-      );
+      const helpTableData = buildHelpTableData({ storeName: store.name, schema: store.schema, mode: context?.mode, missingFields, dynamicFields: store.dynamicFields, cliOverridableFields: store.cliOverridableFields });
       throw new StoreValidationError(messages.join("\n"), helpTableData ? [helpTableData] : [], error);
     }
 
@@ -56,7 +53,7 @@ export function deployStore(
   const prepared = parseResult.data;
   if (context?.isDryRun) {
     context.logger?.info("Dry run: validation passed");
-    context.setStatus?.(StoreStatus.Success);
+    context.setStatus?.(StoreStatus.SUCCESS);
     return Promise.resolve(true);
   }
 

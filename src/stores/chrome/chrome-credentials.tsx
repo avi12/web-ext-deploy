@@ -55,7 +55,15 @@ function openBrowser(url: string) {
   exec(getOpenCommand(url));
 }
 
-async function exchangeCodeForToken(code: string, clientId: string, clientSecret: string) {
+async function exchangeCodeForToken({
+  code,
+  clientId,
+  clientSecret
+}: {
+  code: string;
+  clientId: string;
+  clientSecret: string;
+}) {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: {
@@ -78,18 +86,18 @@ async function exchangeCodeForToken(code: string, clientId: string, clientSecret
 }
 
 enum Step {
-  Waiting = "waiting",
-  Exchanging = "exchanging",
-  Success = "success",
-  Error = "error"
+  WAITING = "waiting",
+  EXCHANGING = "exchanging",
+  SUCCESS = "success",
+  ERROR = "error"
 }
 
 function getSymbol(step: Step) {
-  if (step === Step.Success) {
+  if (step === Step.SUCCESS) {
     return <Text color="green">✔</Text>;
   }
 
-  if (step === Step.Error) {
+  if (step === Step.ERROR) {
     return <Text color="red">✖</Text>;
   }
 
@@ -97,11 +105,11 @@ function getSymbol(step: Step) {
 }
 
 function getTokenStepLabel(step: Step) {
-  if (step === Step.Exchanging) {
+  if (step === Step.EXCHANGING) {
     return "Exchanging code for token...";
   }
 
-  if (step === Step.Success) {
+  if (step === Step.SUCCESS) {
     return "Token received";
   }
 
@@ -125,7 +133,7 @@ interface AppProps {
 
 function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
   const { exit } = useApp();
-  const [step, setStep] = useState<Step>(Step.Waiting);
+  const [step, setStep] = useState<Step>(Step.WAITING);
   const [errorMessage, setErrorMessage] = useState("");
   const [state] = useState(() => crypto.randomUUID());
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
@@ -156,7 +164,7 @@ function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
         const message = `Authorization failed: ${authError}`;
         onError(new Error(message));
         setErrorMessage(message);
-        setStep(Step.Error);
+        setStep(Step.ERROR);
         server.close();
         return;
       }
@@ -167,8 +175,8 @@ function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
         return;
       }
 
-      setStep(Step.Exchanging);
-      const data = await exchangeCodeForToken(code, clientId, clientSecret);
+      setStep(Step.EXCHANGING);
+      const data = await exchangeCodeForToken({ code, clientId, clientSecret });
       response.writeHead(HTTP_OK, { "Content-Type": "text/html" });
 
       if ("error" in data) {
@@ -176,17 +184,17 @@ function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
         const message = `Token exchange failed: ${JSON.stringify(data.error, null, 2)}`;
         onError(new Error(message));
         setErrorMessage(message);
-        setStep(Step.Error);
+        setStep(Step.ERROR);
       } else if (data.refresh_token) {
         response.end("<h1>Success!</h1><p>You can close this tab</p>");
         onSuccess(data.refresh_token);
-        setStep(Step.Success);
+        setStep(Step.SUCCESS);
       } else {
         response.end("<h1>Failed to retrieve refresh token</h1><p>Check the terminal for details</p>");
         const message = `No refresh token in response - try revoking access at https://myaccount.google.com/permissions and retry`;
         onError(new Error(message));
         setErrorMessage(message);
-        setStep(Step.Error);
+        setStep(Step.ERROR);
       }
 
       server.close();
@@ -202,7 +210,7 @@ function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
   }, []);
 
   useEffect(() => {
-    const isTerminalStep = step === Step.Success || step === Step.Error;
+    const isTerminalStep = step === Step.SUCCESS || step === Step.ERROR;
     if (isTerminalStep) {
       exit();
     }
@@ -216,29 +224,35 @@ function App({ clientId, clientSecret, onSuccess, onError }: AppProps) {
       <Newline />
 
       <StatusLine
-        step={step === Step.Waiting ? Step.Waiting : Step.Success}
-        label={step === Step.Waiting ? "Waiting for authorization in browser..." : "Authorization received"}
+        step={step === Step.WAITING ? Step.WAITING : Step.SUCCESS}
+        label={step === Step.WAITING ? "Waiting for authorization in browser..." : "Authorization received"}
       />
 
-      {(step === Step.Exchanging || step === Step.Success || step === Step.Error) && (
-        <StatusLine step={step === Step.Exchanging ? Step.Waiting : step} label={getTokenStepLabel(step)} />
+      {(step === Step.EXCHANGING || step === Step.SUCCESS || step === Step.ERROR) && (
+        <StatusLine step={step === Step.EXCHANGING ? Step.WAITING : step} label={getTokenStepLabel(step)} />
       )}
 
       <Newline />
 
-      {step === Step.Waiting && (
+      {step === Step.WAITING && (
         <Text dimColor>
           If the browser didn't open, visit:{"\n"}
           {authUrl}
         </Text>
       )}
 
-      {step === Step.Error && <Text color="red">{errorMessage}</Text>}
+      {step === Step.ERROR && <Text color="red">{errorMessage}</Text>}
     </Box>
   );
 }
 
-export async function getChromeRefreshToken(clientId: string, clientSecret: string): Promise<string> {
+export async function getChromeRefreshToken({
+  clientId,
+  clientSecret
+}: {
+  clientId: string;
+  clientSecret: string;
+}): Promise<string> {
   let tokenResult = "";
   let errorResult: Error | undefined;
 

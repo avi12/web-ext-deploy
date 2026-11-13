@@ -191,6 +191,6 @@ describe("deployToFirefox", () => {
       expect.any(Buffer),
       expect.any(Object)
     );
-    expect(setStatus).toHaveBeenCalledWith(StoreStatus.Success);
+    expect(setStatus).toHaveBeenCalledWith(StoreStatus.SUCCESS);
   });
 });

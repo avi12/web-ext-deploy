@@ -70,7 +70,7 @@ const ErrorStringSchema = z.object({ error: z.string() });
 const MessageSchema = z.object({ message: z.string() });
 const DetailSchema = z.object({ detail: z.string() });
 
-function extractApiMessage(data: unknown, statusText: string) {
+function extractApiMessage({ data, statusText }: { data: unknown; statusText: string }) {
   const asString = z.string().min(1).safeParse(data).data;
   if (asString) {
     return asString;
@@ -179,7 +179,9 @@ export async function requestWithRetry<T>({
     const isClientError =
       response.status >= 400 && response.status < 500 && !acceptedClientErrorStatuses.includes(response.status);
     if (isClientError) {
-      throw new Error(formatError(`${errorContext}: ${extractApiMessage(response.data, response.statusText)}`));
+      throw new Error(
+        formatError(`${errorContext}: ${extractApiMessage({ data: response.data, statusText: response.statusText })}`)
+      );
     }
 
     const isServerError = response.status >= 500;

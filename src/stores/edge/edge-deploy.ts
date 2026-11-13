@@ -252,6 +252,6 @@ export async function deployToEdgePublishApi(
     onRateLimit
   });
 
-  setStatus?.(StoreStatus.Success);
+  setStatus?.(StoreStatus.SUCCESS);
   return true;
 }

@@ -60,33 +60,39 @@ Options:
 Run "web-ext-deploy env --help" or "web-ext-deploy cli --help" for store-specific options`;
 
 // Base options keep their plain kebab-case name; store options are prefixed with the store.
-function optionName(scope: StoreName | "base", key: string) {
+function optionName({ scope, key }: { scope: StoreName | "base"; key: string }) {
   return scope === "base" ? kebabCase(key) : `${scope}-${kebabCase(key)}`;
 }
 
-function schemaToSpecs(scope: StoreName | "base", schema: z.ZodObject<z.ZodRawShape>) {
+function schemaToSpecs({ scope, schema }: { scope: StoreName | "base"; schema: z.ZodObject<z.ZodRawShape> }) {
   const specs: CliOptionSpecs = {};
   for (const [key, value] of zodObjectEntries(schema)) {
-    specs[optionName(scope, key)] = getZodBaseType(unwrapZod(value));
+    specs[optionName({ scope, key })] = getZodBaseType(unwrapZod(value));
   }
   return specs;
 }
 
-function pickEnvOverridableSpecs(store: (typeof storeRegistry)[number], storeSpecs: CliOptionSpecs) {
+function pickEnvOverridableSpecs({
+  store,
+  storeSpecs
+}: {
+  store: (typeof storeRegistry)[number];
+  storeSpecs: CliOptionSpecs;
+}) {
   const overridable = new Set([
-    ...(store.dynamicFields ?? []).map(field => optionName(store.name, field)),
-    ...(store.cliOverridableFields ?? []).map(field => optionName(store.name, field))
+    ...(store.dynamicFields ?? []).map(field => optionName({ scope: store.name, key: field })),
+    ...(store.cliOverridableFields ?? []).map(field => optionName({ scope: store.name, key: field }))
   ]);
   return Object.fromEntries(Object.entries(storeSpecs).filter(([name]) => overridable.has(name)));
 }
 
-const baseSpecs = schemaToSpecs("base", BaseOptionsSchema);
+const baseSpecs = schemaToSpecs({ scope: "base", schema: BaseOptionsSchema });
 const allStoreSpecs: CliOptionSpecs = {};
 const envOverridableSpecs: CliOptionSpecs = {};
 for (const store of storeRegistry) {
-  const storeSpecs = schemaToSpecs(store.name, store.schema);
+  const storeSpecs = schemaToSpecs({ scope: store.name, schema: store.schema });
   Object.assign(allStoreSpecs, storeSpecs);
-  Object.assign(envOverridableSpecs, pickEnvOverridableSpecs(store, storeSpecs));
+  Object.assign(envOverridableSpecs, pickEnvOverridableSpecs({ store, storeSpecs }));
 }
 
 // Valid options differ per command: `cli` accepts every store flag, while `env`
@@ -109,7 +115,7 @@ function isChangelogField(fieldName: string) {
 const changelogFlagNames = storeRegistry.flatMap(store =>
   Object.keys(store.schema instanceof z.ZodObject ? store.schema.shape : {})
     .filter(isChangelogField)
-    .map(field => `--${optionName(store.name, field)}`)
+    .map(field => `--${optionName({ scope: store.name, key: field })}`)
 );
 
 function greedyFlagKind(token: string) {
@@ -131,7 +137,7 @@ function splitAtNextFlag(tokens: string[]) {
 }
 
 // Build the `--flag=value` token(s) for one greedy flag and the values collected for it.
-function expandGreedyValues(flag: string, kind: "changelog" | "array", values: string[]) {
+function expandGreedyValues({ flag, kind, values }: { flag: string; kind: "changelog" | "array"; values: string[] }) {
   if (values.length === 0) {
     return [flag];
   }
@@ -161,7 +167,7 @@ function expandGreedyFlags(args: string[]) {
     }
 
     const [values, afterValues] = splitAtNextFlag(rest);
-    result.push(...expandGreedyValues(head, greedyKind, values));
+    result.push(...expandGreedyValues({ flag: head, kind: greedyKind, values }));
     remaining = afterValues;
   }
   return result;
@@ -186,7 +192,7 @@ function toParseArgsOptions(specs: CliOptionSpecs) {
   return options;
 }
 
-function coerceOptionValue(value: unknown, type: CliOptionType) {
+function coerceOptionValue({ value, type }: { value: unknown; type: CliOptionType }) {
   if (type === "number") {
     return Number(value);
   }
@@ -194,17 +200,25 @@ function coerceOptionValue(value: unknown, type: CliOptionType) {
   return value;
 }
 
-function buildArguments(command: Command, values: Record<string, unknown>, specs: CliOptionSpecs): Arguments {
+function buildArguments({
+  command,
+  values,
+  specs
+}: {
+  command: Command;
+  values: Record<string, unknown>;
+  specs: CliOptionSpecs;
+}): Arguments {
   const argv: Arguments = { _: [command] };
   for (const [name, rawValue] of Object.entries(values)) {
-    const value = coerceOptionValue(rawValue, specs[name]);
+    const value = coerceOptionValue({ value: rawValue, type: specs[name] });
     argv[name] = value;
     argv[camelCase(name)] = value;
   }
   return argv;
 }
 
-function parseCommandArgs(command: Command, args: string[]) {
+function parseCommandArgs({ command, args }: { command: Command; args: string[] }) {
   const specs = command === "cli" ? cliCommandSpecs : envCommandSpecs;
   const { values } = parseArgs({
     args,
@@ -212,7 +226,7 @@ function parseCommandArgs(command: Command, args: string[]) {
     strict: true,
     allowPositionals: false
   });
-  return buildArguments(command, values, specs);
+  return buildArguments({ command, values, specs });
 }
 
 function buildGlobalHelpTable(command: Command): HelpTableData {
@@ -236,14 +250,14 @@ function buildGlobalHelpTable(command: Command): HelpTableData {
 async function renderCommandHelp(command: Command) {
   console.log(`Usage: web-ext-deploy ${command} [options]\n\n${COMMANDS[command].summary}`);
   const storeTables = storeRegistry.flatMap(store => {
-    const table = buildHelpTableData(
-      store.name,
-      store.schema,
-      command,
-      undefined,
-      store.dynamicFields,
-      store.cliOverridableFields
-    );
+    const table = buildHelpTableData({
+      storeName: store.name,
+      schema: store.schema,
+      mode: command,
+      missingFields: undefined,
+      dynamicFields: store.dynamicFields,
+      cliOverridableFields: store.cliOverridableFields
+    });
     return table ? [table] : [];
   });
   await renderHelpTables([...storeTables, buildGlobalHelpTable(command)]);
@@ -327,7 +341,7 @@ function resolveInvocation(args: string[]): Invocation {
   };
 }
 
-async function runCommand(command: Command, commandArgs: string[]) {
+async function runCommand({ command, commandArgs }: { command: Command; commandArgs: string[] }) {
   if (commandArgs.some(isHelpFlag)) {
     await renderCommandHelp(command);
     return;
@@ -335,7 +349,7 @@ async function runCommand(command: Command, commandArgs: string[]) {
 
   let argv: Arguments;
   try {
-    argv = parseCommandArgs(command, commandArgs);
+    argv = parseCommandArgs({ command, args: commandArgs });
   } catch (error) {
     const message = toError(error).message.replace(/\. To specify a positional.*$/s, "");
     console.error(`${message}\n\nRun "web-ext-deploy ${command} --help" for available options`);
@@ -364,7 +378,7 @@ async function main() {
     return;
   }
 
-  await runCommand(invocation.command, invocation.commandArgs);
+  await runCommand({ command: invocation.command, commandArgs: invocation.commandArgs });
 }
 
 await main();

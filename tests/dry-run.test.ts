@@ -38,7 +38,7 @@ const validInputs: Record<string, Record<string, unknown>> = {
 
 function tryDeployStore(options: unknown, store: string): Promise<boolean> {
   try {
-    return deployStore(options, store, { isDryRun: true });
+    return deployStore({ options, storeName: store, context: { isDryRun: true } });
   } catch (error) {
     return Promise.reject(error);
   }
@@ -48,13 +48,13 @@ describe("dry-run mode", () => {
   describe("single store validation", () => {
     for (const [store, options] of Object.entries(validInputs)) {
       it(`validates ${store} options without deploying`, async () => {
-        const result = await deployStore(options, store, { isDryRun: true });
+        const result = await deployStore({ options, storeName: store, context: { isDryRun: true } });
         expect(result).toBe(true);
       });
     }
 
     it("throws for unknown store", () => {
-      expect(() => deployStore({}, "unknown-store", { isDryRun: true })).toThrow("Unknown store");
+      expect(() => deployStore({ options: {}, storeName: "unknown-store", context: { isDryRun: true } })).toThrow("Unknown store");
     });
   });
 
@@ -74,8 +74,8 @@ describe("dry-run mode", () => {
 
     it("validates chrome + firefox together", async () => {
       const [chrome, firefox] = await Promise.all([
-        deployStore(validInputs.chrome, "chrome", { isDryRun: true }),
-        deployStore(validInputs.firefox, "firefox", { isDryRun: true })
+        deployStore({ options: validInputs.chrome, storeName: "chrome", context: { isDryRun: true } }),
+        deployStore({ options: validInputs.firefox, storeName: "firefox", context: { isDryRun: true } })
       ]);
       expect(chrome).toBe(true);
       expect(firefox).toBe(true);
@@ -83,8 +83,8 @@ describe("dry-run mode", () => {
 
     it("validates edge + opera together", async () => {
       const [edge, opera] = await Promise.all([
-        deployStore(validInputs.edge, "edge", { isDryRun: true }),
-        deployStore(validInputs.opera, "opera", { isDryRun: true })
+        deployStore({ options: validInputs.edge, storeName: "edge", context: { isDryRun: true } }),
+        deployStore({ options: validInputs.opera, storeName: "opera", context: { isDryRun: true } })
       ]);
       expect(edge).toBe(true);
       expect(opera).toBe(true);
@@ -93,71 +93,55 @@ describe("dry-run mode", () => {
 
   describe("partial config errors", () => {
     it("rejects chrome with only extId (missing refreshToken, zip)", () => {
-      expect(() => deployStore({ extId: "abc123" }, "chrome", { isDryRun: true })).toThrow();
+      expect(() => deployStore({ options: { extId: "abc123" }, storeName: "chrome", context: { isDryRun: true } })).toThrow();
     });
 
     it("rejects chrome with extId + refreshToken but no zip", () => {
       expect(() =>
-        deployStore(
-          {
-            extId: "abc123",
-            publisherId: "pub",
-            refreshToken: "tok"
-          },
-          "chrome",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          extId: "abc123",
+                          publisherId: "pub",
+                          refreshToken: "tok"
+                        }, storeName: "chrome", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects firefox with only extId (missing jwtIssuer, jwtSecret, zip)", () => {
-      expect(() => deployStore({ extId: "addon@test" }, "firefox", { isDryRun: true })).toThrow();
+      expect(() => deployStore({ options: { extId: "addon@test" }, storeName: "firefox", context: { isDryRun: true } })).toThrow();
     });
 
     it("rejects firefox with extId + jwtIssuer but no jwtSecret", () => {
       expect(() =>
-        deployStore(
-          {
-            extId: "addon@test",
-            jwtIssuer: "iss"
-          },
-          "firefox",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          extId: "addon@test",
+                          jwtIssuer: "iss"
+                        }, storeName: "firefox", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects edge with only productId (missing clientId, apiKey, zip)", () => {
-      expect(() => deployStore({ productId: "prod" }, "edge", { isDryRun: true })).toThrow();
+      expect(() => deployStore({ options: { productId: "prod" }, storeName: "edge", context: { isDryRun: true } })).toThrow();
     });
 
     it("rejects edge with productId + clientId but no apiKey", () => {
       expect(() =>
-        deployStore(
-          {
-            productId: "prod",
-            clientId: "cli"
-          },
-          "edge",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          productId: "prod",
+                          clientId: "cli"
+                        }, storeName: "edge", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects opera with only packageId (missing sessionid, csrftoken, zip)", () => {
-      expect(() => deployStore({ packageId: 123 }, "opera", { isDryRun: true })).toThrow();
+      expect(() => deployStore({ options: { packageId: 123 }, storeName: "opera", context: { isDryRun: true } })).toThrow();
     });
 
     it("rejects opera with packageId + sessionid but no csrftoken", () => {
       expect(() =>
-        deployStore(
-          {
-            packageId: 123,
-            sessionid: "sess"
-          },
-          "opera",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          packageId: 123,
+                          sessionid: "sess"
+                        }, storeName: "opera", context: { isDryRun: true } })
       ).toThrow();
     });
   });
@@ -165,92 +149,64 @@ describe("dry-run mode", () => {
   describe("missing required fields with empty strings", () => {
     it("rejects chrome with empty extId", () => {
       expect(() =>
-        deployStore(
-          {
-            ...validInputs.chrome,
-            extId: ""
-          },
-          "chrome",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          ...validInputs.chrome,
+                          extId: ""
+                        }, storeName: "chrome", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects chrome with empty refreshToken", () => {
       expect(() =>
-        deployStore(
-          {
-            ...validInputs.chrome,
-            refreshToken: ""
-          },
-          "chrome",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          ...validInputs.chrome,
+                          refreshToken: ""
+                        }, storeName: "chrome", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects firefox with empty jwtIssuer", () => {
       expect(() =>
-        deployStore(
-          {
-            ...validInputs.firefox,
-            jwtIssuer: ""
-          },
-          "firefox",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          ...validInputs.firefox,
+                          jwtIssuer: ""
+                        }, storeName: "firefox", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects firefox with empty jwtSecret", () => {
       expect(() =>
-        deployStore(
-          {
-            ...validInputs.firefox,
-            jwtSecret: ""
-          },
-          "firefox",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          ...validInputs.firefox,
+                          jwtSecret: ""
+                        }, storeName: "firefox", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects edge with empty apiKey", () => {
       expect(() =>
-        deployStore(
-          {
-            ...validInputs.edge,
-            apiKey: ""
-          },
-          "edge",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          ...validInputs.edge,
+                          apiKey: ""
+                        }, storeName: "edge", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects opera with empty sessionid", () => {
       expect(() =>
-        deployStore(
-          {
-            ...validInputs.opera,
-            sessionid: ""
-          },
-          "opera",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          ...validInputs.opera,
+                          sessionid: ""
+                        }, storeName: "opera", context: { isDryRun: true } })
       ).toThrow();
     });
 
     it("rejects non-existent zip path", () => {
       expect(() =>
-        deployStore(
-          {
-            ...validInputs.chrome,
-            zip: "nonexistent.zip"
-          },
-          "chrome",
-          { isDryRun: true }
-        )
+        deployStore({ options: {
+                          ...validInputs.chrome,
+                          zip: "nonexistent.zip"
+                        }, storeName: "chrome", context: { isDryRun: true } })
       ).toThrow(/Zip doesn't exist/);
     });
   });

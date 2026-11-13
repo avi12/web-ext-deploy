@@ -21,7 +21,7 @@ function stringifyParams(params: Record<string, string | number>) {
 
 const REQUEST_TIMEOUT_MS = 120_000;
 
-async function fetchResponse(url: string, options: RequestInit) {
+async function fetchResponse({ url, options }: { url: string; options: RequestInit }) {
   const controller = new AbortController();
   const timeoutId = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -47,12 +47,20 @@ async function fetchResponse(url: string, options: RequestInit) {
 }
 
 export function createHttpClient(baseURL: string, defaultHeaders: Record<string, string> = {}) {
-  function buildUrl(endpoint: string, params?: Record<string, string | number>) {
+  function buildUrl({ endpoint, params }: { endpoint: string; params?: Record<string, string | number> }) {
     const base = `${baseURL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`;
     return params ? `${base}?${stringifyParams(params)}` : base;
   }
 
-  function request(method: "GET" | "POST" | "PATCH", endpoint: string, options: FetchOptions = {}) {
+  function request({
+    method,
+    endpoint,
+    options = {}
+  }: {
+    method: "GET" | "POST" | "PATCH";
+    endpoint: string;
+    options?: FetchOptions;
+  }) {
     const fetchOptions: RequestInit = {
       method,
       headers: {
@@ -64,7 +72,7 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
       })
     };
 
-    return fetchResponse(buildUrl(endpoint, options.params), fetchOptions);
+    return fetchResponse({ url: buildUrl({ endpoint, params: options.params }), options: fetchOptions });
   }
 
   return {
@@ -73,38 +81,49 @@ export function createHttpClient(baseURL: string, defaultHeaders: Record<string,
         // new ReadableStream(underlyingSource) is typed as ReadableStream<any>, which is
         // part of BodyInit — no type assertion needed. duplex: "half" tells fetch to keep
         // the connection open for sending while waiting for the response.
-        return fetchResponse(buildUrl(endpoint), {
-          method: "POST",
-          headers: {
-            ...defaultHeaders,
-            ...options.headers
-          },
-          body: new ReadableStream({
-            start(controller) {
-              body.on("data", chunk => controller.enqueue(chunk));
-              body.on("end", () => controller.close());
-              body.on("error", error => controller.error(error));
+        return fetchResponse({
+          url: buildUrl({ endpoint }),
+          options: {
+            method: "POST",
+            headers: {
+              ...defaultHeaders,
+              ...options.headers
             },
-            cancel() {
-              body.destroy();
-            }
-          }),
-          duplex: "half"
+            body: new ReadableStream({
+              start(controller) {
+                body.on("data", chunk => controller.enqueue(chunk));
+                body.on("end", () => controller.close());
+                body.on("error", error => controller.error(error));
+              },
+              cancel() {
+                body.destroy();
+              }
+            }),
+            duplex: "half"
+          }
         });
       }
 
-      return request("POST", endpoint, {
-        ...options,
-        body
+      return request({
+        method: "POST",
+        endpoint,
+        options: {
+          ...options,
+          body
+        }
       });
     },
     get(endpoint: string, options: FetchOptions = {}) {
-      return request("GET", endpoint, options);
+      return request({ method: "GET", endpoint, options });
     },
     patch(endpoint: string, body?: BodyInit, options: FetchOptions = {}) {
-      return request("PATCH", endpoint, {
-        ...options,
-        body
+      return request({
+        method: "PATCH",
+        endpoint,
+        options: {
+          ...options,
+          body
+        }
       });
     }
   };

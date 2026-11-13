@@ -13,10 +13,10 @@ const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", 
 const RENDER_INTERVAL_MS = 80;
 
 enum LogLevel {
-  Info = "info",
-  Success = "success",
-  Warning = "warning",
-  Error = "error"
+  INFO = "info",
+  SUCCESS = "success",
+  WARNING = "warning",
+  ERROR = "error"
 }
 
 type LogSource = StoreName | "System";
@@ -29,30 +29,30 @@ export interface LogEntry {
 }
 
 const statusIcons = {
-  pending: "○",
-  success: "✔",
-  error: "✖"
+  [StoreStatus.PENDING]: "○",
+  [StoreStatus.SUCCESS]: "✔",
+  [StoreStatus.ERROR]: "✖"
 } as const;
 
 const statusColors = {
-  pending: "blue",
-  running: "cyan",
-  success: "green",
-  error: "red"
+  [StoreStatus.PENDING]: "blue",
+  [StoreStatus.RUNNING]: "cyan",
+  [StoreStatus.SUCCESS]: "green",
+  [StoreStatus.ERROR]: "red"
 } as const;
 
 const deployStatusTexts = {
-  pending: "Waiting...",
-  running: "Deploying...",
-  success: "Published!",
-  error: "Failed"
+  [StoreStatus.PENDING]: "Waiting...",
+  [StoreStatus.RUNNING]: "Deploying...",
+  [StoreStatus.SUCCESS]: "Published!",
+  [StoreStatus.ERROR]: "Failed"
 } as const;
 
 const dryRunStatusTexts = {
-  pending: "Waiting...",
-  running: "Validating...",
-  success: "Valid",
-  error: "Invalid"
+  [StoreStatus.PENDING]: "Waiting...",
+  [StoreStatus.RUNNING]: "Validating...",
+  [StoreStatus.SUCCESS]: "Valid",
+  [StoreStatus.ERROR]: "Invalid"
 } as const;
 
 function stripAnsi(str: string) {
@@ -78,7 +78,7 @@ interface WrapAccumulator {
 }
 
 // An over-long word (e.g. a URL) is kept whole on its own line rather than split.
-function flushLongWord(accumulator: WrapAccumulator, word: string) {
+function flushLongWord({ accumulator, word }: { accumulator: WrapAccumulator; word: string }) {
   if (accumulator.current) {
     accumulator.lines.push(accumulator.current);
   }
@@ -87,9 +87,9 @@ function flushLongWord(accumulator: WrapAccumulator, word: string) {
   accumulator.current = "";
 }
 
-function placeWord(accumulator: WrapAccumulator, word: string, width: number) {
+function placeWord({ accumulator, word, width }: { accumulator: WrapAccumulator; word: string; width: number }) {
   if (word.length > width) {
-    flushLongWord(accumulator, word);
+    flushLongWord({ accumulator, word });
     return;
   }
 
@@ -109,13 +109,13 @@ function placeWord(accumulator: WrapAccumulator, word: string, width: number) {
 
 // Word-wrap to `width`, keeping any single over-long word (e.g. a URL) intact on its
 // own line rather than splitting it, even if that line overflows `width`.
-function wrapText(text: string, width: number) {
+function wrapText({ text, width }: { text: string; width: number }) {
   const accumulator: WrapAccumulator = {
     lines: [],
     current: ""
   };
   for (const word of text.split(/\s+/).filter(Boolean)) {
-    placeWord(accumulator, word, width);
+    placeWord({ accumulator, word, width });
   }
 
   if (accumulator.current) {
@@ -171,7 +171,7 @@ function HelpTable({ data }: { data: HelpTableData }) {
       {fields.map(field => {
         const namePad = " ".repeat(Math.max(0, nameWidth - field.name.length));
         const requiredPad = " ".repeat(field.isRequired ? requiredWidth - 1 : requiredWidth);
-        const [firstLine = "", ...continuationLines] = wrapText(field.description, descriptionWidth);
+        const [firstLine = "", ...continuationLines] = wrapText({ text: field.description, width: descriptionWidth });
         return (
           <React.Fragment key={field.name}>
             <Text>
@@ -217,14 +217,21 @@ export function unwrapZodType(zodValue: z.ZodTypeAny) {
   };
 }
 
-export function buildHelpTableData(
-  storeName: StoreName,
-  schema: z.ZodType,
-  mode?: "cli" | "env",
-  missingFields?: string[],
-  dynamicFields?: string[],
-  cliOverridableFields?: string[]
-) {
+export function buildHelpTableData({
+  storeName,
+  schema,
+  mode,
+  missingFields,
+  dynamicFields,
+  cliOverridableFields
+}: {
+  storeName: StoreName;
+  schema: z.ZodType;
+  mode?: "cli" | "env";
+  missingFields?: string[];
+  dynamicFields?: string[];
+  cliOverridableFields?: string[];
+}) {
   if (!(schema instanceof z.ZodObject)) {
     return null;
   }
@@ -285,7 +292,15 @@ export function buildHelpTableData(
   };
 }
 
-export function buildGlobalHelpTableData(schema: z.ZodType, missingArgs: string[], mode?: "cli" | "env") {
+export function buildGlobalHelpTableData({
+  schema,
+  missingArgs,
+  mode
+}: {
+  schema: z.ZodType;
+  missingArgs: string[];
+  mode?: "cli" | "env";
+}) {
   const hasNoArgs = missingArgs.length === 0;
   const isNotObjectSchema = !(schema instanceof z.ZodObject);
   if (hasNoArgs || isNotObjectSchema) {
@@ -449,7 +464,7 @@ export async function renderApplicationError(error: Error) {
 export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
   const sharedStatuses: Partial<Record<StoreName, StoreStatus>> = {};
   for (const store of storeNames) {
-    sharedStatuses[store] = StoreStatus.Pending;
+    sharedStatuses[store] = StoreStatus.PENDING;
   }
   const sharedEntries: LogEntry[] = [];
   const sharedExtensionNames: Partial<Record<StoreName, string>> = {};
@@ -483,10 +498,10 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
       return () => clearInterval(interval);
     }, []);
 
-    const successCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Success).length;
-    const errorCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Error).length;
-    const runningCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Running).length;
-    const pendingCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.Pending).length;
+    const successCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.SUCCESS).length;
+    const errorCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.ERROR).length;
+    const runningCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.RUNNING).length;
+    const pendingCount = Object.values(sharedStatuses).filter(status => status === StoreStatus.PENDING).length;
     const completedCount = successCount + errorCount;
     const totalCount = storeNames.length;
 
@@ -503,28 +518,28 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
     if (successCount > 0) {
       summaryParts.push({
         text: `✔ ${successCount} succeeded`,
-        color: statusColors.success
+        color: statusColors[StoreStatus.SUCCESS]
       });
     }
 
     if (errorCount > 0) {
       summaryParts.push({
         text: `✖ ${errorCount} failed`,
-        color: statusColors.error
+        color: statusColors[StoreStatus.ERROR]
       });
     }
 
     if (runningCount > 0) {
       summaryParts.push({
         text: `${SPINNER_FRAMES[spinnerFrame]} ${runningCount} ${isDryRun ? "validating" : "deploying"}`,
-        color: statusColors.running
+        color: statusColors[StoreStatus.RUNNING]
       });
     }
 
     if (pendingCount > 0) {
       summaryParts.push({
         text: `○ ${pendingCount} waiting`,
-        color: statusColors.pending
+        color: statusColors[StoreStatus.PENDING]
       });
     }
 
@@ -537,16 +552,16 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
         </Text>
         <Newline />
         {storeNames.map(store => {
-          const status = sharedStatuses[store] ?? StoreStatus.Pending;
-          const icon = status === StoreStatus.Running ? SPINNER_FRAMES[spinnerFrame] : (statusIcons[status] ?? "?");
+          const status = sharedStatuses[store] ?? StoreStatus.PENDING;
+          const icon = status === StoreStatus.RUNNING ? SPINNER_FRAMES[spinnerFrame] : (statusIcons[status] ?? "?");
           const storeEntries = sharedEntries.filter(entry => entry.store === store);
           const latestEntry = storeEntries[storeEntries.length - 1];
-          const firstErrorEntry = storeEntries.find(entry => entry.level === LogLevel.Error);
+          const firstErrorEntry = storeEntries.find(entry => entry.level === LogLevel.ERROR);
           const defaultStatusText = isDryRun ? dryRunStatusTexts[status] : deployStatusTexts[status];
           let statusText: string = defaultStatusText;
-          if (status === StoreStatus.Running && latestEntry) {
+          if (status === StoreStatus.RUNNING && latestEntry) {
             statusText = stripAnsi(latestEntry.message).split("\n")[0];
-          } else if (status === StoreStatus.Error && firstErrorEntry) {
+          } else if (status === StoreStatus.ERROR && firstErrorEntry) {
             statusText = stripAnsi(firstErrorEntry.message).split("\n")[0];
           }
 
@@ -587,14 +602,14 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
 
   const inkInstance = render(<DeployUI />);
 
-  function addLogEntry(entry: LogEntry, overrideStatus?: StoreStatus) {
+  function addLogEntry({ entry, overrideStatus }: { entry: LogEntry; overrideStatus?: StoreStatus }) {
     sharedEntries.push(entry);
 
     if (entry.store !== "System") {
       if (overrideStatus !== undefined) {
         sharedStatuses[entry.store] = overrideStatus;
-      } else if (sharedStatuses[entry.store] === StoreStatus.Pending) {
-        sharedStatuses[entry.store] = StoreStatus.Running;
+      } else if (sharedStatuses[entry.store] === StoreStatus.PENDING) {
+        sharedStatuses[entry.store] = StoreStatus.RUNNING;
       }
     }
 
@@ -604,38 +619,44 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
   const logger = {
     info(store: LogSource, message: string) {
       addLogEntry({
-        store,
-        level: LogLevel.Info,
-        message,
-        timestamp: new Date()
+        entry: {
+          store,
+          level: LogLevel.INFO,
+          message,
+          timestamp: new Date()
+        }
       });
     },
     success(store: LogSource, message: string) {
       addLogEntry({
-        store,
-        level: LogLevel.Success,
-        message,
-        timestamp: new Date()
+        entry: {
+          store,
+          level: LogLevel.SUCCESS,
+          message,
+          timestamp: new Date()
+        }
       });
     },
     warning(store: LogSource, message: string) {
       addLogEntry({
-        store,
-        level: LogLevel.Warning,
-        message,
-        timestamp: new Date()
+        entry: {
+          store,
+          level: LogLevel.WARNING,
+          message,
+          timestamp: new Date()
+        }
       });
     },
     error(store: LogSource, message: string) {
-      addLogEntry(
-        {
+      addLogEntry({
+        entry: {
           store,
-          level: LogLevel.Error,
+          level: LogLevel.ERROR,
           message,
           timestamp: new Date()
         },
-        StoreStatus.Error
-      );
+        overrideStatus: StoreStatus.ERROR
+      });
     }
   };
 
@@ -650,7 +671,7 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
       if (message) {
         sharedEntries.push({
           store,
-          level: status === StoreStatus.Error ? LogLevel.Error : LogLevel.Info,
+          level: status === StoreStatus.ERROR ? LogLevel.ERROR : LogLevel.INFO,
           message,
           timestamp: new Date()
         });
@@ -680,12 +701,12 @@ export function createInkLogger(storeNames: StoreName[], isDryRun?: boolean) {
         async countdown(seconds, getMessage) {
           const entry: LogEntry = {
             store,
-            level: LogLevel.Warning,
+            level: LogLevel.WARNING,
             message: getMessage(seconds),
             timestamp: new Date()
           };
-          if (sharedStatuses[store] === StoreStatus.Pending) {
-            sharedStatuses[store] = StoreStatus.Running;
+          if (sharedStatuses[store] === StoreStatus.PENDING) {
+            sharedStatuses[store] = StoreStatus.RUNNING;
           }
 
           sharedEntries.push(entry);

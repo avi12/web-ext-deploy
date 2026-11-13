@@ -32,7 +32,7 @@ export function createGitIgnoreIfNeeded(stores: StoreName[]) {
   }
 }
 
-export function mapStoreArgs(rawArgs: Record<string, unknown>, store: string) {
+export function mapStoreArgs({ rawArgs, store }: { rawArgs: Record<string, unknown>; store: string }) {
   const prefix = `${store}-`;
   return Object.fromEntries(
     Object.entries(rawArgs)

@@ -1,10 +1,10 @@
 import type { z } from "zod";
 
 export enum StoreStatus {
-  Pending = "pending",
-  Running = "running",
-  Success = "success",
-  Error = "error"
+  PENDING = "pending",
+  RUNNING = "running",
+  SUCCESS = "success",
+  ERROR = "error"
 }
 
 export interface StoreLogger {
@@ -24,10 +24,10 @@ export interface DeployContext {
 }
 
 export enum StoreName {
-  Chrome = "chrome",
-  Firefox = "firefox",
-  Edge = "edge",
-  Opera = "opera"
+  CHROME = "chrome",
+  FIREFOX = "firefox",
+  EDGE = "edge",
+  OPERA = "opera"
 }
 
 // Parsed CLI arguments. `_` holds positionals (`_[0]` is the command); every

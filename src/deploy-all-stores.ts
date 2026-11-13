@@ -7,14 +7,21 @@ import { type Arguments, type StoreName, StoreStatus } from "./types.js";
 import { createInkLogger, createPreDeployUI, type HelpTableData } from "./ui/ink-logger.js";
 import { toError } from "./utils/retry.js";
 
-async function runStoreDeploy(
-  store: StoreName,
-  json: Record<string, unknown>,
-  inkLogger: ReturnType<typeof createInkLogger>,
-  isDryRun?: boolean,
-  isAutoFetchCredentials?: boolean,
-  mode?: "cli" | "env"
-): Promise<{
+async function runStoreDeploy({
+  store,
+  json,
+  inkLogger,
+  isDryRun,
+  isAutoFetchCredentials,
+  mode
+}: {
+  store: StoreName;
+  json: Record<string, unknown>;
+  inkLogger: ReturnType<typeof createInkLogger>;
+  isDryRun?: boolean;
+  isAutoFetchCredentials?: boolean;
+  mode?: "cli" | "env";
+}): Promise<{
   store: StoreName;
   helpTables: HelpTableData[];
 } | null> {
@@ -28,23 +35,27 @@ async function runStoreDeploy(
       : undefined;
 
   try {
-    await deployStore(json, store, {
-      logger: inkLogger.forStore(store),
-      onCredentialsExpired,
-      isDryRun,
-      mode,
-      setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
-      setExtensionName: name => inkLogger.monitor.setExtensionName(store, name)
+    await deployStore({
+      options: json,
+      storeName: store,
+      context: {
+        logger: inkLogger.forStore(store),
+        onCredentialsExpired,
+        isDryRun,
+        mode,
+        setStatus: (status, message) => inkLogger.monitor.updateStore(store, status, message),
+        setExtensionName: name => inkLogger.monitor.setExtensionName(store, name)
+      }
     });
     inkLogger.logger.success(store, isDryRun ? "Validation passed" : "Published!");
-    inkLogger.monitor.updateStore(store, StoreStatus.Success);
+    inkLogger.monitor.updateStore(store, StoreStatus.SUCCESS);
     return null;
   } catch (error) {
     const err = toError(error);
     for (const line of err.message.split("\n").filter(line => line.trim())) {
       inkLogger.logger.error(store, line);
     }
-    inkLogger.monitor.updateStore(store, StoreStatus.Error);
+    inkLogger.monitor.updateStore(store, StoreStatus.ERROR);
     const helpTables = error instanceof StoreValidationError ? error.helpTables : [];
     return {
       store,
@@ -58,10 +69,10 @@ export async function runDeploy(argv: Arguments) {
   const preDeployUI = createPreDeployUI();
   let storeJsons;
   try {
-    storeJsons = await getJsonStoresFromCli(argv, message => {
-      preDeployUI.log(message);
-      preDeployLogs.push(message);
-    });
+    storeJsons = await getJsonStoresFromCli({ argv, log: message => {
+              preDeployUI.log(message);
+              preDeployLogs.push(message);
+            } });
   } catch (error) {
     preDeployUI.unmount();
     throw error;
@@ -95,7 +106,9 @@ export async function runDeploy(argv: Arguments) {
   const isAutoFetchCredentials = z.boolean().safeParse(argv.autoFetchCredentials).data;
 
   const results = await Promise.all(
-    storeEntries.map(([store, json]) => runStoreDeploy(store, json, inkLogger, isDryRun, isAutoFetchCredentials, mode))
+    storeEntries.map(([store, json]) =>
+      runStoreDeploy({ store, json, inkLogger, isDryRun, isAutoFetchCredentials, mode })
+    )
   );
 
   const failures: StoreName[] = [];

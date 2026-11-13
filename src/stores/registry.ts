@@ -13,10 +13,10 @@ export const storeRegistry = [chrome, firefox, edge, opera] as const;
 export const storeNames: StoreName[] = storeRegistry.map(store => store.name);
 
 const storeDisplayNames: Record<StoreName, string> = {
-  [StoreName.Chrome]: "Chrome Web Store",
-  [StoreName.Firefox]: "Firefox Add-ons Store",
-  [StoreName.Edge]: "Microsoft Partner Center",
-  [StoreName.Opera]: "Opera Add-ons Store"
+  [StoreName.CHROME]: "Chrome Web Store",
+  [StoreName.FIREFOX]: "Firefox Add-ons Store",
+  [StoreName.EDGE]: "Microsoft Partner Center",
+  [StoreName.OPERA]: "Opera Add-ons Store"
 };
 
 export function getStoreDisplayName(name: StoreName) {
