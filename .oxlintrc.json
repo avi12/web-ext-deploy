@@ -1,5 +1,30 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./node_modules/oxlint-config-avi12/oxlint.json", "./node_modules/oxlint-plugin-naming/preset.json"],
+  "rules": {
+    "id-length": [
+      "error",
+      { "min": 3, "exceptions": ["_", "i", "j", "x", "y", "id", "to", "on", "ok", "T", "z", "fs", "os"], "properties": "never" }
+    ],
+    "naming/convention": [
+      "error",
+      {
+        "allowedNames": [
+          {
+            "reason": "Ink renders React components, which are PascalCase functions",
+            "names": ["StatusLine", "App", "HelpTable", "PreDeployUI", "HelpTablesUI", "ErrorUI", "DeployUI"]
+          },
+          { "reason": "Node's ESM replacement for the CommonJS global", "names": ["__dirname"] }
+        ],
+        "allowedPatterns": [
+          {
+            "reason": "The store HTTP APIs (OAuth, AMO, Edge, Opera) and extension manifests spell fields in snake_case",
+            "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)+$"
+          },
+          { "reason": "Option bags keyed by the yargs-style positional array", "pattern": "^_$" }
+        ]
+      }
+    ]
+  },
   "ignorePatterns": ["node_modules/**", "dist/**", "dist-ext/**", "tests/fixtures/**"]
 }
