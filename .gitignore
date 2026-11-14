@@ -7,7 +7,7 @@ dist-ext/
 *.env
 .DS_Store
 .idea/
-dist-pack-ext
+dist-pack-ext/
 .ralph/
 .gemini/
 .copilot/
