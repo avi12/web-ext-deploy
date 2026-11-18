@@ -1,5 +1,7 @@
 # WebExt Deploy
 
+[![npm monthly downloads](https://img.shields.io/npm/dm/web-ext-deploy?label=users%20%28monthly%20downloads%29)](https://www.npmjs.com/package/web-ext-deploy)
+
 The ultimate automation tool for deploying to multiple extension stores simultaneously!
 
 Made by [Avi](https://avi12.com)
