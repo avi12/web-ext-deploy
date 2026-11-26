@@ -34,7 +34,7 @@ Supported stores:
 ```shell
 npm i -D web-ext-deploy
 # or
-pnpm i -D web-ext-deploy
+bun install -D web-ext-deploy
 # or
 bun add -D web-ext-deploy
 ```
@@ -44,7 +44,7 @@ or install globally
 ```shell
 npm i -g web-ext-deploy
 # or
-pnpm i -g web-ext-deploy
+bun install -g web-ext-deploy
 # or
 bun add -g web-ext-deploy
 ```
