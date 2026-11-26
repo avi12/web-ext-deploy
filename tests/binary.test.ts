@@ -14,7 +14,7 @@ const EMPTY_DIR = mkdtempSync(path.join(os.tmpdir(), "web-ext-deploy-test-"));
 
 beforeAll(() => {
   if (!existsSync(BINARY)) {
-    execSync("pnpm build", {
+    execSync("bun run build", {
       cwd: ROOT,
       stdio: "ignore"
     });

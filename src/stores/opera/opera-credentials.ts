@@ -70,7 +70,7 @@ function saveToEnvFile(cookiesRaw: string) {
 }
 
 // Installs Chromium through the bundled Playwright CLI directly, so the matching browser build is
-// fetched regardless of which package manager (npx/pnpm/yarn) the environment's install hint names.
+// fetched regardless of which package manager (npx/bunx/yarn) the environment's install hint names.
 function installChromium() {
   const require = createRequire(import.meta.url);
   const playwrightCli = path.join(path.dirname(require.resolve("playwright/package.json")), "cli.js");
