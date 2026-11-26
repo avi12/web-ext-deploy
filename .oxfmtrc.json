@@ -23,7 +23,7 @@
     "**/.claude/**",
     "**/_locales/**",
     "**/locales/**",
-    "**/pnpm-lock.yaml",
+    "**/bun.lock",
     "**/package-lock.json",
     "**/yarn.lock",
     "**/bun.lock",

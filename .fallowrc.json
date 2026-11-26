@@ -1,12 +1,11 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
-  "extends": ["./node_modules/fallow-config-avi12/fallow.json"],
+  "extends": ["./node_modules/lint-config/packages/fallow-config/fallow.json"],
   "ignoreDependencies": [
-    "avi12-lint",
-    "fallow-config-avi12",
-    "oxlint-config-avi12",
-    "oxlint-plugin-naming",
-    "oxfmt-config-avi12",
-    "tsc-alias"
+    "tsc-alias",
+    "lint-config",
+    "stylelint-config-ccb",
+    "typescript-eslint",
+    "globals"
   ]
 }
