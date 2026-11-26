@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["./node_modules/lint-config/packages/oxlint-config/oxlint.json", "./node_modules/lint-config/packages/oxlint-plugin-naming/preset.json"],
+  "extends": [
+    "./node_modules/lint-config/packages/oxlint-config/oxlint.json",
+    "./node_modules/lint-config/packages/oxlint-plugin-naming/preset.json"
+  ],
   "rules": {
     "id-length": [
       "error",

@@ -1,11 +1,5 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
   "extends": ["./node_modules/lint-config/packages/fallow-config/fallow.json"],
-  "ignoreDependencies": [
-    "tsc-alias",
-    "lint-config",
-    "stylelint-config-ccb",
-    "typescript-eslint",
-    "globals"
-  ]
+  "ignoreDependencies": ["tsc-alias", "lint-config", "stylelint-config-ccb", "typescript-eslint", "globals"]
 }
