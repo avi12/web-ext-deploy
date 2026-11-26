@@ -6,7 +6,7 @@ import { buildGlobalHelpTableData, buildHelpTableData, MissingArgsError, NoStore
 import { camelCase } from "./utils/case-conversion.js";
 import { config } from "./utils/dotenv.js";
 import { isObjectEmpty, mapStoreArgs } from "./utils/helpers.js";
-import { isZodOptional, zodObjectEntries } from "./utils/zod.js";
+import { isZodObject, isZodOptional, zodObjectEntries } from "./utils/zod.js";
 
 export const BaseOptionsSchema = z.object({
   autoFetchCredentials: z
@@ -205,7 +205,7 @@ function collectMissingArgs({
       continue;
     }
 
-    if (!(store.schema instanceof z.ZodObject)) {
+    if (!isZodObject(store.schema)) {
       continue;
     }
 

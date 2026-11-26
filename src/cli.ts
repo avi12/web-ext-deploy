@@ -11,9 +11,12 @@ import type { Arguments, StoreName } from "./types.js";
 import { buildHelpTableData, renderApplicationError, renderHelpTables, unwrapZodType } from "./ui/ink-logger.js";
 import { camelCase, kebabCase } from "./utils/case-conversion.js";
 import { toError } from "./utils/retry.js";
-import { getZodBaseType, isZodOptional, unwrapZod, zodObjectEntries } from "./utils/zod.js";
+import { createGuard } from "./utils/zod-guard.js";
+import { getZodBaseType, isZodObject, isZodOptional, unwrapZod, zodObjectEntries } from "./utils/zod.js";
 
-type Command = "cli" | "env";
+const CommandSchema = z.enum(["cli", "env"]);
+const isKnownCommand = createGuard(CommandSchema);
+type Command = z.infer<typeof CommandSchema>;
 type CliOptionType = "boolean" | "number" | "string" | "array";
 type CliOptionSpecs = Record<string, CliOptionType>;
 
@@ -134,7 +137,7 @@ function isChangelogField(fieldName: string) {
 }
 
 const changelogFlagNames = storeRegistry.flatMap(store =>
-  Object.keys(store.schema instanceof z.ZodObject ? store.schema.shape : {})
+  Object.keys(isZodObject(store.schema) ? store.schema.shape : {})
     .filter(isChangelogField)
     .map(
       field =>
@@ -321,10 +324,6 @@ async function handleDeploy(argv: Arguments) {
 
 function isHelpFlag(token: string) {
   return token === "--help" || token === "-h";
-}
-
-function isKnownCommand(value: string): value is Command {
-  return value === "cli" || value === "env";
 }
 
 function unknownCommandMessage(command: string) {

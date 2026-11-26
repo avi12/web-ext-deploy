@@ -1,15 +1,29 @@
 import { z } from "zod";
 
+import { createGuard } from "./zod-guard.js";
+
+export const isZodObject = createGuard(z.instanceof(z.ZodObject));
+const isZodType = createGuard(z.instanceof(z.ZodType));
+const isZodBoolean = createGuard(z.instanceof(z.ZodBoolean));
+const isZodNumber = createGuard(z.instanceof(z.ZodNumber));
+const isZodArray = createGuard(z.instanceof(z.ZodArray));
+const isZodDefault = createGuard(z.instanceof(z.ZodDefault));
+const isZodPipe = createGuard(z.instanceof(z.ZodPipe));
+/** A wrapper that lets the value be left out */
+const isZodOmittable = createGuard(
+  z.union([z.instanceof(z.ZodDefault), z.instanceof(z.ZodOptional), z.instanceof(z.ZodNullable)])
+);
+
 export function getZodBaseType(value: unknown) {
-  if (value instanceof z.ZodBoolean) {
+  if (isZodBoolean(value)) {
     return "boolean";
   }
 
-  if (value instanceof z.ZodNumber) {
+  if (isZodNumber(value)) {
     return "number";
   }
 
-  if (value instanceof z.ZodArray) {
+  if (isZodArray(value)) {
     return "array";
   }
 
@@ -18,31 +32,34 @@ export function getZodBaseType(value: unknown) {
 
 export function unwrapZod(value: unknown) {
   let current = value;
-  while (
-    current instanceof z.ZodDefault ||
-    current instanceof z.ZodOptional ||
-    current instanceof z.ZodNullable ||
-    current instanceof z.ZodPipe
-  ) {
-    current = current instanceof z.ZodPipe ? current.in : current.unwrap();
+  while (true) {
+    if (isZodPipe(current)) {
+      current = current.in;
+      continue;
+    }
+
+    if (isZodOmittable(current)) {
+      current = current.unwrap();
+      continue;
+    }
+
+    return current;
   }
-  return current;
 }
 
 export function getZodDefaultValue(value: unknown) {
   let current = value;
   while (true) {
-    if (current instanceof z.ZodDefault) {
-      const defaultValue = current.def.defaultValue;
-      return typeof defaultValue === "function" ? defaultValue() : defaultValue;
+    if (isZodDefault(current)) {
+      return current.def.defaultValue;
     }
 
-    if (current instanceof z.ZodOptional || current instanceof z.ZodNullable) {
+    if (isZodOmittable(current)) {
       current = current.unwrap();
       continue;
     }
 
-    if (current instanceof z.ZodPipe) {
+    if (isZodPipe(current)) {
       current = current.in;
       continue;
     }
@@ -54,12 +71,12 @@ export function getZodDefaultValue(value: unknown) {
 export function getZodDescription(value: unknown) {
   let current = value;
   while (true) {
-    if (current instanceof z.ZodPipe) {
+    if (isZodPipe(current)) {
       current = current.in;
       continue;
     }
 
-    if (current instanceof z.ZodOptional || current instanceof z.ZodNullable || current instanceof z.ZodDefault) {
+    if (isZodOmittable(current)) {
       if (current.description) {
         return current.description;
       }
@@ -68,7 +85,7 @@ export function getZodDescription(value: unknown) {
       continue;
     }
 
-    if (current instanceof z.ZodType) {
+    if (isZodType(current)) {
       return current.description ?? "";
     }
 
@@ -86,13 +103,11 @@ export function zodObjectEntries<T extends z.ZodObject<z.ZodRawShape>>(schema: T
 }
 
 export function isZodOptional(value: unknown) {
-  const isWrappedOptional =
-    value instanceof z.ZodOptional || value instanceof z.ZodNullable || value instanceof z.ZodDefault;
-  if (isWrappedOptional) {
+  if (isZodOmittable(value)) {
     return true;
   }
 
-  if (value instanceof z.ZodPipe) {
+  if (isZodPipe(value)) {
     return isZodOptional(value.in);
   }
 

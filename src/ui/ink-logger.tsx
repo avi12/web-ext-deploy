@@ -7,7 +7,15 @@ import { z } from "zod";
 import { getStoreDisplayName } from "@/stores/registry.js";
 import { type StoreLogger, type StoreName, StoreStatus } from "@/types.js";
 import { kebabCase, screamingSnakeCase } from "@/utils/case-conversion.js";
-import { getZodBaseType, getZodDefaultValue, getZodDescription, isZodOptional, unwrapZod } from "@/utils/zod.js";
+import { createGuard } from "@/utils/zod-guard.js";
+import {
+  getZodBaseType,
+  getZodDefaultValue,
+  getZodDescription,
+  isZodObject,
+  isZodOptional,
+  unwrapZod
+} from "@/utils/zod.js";
 
 const HELP_TABLE_RULE_PADDING = 20;
 const ESCAPE_CODE = 27;
@@ -153,6 +161,8 @@ export class NoStoresError extends Error {
   }
 }
 
+const isHelpableError = createGuard(z.union([z.instanceof(MissingArgsError), z.instanceof(NoStoresError)]));
+
 function HelpTable({ data }: { data: HelpTableData }) {
   const { title, fields } = data;
   if (fields.length === 0) {
@@ -248,7 +258,7 @@ export function buildHelpTableData({
   dynamicFields?: string[];
   cliOverridableFields?: string[];
 }) {
-  if (!(schema instanceof z.ZodObject)) {
+  if (!isZodObject(schema)) {
     return null;
   }
 
@@ -318,7 +328,7 @@ export function buildGlobalHelpTableData({
   mode?: "cli" | "env";
 }) {
   const hasNoArgs = missingArgs.length === 0;
-  const isNotObjectSchema = !(schema instanceof z.ZodObject);
+  const isNotObjectSchema = !isZodObject(schema);
   if (hasNoArgs || isNotObjectSchema) {
     return null;
   }
@@ -449,8 +459,7 @@ export async function renderApplicationError(error: Error) {
       resolveRendered();
     }, []);
 
-    const isHelpableError = error instanceof MissingArgsError || error instanceof NoStoresError;
-    if (isHelpableError) {
+    if (isHelpableError(error)) {
       return (
         <Box flexDirection="column">
           <Text>
