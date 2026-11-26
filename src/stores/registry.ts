@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { StoreName } from "@/types.js";
+import { createGuard } from "@/utils/zod-guard.js";
 
 import { chrome } from "./chrome/index.js";
 import { edge } from "./edge/index.js";
@@ -27,7 +28,4 @@ export function getStore(name: StoreName) {
   return storeRegistry.find(store => store.name === name);
 }
 
-export function isSupportedStore(value: unknown): value is StoreName {
-  const result = z.string().safeParse(value);
-  return result.success && storeNames.some(name => name === result.data);
-}
+export const isSupportedStore = createGuard(z.enum(StoreName));
