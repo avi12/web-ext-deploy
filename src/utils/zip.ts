@@ -5,6 +5,8 @@ import path from "node:path";
 import { inflateSync } from "fflate";
 import { z } from "zod";
 
+import { toError } from "./retry.js";
+
 const EOCD_CENTRAL_DIRECTORY_SIZE_OFFSET = 12;
 const EOCD_CENTRAL_DIRECTORY_START_OFFSET = 16;
 const CENTRAL_ENTRY_COMPRESSION_METHOD_OFFSET = 10;
@@ -16,6 +18,8 @@ const ExtensionManifestSchema = z.object({
   version: z.string(),
   default_locale: z.string().optional()
 });
+
+const PackageJsonSchema = z.object({ version: z.string().default("") });
 
 // ZIP record signatures and fixed header sizes (see APPNOTE.TXT).
 const END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054b50;
@@ -164,7 +168,7 @@ export function getCorrectZip(zipName: string) {
     return zipName;
   }
 
-  const { version = "" } = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  const { version } = PackageJsonSchema.parse(JSON.parse(fs.readFileSync(packageJsonPath, "utf8")));
   return zipName.replace("{version}", version);
 }
 
@@ -209,7 +213,7 @@ export async function getExtJson(zip: string) {
     try {
       parsed = JSON.parse(manifestContent);
     } catch (error) {
-      throw new Error(`Failed to parse manifest.json: ${error instanceof Error ? error.message : String(error)}`, {
+      throw new Error(`Failed to parse manifest.json: ${toError(error).message}`, {
         cause: error
       });
     }

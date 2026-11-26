@@ -1,5 +1,7 @@
 import fs from "node:fs";
 
+import { isReadStream } from "@/utils/guards.js";
+
 type FormDataValue = string | Buffer | fs.ReadStream;
 
 interface FormDataEntry {
@@ -14,7 +16,7 @@ function readValue(value: FormDataValue) {
     return value;
   }
 
-  if (value instanceof fs.ReadStream) {
+  if (isReadStream(value)) {
     try {
       return fs.readFileSync(value.path);
     } finally {

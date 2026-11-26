@@ -1,4 +1,6 @@
-import { ReadStream } from "node:fs";
+import type { ReadStream } from "node:fs";
+
+import { isReadStream } from "@/utils/guards.js";
 
 // duplex: "half" is required by the Fetch spec for streaming request bodies
 // (the connection stays half-open while the server reads and responds).
@@ -89,7 +91,7 @@ export function createHttpClient({
 
   return {
     post(endpoint: string, body?: BodyInit | ReadStream, options: FetchOptions = {}) {
-      if (body instanceof ReadStream) {
+      if (isReadStream(body)) {
         // new ReadableStream(underlyingSource) is typed as ReadableStream<any>, which is
         // part of BodyInit - no type assertion needed. duplex: "half" tells fetch to keep
         // the connection open for sending while waiting for the response.

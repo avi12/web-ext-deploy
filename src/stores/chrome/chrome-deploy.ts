@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createHttpClient } from "@/http/client.js";
 import { type DeployContext, StoreStatus } from "@/types.js";
 import { storeError } from "@/ui/logging.js";
+import { isString } from "@/utils/guards.js";
 import { createRateLimitHandler, type RateLimitHandler, requestWithRetry } from "@/utils/retry.js";
 import { getExtJson } from "@/utils/zip.js";
 
@@ -21,10 +22,6 @@ import {
 const ERROR_DETAIL_MAX_LENGTH = 200;
 const CANCEL_SETTLE_DELAY_MS = 60_000;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
 // https://developers.google.com/identity/protocols/oauth2/web-server#refreshing-an-expired-access-token
 interface RefreshTokenRequest {
   client_id: string;
@@ -36,6 +33,12 @@ interface RefreshTokenRequest {
 const AccessTokenResponseSchema = z.object({
   access_token: z.string(),
   token_type: z.literal("Bearer")
+});
+
+const TokenErrorBodySchema = z.object({
+  error_description: z.unknown(),
+  error: z.unknown(),
+  message: z.unknown()
 });
 
 async function exchangeRefreshTokenForAccessToken({
@@ -70,9 +73,10 @@ async function exchangeRefreshTokenForAccessToken({
 
   if (!response.ok) {
     let detail = "";
-    if (isRecord(parsedBody)) {
-      const message = parsedBody.error_description ?? parsedBody.error ?? parsedBody.message;
-      if (typeof message === "string") {
+    const errorBody = TokenErrorBodySchema.safeParse(parsedBody).data;
+    if (errorBody) {
+      const message = errorBody.error_description ?? errorBody.error ?? errorBody.message;
+      if (isString(message)) {
         detail = `: ${message}`;
       }
     } else if (rawBody) {

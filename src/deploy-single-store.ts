@@ -1,7 +1,11 @@
+import { z } from "zod";
+
 import { storeRegistry } from "./stores/registry.js";
 import { type DeployContext, StoreStatus } from "./types.js";
 import { buildHelpTableData, type HelpTableData } from "./ui/ink-logger.js";
 import { red } from "./ui/logging.js";
+import { isString } from "./utils/guards.js";
+import { createGuard } from "./utils/zod-guard.js";
 
 export class StoreValidationError extends Error {
   helpTables: HelpTableData[];
@@ -15,6 +19,8 @@ export class StoreValidationError extends Error {
     }
   }
 }
+
+export const isStoreValidationError = createGuard(z.instanceof(StoreValidationError));
 
 export function deployStore({
   options,
@@ -39,9 +45,7 @@ export function deployStore({
     const messages = error.issues.map(issue => issue.message);
     const structuralIssues = error.issues.filter(issue => issue.code !== "custom");
     if (structuralIssues.length > 0) {
-      const failedFields = [
-        ...new Set(structuralIssues.map(issue => issue.path[0]).filter(path => typeof path === "string"))
-      ];
+      const failedFields = [...new Set(structuralIssues.map(issue => issue.path[0]).filter(isString))];
       const missingFields = failedFields.length > 0 ? failedFields : undefined;
       const helpTableData = buildHelpTableData({
         storeName: store.name,

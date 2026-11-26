@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { deployStore, StoreValidationError } from "./deploy-single-store.js";
+import { deployStore, isStoreValidationError } from "./deploy-single-store.js";
 import { createCredentialRefreshCallback, getJsonStoresFromCli } from "./store-argument-parser.js";
 import { getStore, isSupportedStore } from "./stores/registry.js";
 import { type Arguments, type StoreName, StoreStatus } from "./types.js";
@@ -56,7 +56,7 @@ async function runStoreDeploy({
       inkLogger.logger.error(store, line);
     }
     inkLogger.monitor.updateStore(store, StoreStatus.ERROR);
-    const helpTables = error instanceof StoreValidationError ? error.helpTables : [];
+    const helpTables = isStoreValidationError(error) ? error.helpTables : [];
     return {
       store,
       helpTables

@@ -8,6 +8,7 @@ import { chromium, type Page } from "playwright";
 import { StoreName } from "@/types.js";
 import { config, parse } from "@/utils/dotenv.js";
 import { createGitIgnoreIfNeeded, headersToEnv } from "@/utils/helpers.js";
+import { toError } from "@/utils/retry.js";
 
 const CREDENTIALS_FILE = `${StoreName.OPERA}.env`;
 const COOKIE_NAMES = ["sessionid", "csrftoken"] as const;
@@ -85,8 +86,7 @@ export async function fetchOperaCredentials(shouldSaveToEnv: boolean) {
     args: [`--window-size=${width},${height}`]
   };
   const browser = await chromium.launch(launchOptions).catch(async error => {
-    const message = error instanceof Error ? error.message : String(error);
-    const isBrowserMissing = message.includes("Executable doesn't exist");
+    const isBrowserMissing = toError(error).message.includes("Executable doesn't exist");
     if (!isBrowserMissing) {
       throw error;
     }

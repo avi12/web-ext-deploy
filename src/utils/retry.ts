@@ -4,6 +4,9 @@ import { z, ZodError } from "zod";
 
 import type { StoreLogger } from "@/types.js";
 
+import { isError, isString } from "./guards.js";
+import { createGuard } from "./zod-guard.js";
+
 const DEFAULT_MAX_BACKOFF_MS = 5_000;
 const MS_PER_SECOND = 1000;
 const DEFAULT_MAX_WAIT_SECONDS = 60;
@@ -13,7 +16,7 @@ export function getBackoffDelayMs({ attempt, maxMs = DEFAULT_MAX_BACKOFF_MS }: {
 }
 
 export function toError(value: unknown) {
-  return value instanceof Error ? value : new Error(String(value));
+  return isError(value) ? value : new Error(String(value));
 }
 
 export class CookieAuthError extends Error {
@@ -22,6 +25,9 @@ export class CookieAuthError extends Error {
     this.name = "CookieAuthError";
   }
 }
+
+const isCookieAuthError = createGuard(z.instanceof(CookieAuthError));
+const isZodError = createGuard(z.instanceof(ZodError));
 
 export interface HttpLikeResponse {
   data: unknown;
@@ -111,10 +117,7 @@ function extractApiMessage({ data, statusText }: { data: unknown; statusText: st
   if (record) {
     const messages = Object.values(record)
       .flatMap(value => (Array.isArray(value) ? value : [value]))
-      .flatMap(value => {
-        const parsed = z.string().safeParse(value);
-        return parsed.success ? [parsed.data] : [];
-      });
+      .filter(isString);
     if (messages.length > 0) {
       return messages.join(", ");
     }
@@ -164,7 +167,7 @@ export async function requestWithRetry<T>({
     try {
       response = await sendRequest();
     } catch (error) {
-      if (error instanceof CookieAuthError) {
+      if (isCookieAuthError(error)) {
         throw error;
       }
     }
@@ -219,7 +222,7 @@ export async function requestWithRetry<T>({
     try {
       return parseResponse(response);
     } catch (error) {
-      if (!(error instanceof ZodError)) {
+      if (!isZodError(error)) {
         throw error;
       }
 
