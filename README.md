@@ -58,8 +58,8 @@ Deployment to Edge Add-ons Store: [follow this guide](https://github.com/avi12/w
 
 ### Disclaimer: I do NOT take any responsibility for leaked cookies or credentials.
 
-- Opera: `sessionid`, `csrftoken` — obtained via Playwright (use `--auto-fetch-credentials` to fetch automatically)
-- Chrome: `REFRESH_TOKEN` — obtained via OAuth (use `--auto-fetch-credentials` to fetch automatically)
+- Opera: `sessionid`, `csrftoken` - obtained via Playwright (use `--auto-fetch-credentials` to fetch automatically)
+- Chrome: `REFRESH_TOKEN` - obtained via OAuth (use `--auto-fetch-credentials` to fetch automatically)
 
 For the Edge Add-ons Store, you'll use the Microsoft Edge Publish API
 
